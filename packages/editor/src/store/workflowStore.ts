@@ -236,6 +236,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       },
     };
     set((state) => ({
+      ...pushHistory(state),
       nodes: [...state.nodes, newNode],
       isDirty: true,
     }));
@@ -251,12 +252,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         data: JSON.parse(JSON.stringify(n.data)),
         selected: false,
       }));
-      return { nodes: [...state.nodes, ...newNodes], isDirty: true };
+      return { ...pushHistory(state), nodes: [...state.nodes, ...newNodes], isDirty: true };
     });
   },
 
   renameNode: (nodeId, label) => {
     set((state) => ({
+      ...pushHistory(state),
       nodes: state.nodes.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, label } } : n,
       ),
@@ -266,6 +268,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   removeNode: (nodeId) => {
     set((state) => ({
+      ...pushHistory(state),
       nodes: state.nodes.filter((n) => n.id !== nodeId),
       edges: state.edges.filter(
         (e) => e.source !== nodeId && e.target !== nodeId,
@@ -323,6 +326,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       edges,
       selectedNodeId: null,
       isDirty: false,
+      // Reset undo/redo history so the freshly loaded state is the baseline
+      history: [],
+      historyIndex: -1,
       workflowMeta: {
         id: workflow.id,
         name: workflow.name,

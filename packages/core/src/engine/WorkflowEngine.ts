@@ -36,6 +36,9 @@ export class WorkflowEngine {
     resumeFrom?: Record<string, INodeExecutionResult>,
   ): Promise<IExecution> {
     const executionId = crypto.randomUUID();
+    // If the server passed an API execution ID, use that for node input injection
+    // so nodes like AutonomousDev can correlate logs with the correct execution.
+    const nodeExecutionId = (triggerData?._apiExecutionId as string) || executionId;
     const startedAt = new Date();
 
     const emit = (event: string, data: unknown): void => {
@@ -65,9 +68,15 @@ export class WorkflowEngine {
     const configuredTimeout = workflow.settings?.timeout ?? 300_000; // default 5 min
     const workflowTimeoutMs = Math.max(configuredTimeout, maxNodeTimeout > 0 ? maxNodeTimeout + 60_000 : 0);
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    // Shared cancellation flag — prevents runExecution from overwriting the
+    // timeout error status if it continues running after the timeout fires.
+    let cancelled = false;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutHandle = setTimeout(
-        () => reject(new Error(`Workflow timed out after ${workflowTimeoutMs / 1000}s`)),
+        () => {
+          cancelled = true;
+          reject(new Error(`Workflow timed out after ${workflowTimeoutMs / 1000}s`));
+        },
         workflowTimeoutMs,
       );
     });
@@ -122,6 +131,9 @@ export class WorkflowEngine {
       }
 
       for (const nodeId of sortedNodeIds) {
+        // Stop executing further nodes if the workflow was cancelled by timeout
+        if (cancelled) break;
+
         const nodeInstance = nodeMap.get(nodeId);
         if (!nodeInstance) continue;
 
@@ -158,7 +170,8 @@ export class WorkflowEngine {
           continue;
         }
 
-        emit('execution:node:start', { executionId, nodeId, nodeName: nodeInstance.name });
+        const nodeStartedAt = new Date().toISOString();
+        emit('execution:node:start', { executionId, nodeId, nodeName: nodeInstance.name, startedAt: nodeStartedAt });
 
         // Collect input data from all upstream nodes connected to this node
         const inputData = gatherInputData(
@@ -169,9 +182,10 @@ export class WorkflowEngine {
           nodeId === triggerNode.id,
         );
 
-        // Inject executionId into input data so nodes can use it for live logging
+        // Inject executionId into input data so nodes can use it for live logging.
+        // nodeExecutionId = API execution ID if available, otherwise engine's internal ID.
         for (const item of inputData) {
-          item.json.executionId = executionId;
+          item.json.executionId = nodeExecutionId;
         }
 
         // Build a stream emitter for AI nodes: emits tokens via process events
@@ -222,6 +236,10 @@ export class WorkflowEngine {
               }
             : result;
 
+        const nodeFinishedAt = new Date().toISOString();
+        // Stamp timestamps onto the stored result for the timeline chart
+        storedResult.startedAt = nodeStartedAt;
+        storedResult.finishedAt = nodeFinishedAt;
         execution.nodeResults[nodeId] = storedResult;
 
         emit('execution:node:done', {
@@ -232,6 +250,8 @@ export class WorkflowEngine {
           output: storedResult.output,
           error: storedResult.error,
           durationMs: storedResult.durationMs ?? 0,
+          startedAt: nodeStartedAt,
+          finishedAt: nodeFinishedAt,
         });
 
         // If a node fails and the workflow is not configured to continue, stop.
@@ -243,17 +263,23 @@ export class WorkflowEngine {
       }
 
       // ── Finalise execution ──────────────────────────────────────────
-      const finishedAt = new Date();
-      execution.status = 'success';
-      execution.finishedAt = finishedAt.toISOString();
-      execution.durationMs = finishedAt.getTime() - startedAt.getTime();
+      // Don't overwrite the timeout error set by the outer catch
+      if (!cancelled) {
+        const finishedAt = new Date();
+        execution.status = 'success';
+        execution.finishedAt = finishedAt.toISOString();
+        execution.durationMs = finishedAt.getTime() - startedAt.getTime();
+      }
     } catch (err: unknown) {
-      const finishedAt = new Date();
-      execution.status = 'error';
-      execution.errorMessage =
-        err instanceof Error ? err.message : String(err);
-      execution.finishedAt = finishedAt.toISOString();
-      execution.durationMs = finishedAt.getTime() - startedAt.getTime();
+      // Don't overwrite the timeout error set by the outer catch
+      if (!cancelled) {
+        const finishedAt = new Date();
+        execution.status = 'error';
+        execution.errorMessage =
+          err instanceof Error ? err.message : String(err);
+        execution.finishedAt = finishedAt.toISOString();
+        execution.durationMs = finishedAt.getTime() - startedAt.getTime();
+      }
     }
 
     return execution;

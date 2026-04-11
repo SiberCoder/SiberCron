@@ -362,7 +362,7 @@ export default function WorkflowListPage() {
                 className="btn-aurora"
               >
                 <Plus size={16} />
-                New Workflow
+                Yeni Workflow
               </button>
             </>
           )}
@@ -536,11 +536,10 @@ export default function WorkflowListPage() {
             <div className="absolute -inset-4 bg-aurora-cyan/5 rounded-full blur-2xl pointer-events-none" />
           </div>
           <h3 className="text-xl font-display font-semibold text-white mb-2">
-            No workflows yet
+            Henüz workflow yok
           </h3>
           <p className="text-sm text-obsidian-500 mb-8 max-w-sm font-body">
-            Create your first workflow to start automating tasks with AI-powered
-            nodes
+            AI destekli nodelarla görevleri otomatikleştirmek için ilk workflow'unuzu oluşturun
           </p>
           {isAdmin && (
             <button
@@ -548,7 +547,7 @@ export default function WorkflowListPage() {
               className="btn-aurora"
             >
               <Plus size={16} />
-              Create Workflow
+              Workflow Oluştur
             </button>
           )}
         </div>
@@ -654,7 +653,7 @@ export default function WorkflowListPage() {
                       title={wf.isActive ? 'Devre disi birak' : 'Aktif et'}
                     >
                       <span className={clsx('w-1.5 h-1.5 rounded-full', wf.isActive ? 'bg-aurora-emerald' : 'bg-obsidian-600')} />
-                      {wf.isActive ? 'Active' : 'Inactive'}
+                      {wf.isActive ? 'Aktif' : 'Pasif'}
                     </button>
                   </div>
 
@@ -687,11 +686,11 @@ export default function WorkflowListPage() {
                   <div className="flex items-center gap-3 text-[10px] text-obsidian-500 font-body">
                     <span className={clsx('flex items-center gap-1', triggerColor)}>
                       <TriggerIcon size={11} />
-                      <span className="capitalize">{wf.triggerType}</span>
+                      <span>{{ manual: 'Manuel', cron: 'Cron', webhook: 'Webhook', event: 'Olay' }[wf.triggerType] ?? wf.triggerType}</span>
                     </span>
                     <span className="flex items-center gap-1 text-obsidian-500">
                       <GitBranch size={11} />
-                      {wf.nodes.length} nodes
+                      {wf.nodes.length} node
                     </span>
                     <span className="ml-auto text-obsidian-600">
                       {new Date(wf.updatedAt).toLocaleDateString()}

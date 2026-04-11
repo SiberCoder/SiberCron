@@ -217,6 +217,9 @@ class QueueService {
       createdAt: now,
     });
 
+    // Pass API execution ID so nodes (like AutonomousDev) can use it for log correlation
+    triggerData._apiExecutionId = executionId;
+
     try {
       const engineResult = await this.engine.execute(
         workflow,
@@ -243,17 +246,23 @@ class QueueService {
               output?: Record<string, unknown>[];
               error?: string;
               durationMs?: number;
+              startedAt?: string;
+              finishedAt?: string;
             };
             if (nodeData.nodeId) {
               const existing = db.getExecution(executionId);
               if (existing) {
+                const now = new Date().toISOString();
+                const durationMs = nodeData.durationMs ?? 0;
                 existing.nodeResults[nodeData.nodeId] = {
                   nodeId: nodeData.nodeId,
                   nodeName: nodeData.nodeName ?? nodeData.nodeId,
                   status: (nodeData.status ?? 'error') as INodeExecutionResult['status'],
                   output: nodeData.output,
                   error: nodeData.error,
-                  durationMs: nodeData.durationMs,
+                  durationMs,
+                  startedAt: nodeData.startedAt ?? new Date(Date.now() - durationMs).toISOString(),
+                  finishedAt: nodeData.finishedAt ?? now,
                 };
                 db.updateExecution(executionId, { nodeResults: existing.nodeResults });
               }
@@ -296,11 +305,12 @@ class QueueService {
       });
       throw err; // Re-throw so BullMQ can retry and direct mode can log
     } finally {
-      // Clean up executionIdMap entry to prevent memory leak
+      // Clean up ALL executionIdMap entries that point to this executionId
+      // (there may be multiple engine IDs mapping to the same API execution ID)
       const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
       if (idMap) {
-        for (const [engineId, apiId] of idMap) {
-          if (apiId === executionId) { idMap.delete(engineId); break; }
+        for (const [engineId, apiId] of [...idMap]) {
+          if (apiId === executionId) idMap.delete(engineId);
         }
       }
     }

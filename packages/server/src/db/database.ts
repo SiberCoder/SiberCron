@@ -154,6 +154,9 @@ export class Database {
   private apiKeys: Map<string, IApiKey> = new Map();
   /** Secondary index: hash → apiKey.id for O(1) lookup */
   private apiKeyHashIndex: Map<string, string> = new Map();
+  /** Throttle cache: keyId → last disk-write timestamp (ms). Prevents a disk write on every API request. */
+  private _apiKeyTouchTs: Map<string, number> = new Map();
+  private static readonly _TOUCH_THROTTLE_MS = 60_000; // write at most once per minute per key
 
   // ── API Key CRUD ─────────────────────────────────────────────────────
 
@@ -198,8 +201,13 @@ export class Database {
 
   touchApiKey(id: string): void {
     const k = this.apiKeys.get(id);
-    if (k) {
-      this.apiKeys.set(id, { ...k, lastUsedAt: new Date().toISOString() });
+    if (!k) return;
+    const now = Date.now();
+    const last = this._apiKeyTouchTs.get(id) ?? 0;
+    // Update in-memory timestamp always, but only flush to disk once per minute
+    this.apiKeys.set(id, { ...k, lastUsedAt: new Date(now).toISOString() });
+    if (now - last >= Database._TOUCH_THROTTLE_MS) {
+      this._apiKeyTouchTs.set(id, now);
       this.save();
     }
   }
@@ -457,7 +465,9 @@ export class Database {
       items = items.filter(
         (e) =>
           e.triggeredBy?.userId?.toLowerCase().includes(q) ||
-          e.triggeredBy?.username?.toLowerCase().includes(q),
+          e.triggeredBy?.username?.toLowerCase().includes(q) ||
+          e.triggeredBy?.method?.toLowerCase().includes(q) ||
+          e.triggeredBy?.apiKeyName?.toLowerCase().includes(q),
       );
     }
 
