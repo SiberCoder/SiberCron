@@ -19,7 +19,7 @@ import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useExecutionStore } from '../../store/executionStore';
 import { toast } from '../../store/toastStore';
-import { apiPost, apiDelete } from '../../api/client';
+import { apiPost, apiDelete, apiGet } from '../../api/client';
 
 interface EditorToolbarProps {
   onVersionHistory?: () => void;
@@ -86,6 +86,23 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       if (isDirty) {
         await saveWorkflow();
       }
+
+      // Pre-execution validation: check for missing credentials, etc.
+      if (meta.id) {
+        const validation = await apiGet<{ valid: boolean; errors: string[]; warnings: string[] }>(
+          `/workflows/${meta.id}/validate`,
+        ).catch(() => null);
+
+        if (validation && !validation.valid && validation.errors.length > 0) {
+          toast.error(`Workflow çalıştırılamaz: ${validation.errors[0]}`);
+          setIsExecuting(false);
+          return;
+        }
+        if (validation && validation.warnings.length > 0) {
+          toast.warning(validation.warnings[0], 5000);
+        }
+      }
+
       const executionId = await executeWorkflow();
       connectExecution(executionId);
     } catch (err) {
@@ -94,7 +111,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
     } finally {
       setIsExecuting(false);
     }
-  }, [isDirty, saveWorkflow, executeWorkflow, connectExecution]);
+  }, [isDirty, saveWorkflow, executeWorkflow, connectExecution, meta.id]);
 
   // Keep refs up-to-date
   handleSaveRef.current = handleSave;

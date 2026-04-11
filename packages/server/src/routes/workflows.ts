@@ -395,6 +395,78 @@ export async function workflowRoutes(
     return workflow;
   });
 
+  // GET /:id/validate - Check if a workflow is ready to execute
+  // Returns { valid: bool, warnings: string[], errors: string[] }
+  fastify.get('/:id/validate', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const workflow = db.getWorkflow(id);
+    if (!workflow) {
+      reply.code(404);
+      return { error: 'Workflow not found' };
+    }
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // 1. Must have at least one node
+    if (!workflow.nodes || workflow.nodes.length === 0) {
+      errors.push('Workflow has no nodes');
+    }
+
+    // 2. Must have a trigger node (name contains trigger/cron/webhook, or zero-in-degree)
+    const TRIGGER_HINT = /trigger|cron|webhook/i;
+    const hasTrigger = workflow.nodes.some(
+      (n) => TRIGGER_HINT.test(n.name) || TRIGGER_HINT.test(n.type),
+    );
+    if (!hasTrigger && workflow.nodes.length > 0) {
+      warnings.push('No trigger node detected — workflow can only be run manually');
+    }
+
+    // 3. Cron expression must be valid if triggerType is cron
+    if (workflow.triggerType === 'cron') {
+      if (!workflow.cronExpression) {
+        errors.push('Cron trigger requires a cron expression');
+      }
+    }
+
+    // 4. Webhook path must be set if triggerType is webhook
+    if (workflow.triggerType === 'webhook') {
+      if (!workflow.webhookPath) {
+        errors.push('Webhook trigger requires a webhook path');
+      }
+    }
+
+    // 5. Check that all assigned credentials actually exist in the DB
+    const missingCredentials: string[] = [];
+    for (const node of workflow.nodes) {
+      if (!node.credentials) continue;
+      for (const [credType, credId] of Object.entries(node.credentials)) {
+        if (typeof credId === 'string' && credId) {
+          const cred = db.getCredential(credId);
+          if (!cred) {
+            missingCredentials.push(`Node "${node.name}" — credential "${credType}" (${credId}) not found`);
+          }
+        }
+      }
+    }
+    errors.push(...missingCredentials);
+
+    // 6. Check for duplicate webhookPath conflicts with other workflows
+    if (workflow.webhookPath) {
+      const normalized = workflow.webhookPath.toLowerCase();
+      const { data: others } = db.listWorkflows({ triggerType: 'webhook', isActive: true, limit: 200 });
+      const conflict = others.find(
+        (w) => w.id !== id && (w.webhookPath ?? '').toLowerCase() === normalized,
+      );
+      if (conflict) {
+        warnings.push(`Webhook path conflicts with active workflow "${conflict.name}" (${conflict.id})`);
+      }
+    }
+
+    const valid = errors.length === 0;
+    return { valid, errors, warnings };
+  });
+
   // POST /:id/activate - Set isActive=true
   fastify.post('/:id/activate', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
