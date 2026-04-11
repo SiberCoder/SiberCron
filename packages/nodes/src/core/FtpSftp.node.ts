@@ -10,7 +10,7 @@ export const FtpSftpNode: INodeType = {
     name: 'sibercron.ftpSftp',
     displayName: 'FTP / SFTP',
     description: 'FTP veya SFTP sunucusunda dosya işlemleri: listele, indir, yükle, sil, yeniden adlandır',
-    icon: '📁',
+    icon: 'HardDrive',
     group: 'data',
     version: 1,
     inputs: ['main'],

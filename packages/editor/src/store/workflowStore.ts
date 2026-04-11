@@ -349,6 +349,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       'sibercron.cronTrigger': 'cron',
       'sibercron.webhookTrigger': 'webhook',
       'sibercron.manualTrigger': 'manual',
+      'sibercron.telegramTrigger': 'event',
+      'sibercron.githubTrigger': 'webhook',
     };
     const triggerNode = nodes.find(
       (n) => TRIGGER_TYPE_MAP[n.data.nodeType as string] !== undefined,

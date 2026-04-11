@@ -17,6 +17,8 @@ import {
   HardDrive,
   FileText,
   Server,
+  Github,
+  Layers,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { ICredential } from '@sibercron/shared';
@@ -167,6 +169,41 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
       { key: 'clientEmail', label: 'Client Email', placeholder: 'name@project.iam.gserviceaccount.com', required: true },
       { key: 'privateKey', label: 'Private Key', placeholder: '-----BEGIN RSA PRIVATE KEY-----...', secret: true, required: true },
       { key: 'projectId', label: 'Project ID (opsiyonel)' },
+    ],
+  },
+  // ── Source Control / Project Management ─────────────────────────────────────
+  {
+    name: 'githubApi',
+    displayName: 'GitHub API Token',
+    Icon: Github,
+    fields: [
+      { key: 'token', label: 'Personal Access Token', placeholder: 'ghp_...', secret: true, required: true },
+    ],
+  },
+  {
+    name: 'githubWebhook',
+    displayName: 'GitHub Webhook Secret',
+    Icon: Github,
+    fields: [
+      { key: 'secret', label: 'Webhook Secret', placeholder: 'Minimum 8 karakter', secret: true, required: true },
+    ],
+  },
+  {
+    name: 'jiraApi',
+    displayName: 'Jira API (Cloud)',
+    Icon: Layers,
+    fields: [
+      { key: 'domain', label: 'Jira Domain', placeholder: 'yourcompany.atlassian.net', required: true },
+      { key: 'email', label: 'E-posta', placeholder: 'you@company.com', required: true },
+      { key: 'apiToken', label: 'API Token', placeholder: 'Atlassian hesap API token', secret: true, required: true },
+    ],
+  },
+  {
+    name: 'airtableApi',
+    displayName: 'Airtable API',
+    Icon: Database,
+    fields: [
+      { key: 'apiKey', label: 'Personal Access Token', placeholder: 'pat...', secret: true, required: true },
     ],
   },
   // ── Productivity ──────────────────────────────────────────────────────────────

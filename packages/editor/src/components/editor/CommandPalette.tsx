@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
+import { toast } from '../../store/toastStore';
 
 interface Command {
   id: string;
@@ -66,7 +67,12 @@ export default function CommandPalette() {
         category: 'Workflow',
         icon: <Save size={14} />,
         shortcut: 'Ctrl+S',
-        action: () => { saveWorkflow().catch(console.error); setOpen(false); },
+        action: () => {
+          setOpen(false);
+          saveWorkflow().then(() => toast.success('Workflow kaydedildi')).catch((err: unknown) => {
+            toast.error(err instanceof Error ? err.message : 'Kayıt başarısız');
+          });
+        },
       },
       {
         id: 'execute',
@@ -74,7 +80,14 @@ export default function CommandPalette() {
         category: 'Workflow',
         icon: <Play size={14} />,
         shortcut: 'Ctrl+E',
-        action: () => { if (meta.id) executeWorkflow().catch(console.error); setOpen(false); },
+        action: () => {
+          setOpen(false);
+          if (meta.id) {
+            executeWorkflow().catch((err: unknown) => {
+              toast.error(err instanceof Error ? err.message : 'Çalıştırma başarısız');
+            });
+          }
+        },
       },
       {
         id: 'export',

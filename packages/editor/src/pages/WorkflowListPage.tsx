@@ -767,10 +767,10 @@ export default function WorkflowListPage() {
                           ? 'text-aurora-amber hover:bg-aurora-amber/5'
                           : 'text-aurora-emerald hover:bg-aurora-emerald/5',
                       )}
-                      title={wf.isActive ? 'Durdur' : 'Baslat'}
+                      title={wf.isActive ? 'Durdur' : 'Başlat'}
                     >
                       {wf.isActive ? <PowerOff size={12} /> : <Power size={12} />}
-                      {wf.isActive ? 'Durdur' : 'Baslat'}
+                      {wf.isActive ? 'Durdur' : 'Başlat'}
                     </button>
                     <button
                       onClick={async (e) => {
@@ -792,7 +792,7 @@ export default function WorkflowListPage() {
                       }}
                       disabled={executingId === wf.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-aurora-blue hover:bg-aurora-blue/5 rounded-lg transition-all font-body disabled:opacity-50"
-                      title="Calistir"
+                      title="Çalıştır"
                     >
                       {executingId === wf.id
                         ? <Loader2 size={12} className="animate-spin" />

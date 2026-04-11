@@ -91,7 +91,7 @@ Tümü `/api/v1/` altında:
 **Trigger:** ManualTrigger, CronTrigger, WebhookTrigger, TelegramTrigger (incoming messages, command/text filter)
 **Core:** HttpRequest (auth: bearer/basic/apiKey, query params, timeout), Code (vm sandbox: Date/JSON/Math/console/URL/Promise), Conditional (19 operatör), Transform (pick/remove/rename/set/flatten/wrap), Merge (6 mod), Delay, Log (select logLevel), Loop (each/count/arrayField), Split (chunk/byField/splitText)
 **AI:** AIAgent (çoklu provider), AutonomousDev (Claude CLI loop), AISummarizer (concise/paragraph/bullets/keypoints/custom, çoklu dil), AIClassifier (multi-label, confidence score, çoklu provider)
-**Data:** DatabaseQuery (PostgreSQL/MySQL, parameterized queries, CRUD), Redis (16 operasyon: get/set/del/hget/hset/lpush/lrange/sadd/publish...), GitHub (issue/PR/repo/release/comment, REST API v3), Airtable (record CRUD, arama, upsert, REST API)
+**Data:** DatabaseQuery (PostgreSQL/MySQL, parameterized queries, CRUD), Redis (16 operasyon: get/set/del/hget/hset/lpush/lrange/sadd/publish...), GitHub (issue/PR/repo/release/comment, REST API v3), Airtable (record CRUD, arama, upsert, REST API), Jira (issue CRUD + JQL search, comments, transitions, projects, Cloud REST API v3)
 **Messaging:** TelegramSend (text/photo/document, parseMode, reply), DiscordSend (webhook + bot API, embeds), SlackSend (blocks, thread reply), WhatsAppReceive, WhatsAppSend, EmailSMTP (HTML/text, CC/BCC)
 
 Her node `INodeType` interface'ini implemente eder: `{ definition: INodeTypeDefinition, execute(context) }`
@@ -174,6 +174,10 @@ Ana interface'ler:
 - **GoogleDrive Node**: Google Drive API v3, service account auth. list/upload/download/delete/createFolder/move. googleapis paketi.
 - **NotionDatabase Node**: Notion API v2022-06-28, integration token auth. queryDatabase/getPage/createPage/updatePage/archivePage/search/appendBlocks.
 - **API Anahtarı Yönetimi**: Kullanıcı başına API key oluşturma/iptal. `scx_` prefix, SHA-256 hash'leme. Settings sayfasında UI. `X-Api-Key` veya `Authorization: Bearer scx_...` header ile kullanım. Max 20 key/kullanıcı.
+- **GitHub Node**: issue/PR/repository/release/comment CRUD, REST API v3, bearer token auth. `sibercron.github`
+- **GitHub Trigger Node**: push/pull_request/issues/release webhook tetikleyici, HMAC-SHA256 imza doğrulama, event/repo/branch filtreleme. `sibercron.githubTrigger`
+- **Airtable Node**: record list/get/create/update/upsert/delete/search, REST API v0, personal access token auth. `sibercron.airtable`
+- **Jira Node**: issue CRUD + JQL arama, comment CRUD, transition yönetimi, project listesi. Jira Cloud REST API v3, Basic Auth (email+token). `sibercron.jira`
 
 ## Kurallar
 

@@ -30,6 +30,7 @@ const TRIGGER_TYPES = new Set([
   'sibercron.webhookTrigger',
   'sibercron.manualTrigger',
   'sibercron.telegramTrigger',
+  'sibercron.githubTrigger',
 ]);
 
 function useWorkflowValidation() {

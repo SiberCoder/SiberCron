@@ -240,9 +240,9 @@ app.addHook('onRequest', async (request, reply) => {
 // unref() prevents these timers from keeping the process alive during graceful shutdown
 setInterval(() => {
   const now = Date.now();
-  for (const [ip, entry] of rateLimitMap) {
+  for (const [key, entry] of rateLimitMap) {
     if (now > entry.resetAt) {
-      rateLimitMap.delete(ip);
+      rateLimitMap.delete(key);
     }
   }
 }, 5 * 60_000).unref();

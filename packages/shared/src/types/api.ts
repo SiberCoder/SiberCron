@@ -16,7 +16,9 @@ export interface CreateWorkflowRequest {
   webhookPath?: string;
 }
 
-export interface UpdateWorkflowRequest extends Partial<CreateWorkflowRequest> {}
+export interface UpdateWorkflowRequest extends Partial<CreateWorkflowRequest> {
+  isActive?: boolean;
+}
 
 export interface WorkflowListQuery {
   page?: number;

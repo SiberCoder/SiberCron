@@ -58,7 +58,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
     }
 
     // Warn if no trigger node
-    const TRIGGER_TYPES = ['sibercron.cronTrigger', 'sibercron.webhookTrigger', 'sibercron.manualTrigger', 'sibercron.telegramTrigger'];
+    const TRIGGER_TYPES = ['sibercron.cronTrigger', 'sibercron.webhookTrigger', 'sibercron.manualTrigger', 'sibercron.telegramTrigger', 'sibercron.githubTrigger'];
     const hasTrigger = nodes.some((n) => TRIGGER_TYPES.includes(n.data.nodeType as string));
     if (!hasTrigger && nodes.length > 0) {
       toast.warning('Trigger node yok. Workflow sadece manuel çalıştırılabilir.');

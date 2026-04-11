@@ -164,6 +164,14 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] Jira node: Issues CRUD + JQL search, Comments, Transitions, Projects (Jira Cloud REST API v3)
 - [x] QueueService: concurrent execution guard (scheduled workflows icin)
 - [x] DashboardPage: zaman etiketleri Turkce'ye cevrildi
+- [x] iconRegistry: eksik ikonlar eklendi (Repeat, Split, BookOpen, Tags)
+- [x] FtpSftp node: emoji ikon → HardDrive (Lucide)
+- [x] CredentialsPage: githubApi, githubWebhook, jiraApi, airtableApi credential tipleri eklendi
+- [x] GitHubTrigger: TRIGGER_TYPES + TRIGGER_TYPE_MAP + EditorToolbar TRIGGER listesine eklendi
+- [x] workflowStore: telegramTrigger → 'event' tip mapping eklendi
+- [x] Templates: GitHub Issue Responder → githubTrigger + github node kullanacak sekilde guncellendi
+- [x] Templates: Jira Bug Triage ve RSS→Notion yeni sablon olarak eklendi
+- [x] CommandPalette: save/execute silent console.error → toast bildirimi ile degistirildi
 
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci

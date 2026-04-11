@@ -495,7 +495,7 @@ export async function workflowRoutes(
   // POST /:id/activate - Set isActive=true
   fastify.post('/:id/activate', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    const workflow = db.updateWorkflow(id, { isActive: true } as Record<string, unknown>);
+    const workflow = db.updateWorkflow(id, { isActive: true });
     if (!workflow) {
       reply.code(404);
       return { error: 'Workflow not found' };
@@ -509,7 +509,7 @@ export async function workflowRoutes(
   // POST /:id/deactivate - Set isActive=false
   fastify.post('/:id/deactivate', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    const workflow = db.updateWorkflow(id, { isActive: false } as Record<string, unknown>);
+    const workflow = db.updateWorkflow(id, { isActive: false });
     if (!workflow) {
       reply.code(404);
       return { error: 'Workflow not found' };

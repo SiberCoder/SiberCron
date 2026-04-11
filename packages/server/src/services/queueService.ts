@@ -317,7 +317,7 @@ class QueueService {
     // If queue is available, use it
     if (this.queue && this._connected) {
       const job = await this.queue.add(`execute:${workflowName}`, jobData, {
-        jobId: `${workflowId}:${Date.now()}`,
+        jobId: `${workflowId}:${Date.now()}:${crypto.randomBytes(4).toString('hex')}`,
       });
       console.log(`[Queue] Job queued: ${job.id}`);
       return job.id!;
