@@ -25,7 +25,7 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL || 'sqlite://./data/sibercron.db',
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   encryptionKey: process.env.ENCRYPTION_KEY || 'dev-only-key-do-not-use-in-prod!!',
-  corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN || 'http://localhost:5173'),
+  corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://192.168.1.20:5173,http://192.168.1.20:5174'),
   /** Optional: set API_KEY env var to require Bearer token on all /api/v1/* routes. */
   apiKey: process.env.API_KEY || '',
   /** JWT secret for auth tokens. Set JWT_SECRET in production. */
@@ -34,4 +34,9 @@ export const config = {
   defaultAdminPassword: process.env.ADMIN_PASSWORD || 'admin',
   /** Set AUTH_ENABLED=false to disable auth (dev convenience). Default: true. */
   authEnabled: process.env.AUTH_ENABLED !== 'false',
+  /**
+   * JWT access token TTL. Accepts any value fastify-jwt supports: '8h', '1d', '30m', etc.
+   * Can be overridden via JWT_ACCESS_TTL env var or persisted via /api/v1/setup/auth-settings.
+   */
+  jwtAccessTtl: process.env.JWT_ACCESS_TTL || '8h',
 };

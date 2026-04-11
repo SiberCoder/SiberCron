@@ -255,6 +255,137 @@ function ApiKeySection() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Security Section (JWT token TTL)                                   */
+/* ------------------------------------------------------------------ */
+
+const TTL_PRESETS = [
+  { label: '1 Saat', value: '1h' },
+  { label: '4 Saat', value: '4h' },
+  { label: '8 Saat', value: '8h' },
+  { label: '24 Saat', value: '24h' },
+  { label: '7 Gün', value: '7d' },
+  { label: '30 Gün', value: '30d' },
+];
+
+function SecuritySection() {
+  const user = useAuthStore((s) => s.user);
+  const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
+  const [ttl, setTtl] = useState('8h');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/v1/setup/auth-settings', { headers: getAuthHeader() })
+      .then((r) => r.json())
+      .then((d: { jwtAccessTtl?: string }) => {
+        if (d.jwtAccessTtl) setTtl(d.jwtAccessTtl);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [getAuthHeader]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/v1/setup/auth-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ jwtAccessTtl: ttl }),
+      });
+      const data = await res.json() as { jwtAccessTtl?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? 'Kayıt başarısız');
+      if (data.jwtAccessTtl) setTtl(data.jwtAccessTtl);
+      setMsg({ type: 'success', text: `Token süresi "${data.jwtAccessTtl}" olarak güncellendi. Yeni giriş yapıldığında geçerli olur.` });
+    } catch (err) {
+      setMsg({ type: 'error', text: err instanceof Error ? err.message : 'Hata' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isAdmin = user?.role === 'admin';
+
+  return (
+    <Section icon={Shield} title="Güvenlik" description="JWT token süresi ve auth ayarları" defaultOpen={false}>
+      <div className="space-y-4">
+        {!isAdmin && (
+          <div className="glass-panel rounded-xl p-3 flex items-center gap-2 border border-aurora-amber/20">
+            <AlertTriangle size={13} className="text-aurora-amber shrink-0" />
+            <p className="text-xs text-obsidian-400">Bu ayarları değiştirmek için admin yetkisi gerekir.</p>
+          </div>
+        )}
+
+        <div className="glass-panel rounded-xl p-4 space-y-4">
+          <div>
+            <p className="text-xs font-semibold text-white mb-1">Erişim Token Süresi</p>
+            <p className="text-[11px] text-obsidian-500">JWT access token ne kadar süre geçerli olacak. Refresh token her zaman 30 gün geçerlidir.</p>
+          </div>
+
+          {/* Preset chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {TTL_PRESETS.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                disabled={!isAdmin || loading}
+                onClick={() => setTtl(p.value)}
+                className={clsx(
+                  'px-3 py-1 rounded-lg text-xs font-medium border transition-all',
+                  ttl === p.value
+                    ? 'border-aurora-cyan/40 bg-aurora-cyan/15 text-aurora-cyan'
+                    : 'border-white/[0.08] bg-white/[0.04] text-obsidian-400 hover:text-white hover:border-white/20 disabled:opacity-50',
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom input */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <label className="block text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider mb-1">
+                Özel Değer
+              </label>
+              <input
+                type="text"
+                value={ttl}
+                disabled={!isAdmin || loading}
+                onChange={(e) => setTtl(e.target.value)}
+                placeholder="örn: 2h, 45m, 3d"
+                className="glass-input font-mono text-xs w-full disabled:opacity-50"
+              />
+              <p className="text-[10px] text-obsidian-600 mt-1">Format: sayı + birim (s=saniye, m=dakika, h=saat, d=gün)</p>
+            </div>
+          </div>
+
+          {msg && (
+            <div className={clsx(
+              'text-xs px-3 py-2 rounded-lg',
+              msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400',
+            )}>{msg.text}</div>
+          )}
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving || loading}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-aurora-cyan/10 text-aurora-cyan text-xs font-semibold hover:bg-aurora-cyan/20 disabled:opacity-50 transition-colors"
+            >
+              {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+              Kaydet
+            </button>
+          )}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Account Section                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -772,6 +903,9 @@ export default function SettingsPage() {
             </Field>
           </div>
         </Section>
+
+        {/* Security Section */}
+        <SecuritySection />
 
         {/* API Key Section */}
         <ApiKeySection />

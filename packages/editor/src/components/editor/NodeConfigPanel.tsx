@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { X, Trash2, KeyRound, Copy, Check, Globe } from 'lucide-react';
+import { X, Trash2, KeyRound, Copy, Check, Globe, Braces } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import type { INodeProperty, ICredential } from '@sibercron/shared';
@@ -272,6 +272,138 @@ function WebhookUrlBanner({ path }: { path: string }) {
   );
 }
 
+// ── Expression Builder ────────────────────────────────────────────────
+
+const EXPRESSION_VARS = [
+  { label: '$now', insert: '{{ $now }}', description: 'Şu anki tarih/saat (ISO)' },
+  { label: '$timestamp', insert: '{{ $timestamp }}', description: 'Unix timestamp (ms)' },
+  { label: '$runId', insert: '{{ $runId }}', description: 'Çalıştırma ID' },
+  { label: '$json.field', insert: '{{ $json.field }}', description: 'Önceki node çıktısı' },
+  { label: '$input[0].json', insert: '{{ $input[0].json.field }}', description: 'İlk girdi item alanı' },
+  { label: '$env.VAR', insert: '{{ $env.VARIABLE_NAME }}', description: 'Ortam değişkeni' },
+] as const;
+
+function ExpressionInput({
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+  hasError,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+  placeholder?: string;
+  hasError: boolean;
+}) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasExpression = value.includes('{{');
+
+  const insertExpression = (expr: string) => {
+    const input = inputRef.current;
+    if (!input) {
+      onChange(value + expr);
+      return;
+    }
+    const start = input.selectionStart ?? value.length;
+    const end = input.selectionEnd ?? value.length;
+    const newVal = value.slice(0, start) + expr + value.slice(end);
+    onChange(newVal);
+    setTimeout(() => {
+      input.focus();
+      const pos = start + expr.length;
+      input.setSelectionRange(pos, pos);
+    }, 10);
+    setShowSuggestions(false);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    if (!showSuggestions) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSuggestions]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="flex gap-1">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            // Auto-show suggestions when user types {{
+            if (e.target.value.includes('{{')) setShowSuggestions(true);
+          }}
+          onBlur={() => {
+            setTimeout(() => {
+              if (!showSuggestions) onBlur();
+            }, 150);
+          }}
+          placeholder={placeholder}
+          className={clsx(
+            'glass-input text-xs flex-1',
+            hasError && 'border-red-500',
+            hasExpression && !hasError && 'border-aurora-violet/40 bg-aurora-violet/5',
+          )}
+        />
+        <button
+          type="button"
+          title="Expression değişkeni ekle"
+          onClick={() => {
+            if (!showSuggestions) {
+              setShowSuggestions(true);
+              inputRef.current?.focus();
+            } else {
+              setShowSuggestions(false);
+            }
+          }}
+          className={clsx(
+            'shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border text-[10px] font-mono transition-all',
+            hasExpression || showSuggestions
+              ? 'border-aurora-violet/40 bg-aurora-violet/15 text-aurora-violet'
+              : 'border-white/[0.08] bg-white/[0.04] text-obsidian-500 hover:text-white hover:border-white/20',
+          )}
+        >
+          <Braces size={12} />
+        </button>
+      </div>
+
+      {showSuggestions && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 glass-card rounded-xl border border-aurora-violet/20 shadow-2xl overflow-hidden">
+          <div className="p-2 space-y-0.5">
+            <div className="text-[9px] font-semibold text-obsidian-500 uppercase tracking-wider px-2 py-1">
+              Expression Değişkenleri
+            </div>
+            {EXPRESSION_VARS.map((v) => (
+              <button
+                key={v.label}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  insertExpression(v.insert);
+                }}
+                className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-aurora-violet/10 flex items-center gap-2.5 transition-colors group"
+              >
+                <code className="text-[10px] text-aurora-violet font-mono shrink-0">{v.label}</code>
+                <span className="text-[10px] text-obsidian-500 group-hover:text-obsidian-300 transition-colors">{v.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface FieldProps {
   property: INodeProperty;
   value: unknown;
@@ -336,13 +468,12 @@ function PropertyField({ property, value, onChange }: FieldProps) {
   switch (type) {
     case 'string':
       input = (
-        <input
-          type="text"
+        <ExpressionInput
           value={(value as string) ?? ''}
-          onChange={(e) => { onChange(name, e.target.value); if (touchedRef.current) { setFieldError(validateRequired(e.target.value)); } }}
+          onChange={(v) => { onChange(name, v); if (touchedRef.current) setFieldError(validateRequired(v)); }}
           onBlur={() => handleBlur(value)}
           placeholder={placeholder}
-          className={clsx('glass-input text-xs', errorBorder)}
+          hasError={hasError}
         />
       );
       break;
@@ -461,13 +592,12 @@ function PropertyField({ property, value, onChange }: FieldProps) {
 
     default:
       input = (
-        <input
-          type="text"
+        <ExpressionInput
           value={(value as string) ?? ''}
-          onChange={(e) => { onChange(name, e.target.value); if (touchedRef.current) { setFieldError(validateRequired(e.target.value)); } }}
+          onChange={(v) => { onChange(name, v); if (touchedRef.current) setFieldError(validateRequired(v)); }}
           onBlur={() => handleBlur(value)}
           placeholder={placeholder}
-          className={clsx('glass-input text-xs', errorBorder)}
+          hasError={hasError}
         />
       );
   }

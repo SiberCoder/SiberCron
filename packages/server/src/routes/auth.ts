@@ -1,10 +1,16 @@
 import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { db } from '../db/database.js';
+import { config } from '../config/env.js';
 
 const SALT_ROUNDS = 10;
-const ACCESS_TOKEN_TTL = '8h';
 const REFRESH_TOKEN_TTL = '30d';
+
+/** Read access token TTL from persisted setup config, fall back to env/default. */
+function getAccessTokenTtl(): string {
+  const cfg = db.getSetupConfig() as Record<string, unknown> | undefined;
+  return (cfg?.jwtAccessTtl as string | undefined) ?? config.jwtAccessTtl;
+}
 
 export async function authRoutes(app: FastifyInstance) {
   // POST /api/v1/auth/login
@@ -35,7 +41,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     const payload = { sub: user.id, username: user.username, role: user.role };
-    const accessToken = app.jwt.sign(payload, { expiresIn: ACCESS_TOKEN_TTL });
+    const accessToken = app.jwt.sign(payload, { expiresIn: getAccessTokenTtl() });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const refreshToken = app.jwt.sign({ sub: user.id, type: 'refresh' } as any, { expiresIn: REFRESH_TOKEN_TTL });
 
@@ -69,7 +75,7 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.status(401).send({ error: 'User not found' });
       }
       const payload = { sub: user.id, username: user.username, role: user.role };
-      const accessToken = app.jwt.sign(payload, { expiresIn: ACCESS_TOKEN_TTL });
+      const accessToken = app.jwt.sign(payload, { expiresIn: getAccessTokenTtl() });
       return reply.send({ accessToken });
     } catch {
       return reply.status(401).send({ error: 'Invalid or expired refresh token' });

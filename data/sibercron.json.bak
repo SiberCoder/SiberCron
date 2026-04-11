@@ -1,0 +1,20 @@
+{
+  "workflows": {},
+  "executions": {},
+  "credentials": {},
+  "socialAccounts": {},
+  "commandRegistrations": {},
+  "setupConfig": {},
+  "workflowVersions": {},
+  "users": {
+    "eb7b531b-74f9-43d9-afc6-42a04cb707d2": {
+      "id": "eb7b531b-74f9-43d9-afc6-42a04cb707d2",
+      "username": "admin",
+      "passwordHash": "$2b$10$3RO.bwHUDtl4e0t0hIDpZ.aiUpR3NBqZCsRJbQwMQyvR9kdFSzZGC",
+      "role": "admin",
+      "createdAt": "2026-04-11T17:59:53.753Z",
+      "updatedAt": "2026-04-11T17:59:53.753Z"
+    }
+  },
+  "apiKeys": {}
+}

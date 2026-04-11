@@ -971,4 +971,36 @@ async function submitKey(){
       return { success: false, error: (err as Error).message };
     }
   });
+
+  // GET /auth-settings - Get current auth/token settings
+  fastify.get('/auth-settings', async (_request: FastifyRequest, _reply: FastifyReply) => {
+    const cfg = db.getSetupConfig() as Record<string, unknown> | undefined;
+    return {
+      jwtAccessTtl: (cfg?.jwtAccessTtl as string | undefined) ?? '8h',
+    };
+  });
+
+  // POST /auth-settings - Update auth/token settings (admin only)
+  fastify.post('/auth-settings', async (request: FastifyRequest, reply: FastifyReply) => {
+    // Admin-only: verify role
+    const user = request.user as { role?: string } | undefined;
+    if (user?.role && user.role !== 'admin') {
+      return reply.status(403).send({ error: 'Admin required' });
+    }
+
+    const body = request.body as { jwtAccessTtl?: string } | undefined;
+    const ttl = body?.jwtAccessTtl?.trim();
+
+    // Basic validation: must match pattern like 1h, 30m, 2d, etc.
+    if (ttl !== undefined) {
+      if (!/^\d+[smhd]$/.test(ttl)) {
+        return reply.status(400).send({ error: 'Invalid TTL format. Use e.g. 8h, 30m, 1d, 3600s' });
+      }
+      const current = db.getSetupConfig() as Record<string, unknown> | undefined ?? {};
+      db.saveSetupConfig({ ...current, jwtAccessTtl: ttl });
+    }
+
+    const cfg = db.getSetupConfig() as Record<string, unknown>;
+    return { jwtAccessTtl: (cfg.jwtAccessTtl as string | undefined) ?? '8h' };
+  });
 }

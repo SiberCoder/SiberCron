@@ -69,7 +69,10 @@ function decryptCredentialData(data: Record<string, unknown> | string): Record<s
   }
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+// Resolve data directory relative to the server package root (2 levels up from this file).
+// This ensures data is always at packages/server/data/ regardless of process.cwd().
+const __dirname = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Z]:)/i, '$1');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'sibercron.json');
 
 /**
