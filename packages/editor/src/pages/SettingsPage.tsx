@@ -912,7 +912,7 @@ export default function SettingsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
         <AlertTriangle size={32} className="text-aurora-amber" />
-        <p className="text-sm text-obsidian-400">Yapilandirma yuklenemedi.</p>
+        <p className="text-sm text-obsidian-400">Yapılandırma yüklenemedi.</p>
         <button onClick={loadConfig} className="btn-ghost text-xs">
           <RefreshCw size={12} /> Tekrar Dene
         </button>
@@ -931,7 +931,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <h1 className="text-lg font-display font-bold text-white">Ayarlar</h1>
-              <p className="text-xs text-obsidian-400 font-body">Sistem yapilandirmasini yonet</p>
+              <p className="text-xs text-obsidian-400 font-body">Sistem yapılandırmasını yönet</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -967,8 +967,8 @@ export default function SettingsPage() {
         {/* AI Provider Section */}
         <Section
           icon={Brain}
-          title="AI Saglayici"
-          description="Varsayilan AI saglayici ve model ayarlari"
+          title="AI Sağlayıcı"
+          description="Varsayılan AI sağlayıcı ve model ayarları"
         >
           <AIProviderSelector
             selectedProviders={config.ai.providers || []}
@@ -979,8 +979,8 @@ export default function SettingsPage() {
         {/* Messaging Section */}
         <Section
           icon={MessageSquare}
-          title="Mesajlasma Kanallari"
-          description="WhatsApp, Telegram, Discord ve Slack ayarlari"
+          title="Mesajlaşma Kanalları"
+          description="WhatsApp, Telegram, Discord ve Slack ayarları"
           defaultOpen={false}
         >
           <div className="space-y-4">
@@ -1102,7 +1102,7 @@ export default function SettingsPage() {
         <Section
           icon={Clock}
           title="Zamanlama"
-          description="Varsayilan zamanlama ve calistirma ayarlari"
+          description="Varsayılan zamanlama ve çalıştırma ayarları"
           defaultOpen={false}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1118,7 +1118,7 @@ export default function SettingsPage() {
               </select>
             </Field>
 
-            <Field label="Varsayilan Cron">
+            <Field label="Varsayılan Cron">
               <input
                 type="text"
                 value={config.scheduling.defaultCron}
@@ -1176,7 +1176,7 @@ export default function SettingsPage() {
             <div className="glass-panel rounded-xl p-4 space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <Activity size={14} className="text-aurora-cyan" />
-                <span className="text-xs font-semibold text-white">Baglanti</span>
+                <span className="text-xs font-semibold text-white">Bağlantı</span>
               </div>
               <div className="grid grid-cols-1 gap-1.5 text-xs font-mono">
                 <div className="flex justify-between items-center">
@@ -1216,7 +1216,7 @@ export default function SettingsPage() {
                   )}
                   {health.scheduler && (
                     <div className="flex justify-between">
-                      <span className="text-obsidian-500">Zamanlanmis</span>
+                      <span className="text-obsidian-500">Zamanlanmış</span>
                       <span className="text-obsidian-300">{health.scheduler.activeJobs} is</span>
                     </div>
                   )}
@@ -1305,18 +1305,18 @@ export default function SettingsPage() {
         {/* Danger Zone */}
         <Section
           icon={AlertTriangle}
-          title="Tehlikeli Bolge"
-          description="Dikkatli kullanin - geri alinamaz islemler"
+          title="Tehlikeli Bölge"
+          description="Dikkatli kullanın — geri alınamaz işlemler"
           defaultOpen={false}
         >
           <div className="flex items-center justify-between glass-panel rounded-xl p-4">
             <div>
-              <p className="text-sm font-semibold text-white">Kurulumu Sifirla</p>
-              <p className="text-[11px] text-obsidian-400">Tum ayarlari sifirlar ve kurulum sihirbazini yeniden baslatir.</p>
+              <p className="text-sm font-semibold text-white">Kurulumu Sıfırla</p>
+              <p className="text-[11px] text-obsidian-400">Tüm ayarları sıfırlar ve kurulum sihirbazını yeniden başlatır.</p>
             </div>
             <button
               onClick={() => {
-                if (window.confirm('Tum ayarlar sifirlanacak. Emin misiniz?')) {
+                if (window.confirm('Tüm ayarlar sıfırlanacak. Emin misiniz?')) {
                   localStorage.removeItem('sibercron_setup_complete');
                   window.location.href = '/setup';
                 }
@@ -1324,7 +1324,7 @@ export default function SettingsPage() {
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors"
             >
               <Trash2 size={12} />
-              Sifirla
+              Sıfırla
             </button>
           </div>
         </Section>

@@ -187,6 +187,16 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] Sort node: aynı tip hataları düzeltildi, JSON array formatına geçildi
 - [x] Filter, Aggregate, Sort: yeni core nodes, index.ts ve iconRegistry'ye eklendi
 
+#### Oncelik 4h: Bug Fixes & UX Improvements
+- [x] NodeConfigPanel: multiSelect tipi için checkbox grup renderer eklendi
+- [x] NodeConfigPanel: displayOptions.hide desteği eklendi (önceden sadece show vardı)
+- [x] WorkflowListPage: filtreli boş durum context-aware (aktif filtreleri gösterir, tüm filtreleri temizle butonu)
+- [x] ExecuteWorkflow node: başka workflow'u API ile çalıştır (polling + fire-and-forget)
+- [x] WorkflowListPage: execute → /executions?id= navigasyonu (çalışan execution'a yönlendirir)
+- [x] TelegramTrigger: kritik bug düzeltildi — messaging webhook artık TelegramTrigger workflow'larını tetikliyor
+- [x] Code node sandbox: fetch, Request, Response, Headers, AbortController, crypto.randomUUID eklendi
+- [x] SettingsPage: bozuk Türkçe karakterler düzeltildi (Yapılandırma, Sağlayıcı, Mesajlaşma, Sıfırla...)
+
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
 - [ ] Community node marketplace sayfasi
