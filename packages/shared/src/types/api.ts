@@ -64,7 +64,7 @@ export interface WsNodeDone {
   executionId: string;
   nodeId: string;
   nodeName: string;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'skipped';
   output?: Record<string, unknown>[];
   error?: string;
   durationMs: number;

@@ -127,6 +127,16 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] BaseNode/WorkflowCanvas: skipped durumu destegi (slate renk)
 - [x] LiveExecutionPanel: ai_streaming log tipi, otomatik reset (30s)
 
+#### Oncelik 4d: Kalan Gelistirmeler
+- [ ] LoginPage'e "sifre unut" senaryosu (admin reset flow)
+- [ ] FTP/SFTP node: buyuk dosyalar icin streaming download (su an tum dosyayi belleğe cekiyor)
+- [ ] Node gruplama / sub-workflow (complex, lower priority)
+- [ ] Minimap toggle butonu ve konum duzeltme (minor)
+- [ ] Execution history export (CSV/JSON)
+- [ ] Workflow bulk operations (coklu aktifle/pasifle, toplu sil)
+- [ ] AIAgent node: streaming output destegi (SSE)
+- [ ] Node config paneli: JSON field icin syntax highlighting editor
+
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
 - [ ] Community node marketplace sayfasi

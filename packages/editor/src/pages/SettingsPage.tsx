@@ -1221,7 +1221,13 @@ export default function SettingsPage() {
                   {health.uptime !== undefined && (
                     <div className="flex justify-between">
                       <span className="text-obsidian-500">Uptime</span>
-                      <span className="text-obsidian-300">{Math.floor(health.uptime / 60)}d</span>
+                      <span className="text-obsidian-300" title={`${health.uptime}s`}>
+                        {health.uptime < 3600
+                          ? `${Math.floor(health.uptime / 60)}m`
+                          : health.uptime < 86400
+                          ? `${Math.floor(health.uptime / 3600)}h`
+                          : `${Math.floor(health.uptime / 86400)}d`}
+                      </span>
                     </div>
                   )}
                 </div>

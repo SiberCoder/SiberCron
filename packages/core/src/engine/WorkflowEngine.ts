@@ -112,6 +112,14 @@ export class WorkflowEngine {
             nodeName: nodeInstance.name,
             status: 'skipped',
           };
+          // Emit so the live UI can immediately show the skipped status
+          emit('execution:node:done', {
+            executionId,
+            nodeId,
+            nodeName: nodeInstance.name,
+            status: 'skipped',
+            durationMs: 0,
+          });
           continue;
         }
 
