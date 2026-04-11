@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   GitBranch,
@@ -13,6 +13,7 @@ import {
   Activity,
   RefreshCw,
   AlertTriangle,
+  X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
@@ -89,6 +90,7 @@ interface DashboardStats {
   activeWorkflows: number;
   totalExecutions: number;
   successRate: string;
+  avgDuration: string;
 }
 
 interface NodeErrorStat {
@@ -296,6 +298,14 @@ interface WorkflowHealthAlert {
   total: number;
 }
 
+interface ExecutionToast {
+  id: string;
+  workflowName: string;
+  executionId: string;
+  status: 'success' | 'error';
+  durationMs?: number;
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -306,6 +316,7 @@ export default function DashboardPage() {
     activeWorkflows: 0,
     totalExecutions: 0,
     successRate: '0%',
+    avgDuration: '-',
   });
   const [recentExecutions, setRecentExecutions] = useState<IExecution[]>([]);
   const [trendData, setTrendData] = useState<TrendBucket[]>([]);
@@ -313,6 +324,14 @@ export default function DashboardPage() {
   const [topWorkflows, setTopWorkflows] = useState<WorkflowSummary[]>([]);
   const [topFailingNodes, setTopFailingNodes] = useState<NodeErrorStat[]>([]);
   const [healthAlerts, setHealthAlerts] = useState<WorkflowHealthAlert[]>([]);
+  const [toasts, setToasts] = useState<ExecutionToast[]>([]);
+  const toastTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+    const timer = toastTimers.current.get(id);
+    if (timer) { clearTimeout(timer); toastTimers.current.delete(id); }
+  }, []);
 
   const fetchDashboardData = useCallback(async (silent = false, signal?: AbortSignal) => {
     if (!silent) setLoading(true);
@@ -343,7 +362,15 @@ export default function DashboardPage() {
           ? `${((successCount / executions.length) * 100).toFixed(1)}%`
           : '0%';
 
-      setStats({ totalWorkflows, activeWorkflows, totalExecutions, successRate });
+      const durationsMs = executions
+        .filter((e) => typeof e.durationMs === 'number' && e.durationMs > 0)
+        .map((e) => e.durationMs as number);
+      const avgMs = durationsMs.length > 0
+        ? durationsMs.reduce((a, b) => a + b, 0) / durationsMs.length
+        : 0;
+      const avgDuration = avgMs > 0 ? formatDuration(Math.round(avgMs)) : '-';
+
+      setStats({ totalWorkflows, activeWorkflows, totalExecutions, successRate, avgDuration });
       setWorkflows(workflows);
       setRecentExecutions(executions.slice(0, 5));
       if (trendRes?.data) setTrendData(trendRes.data);
@@ -408,11 +435,20 @@ export default function DashboardPage() {
     return () => controller.abort();
   }, [fetchDashboardData]);
 
-  // Socket.io: refresh stats when any execution completes (shared singleton)
-  // Note: 'execution:completed' is room-scoped; use the global 'workflow:execution:completed' broadcast instead
+  // Socket.io: refresh stats + show toast when any execution completes
   useEffect(() => {
     const socket = getSocket();
-    const onCompleted = () => fetchDashboardData(true);
+    const onCompleted = (data: { workflowName?: string; status: string; durationMs?: number }) => {
+      fetchDashboardData(true);
+      const name = data.workflowName ?? 'Workflow';
+      const dur = data.durationMs
+        ?         : '';
+      if (data.status === 'success') {
+        toast.success(, 5000);
+      } else if (data.status === 'error') {
+        toast.error(, 6000);
+      }
+    };
     socket.on('workflow:execution:completed', onCompleted);
     return () => {
       socket.off('workflow:execution:completed', onCompleted);
@@ -452,6 +488,14 @@ export default function DashboardPage() {
       accent: 'text-aurora-amber',
       glow: 'from-aurora-amber/20 to-aurora-amber/5',
       iconBg: 'bg-aurora-amber/10',
+    },
+    {
+      label: 'Avg Duration',
+      value: stats.avgDuration,
+      icon: Clock,
+      accent: 'text-aurora-violet',
+      glow: 'from-aurora-violet/20 to-aurora-violet/5',
+      iconBg: 'bg-aurora-violet/10',
     },
   ];
 
