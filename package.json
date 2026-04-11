@@ -1,0 +1,31 @@
+{
+  "name": "sibercron",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered workflow automation platform",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "clean": "turbo clean"
+  },
+  "keywords": [
+    "workflow",
+    "automation",
+    "ai",
+    "cron",
+    "scheduler",
+    "n8n",
+    "openclaw"
+  ],
+  "author": "SiberCron",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "~20.17.0",
+    "typescript": "~5.6.2"
+  }
+}

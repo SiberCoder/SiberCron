@@ -1,0 +1,35 @@
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# Coverage & logs
+coverage/
+*.log
+
+# Vite
+.vite/
+
+# Data files (user-specific runtime data)
+packages/server/data/
+*.db
+*.sqlite
+*.sqlite3

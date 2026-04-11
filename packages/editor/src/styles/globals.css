@@ -1,0 +1,515 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   OBSIDIAN AURORA — Next-Gen Design System v2
+   Enhanced with live animations & dynamic effects
+   ============================================================ */
+
+@layer base {
+  body {
+    @apply bg-obsidian-950 text-obsidian-100 antialiased;
+    font-family: 'Satoshi', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.01em;
+    overflow-x: hidden;
+  }
+
+  * {
+    @apply border-white/[0.06];
+  }
+
+  /* Premium scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 100px;
+    transition: background 0.3s;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(6, 214, 160, 0.3);
+  }
+
+  /* Selection color */
+  ::selection {
+    background: rgba(6, 214, 160, 0.25);
+    color: #fff;
+  }
+}
+
+/* ============================================================
+   GLASS MORPHISM UTILITIES
+   ============================================================ */
+
+@layer components {
+  /* Glass card with animated border */
+  .glass-card {
+    @apply relative overflow-hidden;
+    background: rgba(20, 28, 40, 0.5);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 50%, rgba(6, 214, 160, 0.05) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  /* Animated rotating border on hover */
+  .glass-card-glow {
+    @apply relative overflow-hidden;
+    background: rgba(20, 28, 40, 0.5);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid transparent;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-card-glow::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: conic-gradient(
+      from var(--border-angle, 0deg),
+      transparent 0%,
+      rgba(6, 214, 160, 0.3) 10%,
+      transparent 20%,
+      transparent 40%,
+      rgba(17, 138, 178, 0.3) 50%,
+      transparent 60%,
+      transparent 80%,
+      rgba(99, 102, 241, 0.2) 90%,
+      transparent 100%
+    );
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s;
+    animation: rotateBorder 4s linear infinite;
+  }
+
+  .glass-card-glow::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: rgba(20, 28, 40, 0.95);
+    z-index: -1;
+  }
+
+  .glass-card-glow:hover::before {
+    opacity: 1;
+  }
+
+  @property --border-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes rotateBorder {
+    to { --border-angle: 360deg; }
+  }
+
+  /* Glass panel (sidebar, panels) */
+  .glass-panel {
+    background: rgba(15, 23, 32, 0.75);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  /* Glass input with animated focus */
+  .glass-input {
+    @apply w-full rounded-xl px-4 py-2.5 text-sm text-white transition-all duration-300;
+    background: rgba(15, 23, 32, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .glass-input::placeholder {
+    @apply text-obsidian-500;
+    transition: color 0.3s;
+  }
+
+  .glass-input:focus {
+    outline: none;
+    border-color: rgba(6, 214, 160, 0.4);
+    box-shadow: 0 0 0 3px rgba(6, 214, 160, 0.1), 0 0 20px rgba(6, 214, 160, 0.08);
+    background: rgba(15, 23, 32, 0.8);
+  }
+
+  .glass-input:focus::placeholder {
+    color: rgba(6, 214, 160, 0.3);
+  }
+
+  /* ---- Buttons ---- */
+
+  /* Aurora button with shimmer sweep */
+  .btn-aurora {
+    @apply relative inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white overflow-hidden;
+    background: linear-gradient(135deg, #06d6a0 0%, #118ab2 100%);
+    box-shadow: 0 4px 16px rgba(6, 214, 160, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-aurora:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 32px rgba(6, 214, 160, 0.4), 0 0 60px rgba(6, 214, 160, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-aurora:active {
+    transform: translateY(0) scale(0.98);
+    transition-duration: 0.1s;
+  }
+
+  /* Shimmer sweep */
+  .btn-aurora::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -100%;
+    width: 60%;
+    height: 200%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.6s ease;
+  }
+
+  .btn-aurora:hover::after {
+    left: 150%;
+  }
+
+  /* Ghost button with hover glow */
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-ghost:hover {
+    color: #06d6a0;
+    background: rgba(6, 214, 160, 0.06);
+    border-color: rgba(6, 214, 160, 0.15);
+    box-shadow: 0 0 20px rgba(6, 214, 160, 0.05);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost:active {
+    transform: translateY(0);
+    transition-duration: 0.1s;
+  }
+
+  /* Status badge with dot pulse */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide;
+  }
+
+  /* Aurora divider — animated shimmer */
+  .aurora-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(6, 214, 160, 0.2) 30%, rgba(17, 138, 178, 0.2) 70%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmerDivider 4s ease-in-out infinite;
+  }
+
+  @keyframes shimmerDivider {
+    0%, 100% { background-position: 0% 0; }
+    50% { background-position: 100% 0; }
+  }
+
+  /* Staggered animations */
+  .stagger-1 { animation-delay: 0.06s; }
+  .stagger-2 { animation-delay: 0.12s; }
+  .stagger-3 { animation-delay: 0.18s; }
+  .stagger-4 { animation-delay: 0.24s; }
+  .stagger-5 { animation-delay: 0.3s; }
+  .stagger-6 { animation-delay: 0.36s; }
+  .stagger-7 { animation-delay: 0.42s; }
+  .stagger-8 { animation-delay: 0.48s; }
+
+  /* ---- Live Activity Indicators ---- */
+
+  /* Breathing dot */
+  .live-dot {
+    @apply relative;
+  }
+  .live-dot::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: inherit;
+    opacity: 0.4;
+    animation: breathe 2s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.8); opacity: 0; }
+  }
+
+  /* Activity ring spinner */
+  .activity-ring {
+    @apply relative;
+  }
+  .activity-ring::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: #06d6a0;
+    animation: spin 1.5s linear infinite;
+  }
+
+  /* Shimmer loading skeleton */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmerSlide 1.5s ease-in-out infinite;
+    border-radius: 8px;
+  }
+
+  @keyframes shimmerSlide {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Hover lift effect */
+  .hover-lift {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 40px rgba(6, 214, 160, 0.05);
+  }
+
+  /* Hover tilt 3D */
+  .hover-tilt {
+    transition: transform 0.3s ease;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+
+  /* Magnetic hover */
+  .magnetic-hover {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .magnetic-hover:hover {
+    transform: translateY(-3px) scale(1.02);
+  }
+  .magnetic-hover:active {
+    transform: translateY(0) scale(0.98);
+    transition-duration: 0.1s;
+  }
+
+  /* Noise texture overlay */
+  .noise-overlay::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Gradient text */
+  .text-aurora-gradient {
+    background: linear-gradient(135deg, #06d6a0 0%, #118ab2 50%, #6366f1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Animated gradient text */
+  .text-aurora-animated {
+    background: linear-gradient(135deg, #06d6a0 0%, #118ab2 25%, #6366f1 50%, #118ab2 75%, #06d6a0 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientText 4s ease-in-out infinite;
+  }
+
+  @keyframes gradientText {
+    0%, 100% { background-position: 0% center; }
+    50% { background-position: 200% center; }
+  }
+
+  /* Pulse ring for live elements */
+  .pulse-ring {
+    position: relative;
+  }
+  .pulse-ring::before,
+  .pulse-ring::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid currentColor;
+    opacity: 0;
+  }
+  .pulse-ring::before {
+    animation: pulseRing 2s ease-out infinite;
+  }
+  .pulse-ring::after {
+    animation: pulseRing 2s ease-out 1s infinite;
+  }
+
+  @keyframes pulseRing {
+    0% { transform: scale(1); opacity: 0.5; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+
+  /* Typewriter cursor */
+  .typewriter-cursor::after {
+    content: '|';
+    animation: blink 1s step-end infinite;
+    color: #06d6a0;
+    font-weight: 300;
+    margin-left: 2px;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+}
+
+/* ============================================================
+   REACT FLOW — Obsidian Aurora Theme
+   ============================================================ */
+
+.react-flow__background {
+  background-color: #0a1018 !important;
+}
+
+.react-flow__minimap {
+  background-color: rgba(15, 23, 32, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  backdrop-filter: blur(12px) !important;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(6, 214, 160, 0.08) !important;
+  stroke: rgba(6, 214, 160, 0.4) !important;
+  stroke-width: 1;
+}
+
+.react-flow__controls {
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+.react-flow__controls-button {
+  background-color: rgba(15, 23, 32, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.04) !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+  width: 32px !important;
+  height: 32px !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: rgba(6, 214, 160, 0.1) !important;
+  color: #06d6a0 !important;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor !important;
+}
+
+.react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.08) !important;
+  stroke-width: 2 !important;
+  transition: stroke 0.3s ease !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #06d6a0 !important;
+  filter: drop-shadow(0 0 8px rgba(6, 214, 160, 0.5));
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke: #06d6a0 !important;
+  stroke-dasharray: 8 4;
+  animation: flowDash 1s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(6, 214, 160, 0.3));
+}
+
+@keyframes flowDash {
+  from { stroke-dashoffset: 12; }
+  to { stroke-dashoffset: 0; }
+}
+
+.react-flow__connection-line {
+  stroke: #06d6a0 !important;
+  stroke-width: 2 !important;
+  filter: drop-shadow(0 0 10px rgba(6, 214, 160, 0.6));
+}
+
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid rgba(255, 255, 255, 0.1) !important;
+  background-color: rgba(15, 23, 32, 0.9) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.react-flow__handle:hover,
+.react-flow__handle-connecting {
+  border-color: #06d6a0 !important;
+  background-color: #06d6a0 !important;
+  transform: scale(1.5);
+  box-shadow: 0 0 16px rgba(6, 214, 160, 0.6), 0 0 32px rgba(6, 214, 160, 0.2);
+}
+
+.react-flow__attribution {
+  display: none !important;
+}
+
+/* ============================================================
+   GLOBAL FOCUS STYLES
+   ============================================================ */
+
+*:focus-visible {
+  outline: 2px solid rgba(6, 214, 160, 0.5);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
