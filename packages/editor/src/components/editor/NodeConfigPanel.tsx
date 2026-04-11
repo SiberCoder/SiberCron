@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw, Eye, EyeOff, Tag, FileText, Settings2, Timer, SkipForward, ExternalLink } from 'lucide-react';
+import JsonEditor from './JsonEditor';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import { useNavigate } from 'react-router-dom';
@@ -752,20 +753,18 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
 
     case 'json':
       input = (
-        <textarea
+        <JsonEditor
           value={(value as string) ?? ''}
-          onChange={(e) => { onChange(name, e.target.value); if (touchedRef.current) { const err = validateJson(e.target.value) ?? validateRequired(e.target.value); setFieldError(err); } }}
+          onChange={(v) => {
+            onChange(name, v);
+            if (touchedRef.current) {
+              const err = validateJson(v) ?? validateRequired(v);
+              setFieldError(err);
+            }
+          }}
           onBlur={() => {
             touchedRef.current = true;
             const str = (value as string) ?? '';
-            // Auto-format valid JSON on blur
-            if (str.trim()) {
-              try {
-                const parsed = JSON.parse(str);
-                const formatted = JSON.stringify(parsed, null, 2);
-                if (formatted !== str) onChange(name, formatted);
-              } catch { /* invalid JSON, leave as-is */ }
-            }
             const jsonErr = validateJson(str);
             if (jsonErr) { setFieldError(jsonErr); return; }
             const reqErr = validateRequired(str);
@@ -773,8 +772,8 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
             setFieldError(null);
           }}
           placeholder={placeholder ?? '{}'}
-          rows={4}
-          className={clsx('glass-input text-xs font-mono resize-y min-h-[60px]', errorBorder)}
+          hasError={hasError}
+          rows={5}
         />
       );
       break;

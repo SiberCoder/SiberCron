@@ -513,3 +513,18 @@
   outline-offset: 2px;
   border-radius: 8px;
 }
+
+/* ============================================================
+   JSON SYNTAX HIGHLIGHTING (JsonEditor component)
+   ============================================================ */
+
+.json-highlight {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.json-highlight .json-key   { color: #7dd3fc; }   /* aurora-blue-light */
+.json-highlight .json-str   { color: #86efac; }   /* aurora-emerald-light */
+.json-highlight .json-num   { color: #fcd34d; }   /* aurora-amber-light */
+.json-highlight .json-bool  { color: #c084fc; }   /* aurora-violet-light */
+.json-highlight .json-null  { color: #f87171; }   /* aurora-rose-light */
+.json-highlight .json-placeholder { color: rgba(100,116,139,0.6); }
