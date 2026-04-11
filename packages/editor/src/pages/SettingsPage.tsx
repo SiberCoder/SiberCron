@@ -25,7 +25,7 @@ import {
   Users,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { apiGet, apiPost } from '../api/client';
+import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
 import type { AIProviderConfig } from '@sibercron/shared';
 import AIProviderSelector from '../components/editor/AIProviderSelector';
 import { API_BASE_URL, SOCKET_URL } from '../lib/config';
@@ -126,7 +126,6 @@ interface ApiKeyInfo {
 }
 
 function ApiKeySection() {
-  const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
@@ -137,12 +136,11 @@ function ApiKeySection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/api-keys', { headers: getAuthHeader() });
-      const data = await res.json() as ApiKeyInfo[];
+      const data = await apiGet<ApiKeyInfo[]>('/auth/api-keys');
       setKeys(Array.isArray(data) ? data : []);
     } catch { /* ignore */ }
     setLoading(false);
-  }, [getAuthHeader]);
+  }, []);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -150,12 +148,7 @@ function ApiKeySection() {
     if (!newName.trim()) return;
     setCreating(true);
     try {
-      const res = await fetch('/api/v1/auth/api-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-      const data = await res.json() as ApiKeyInfo & { key?: string };
+      const data = await apiPost<ApiKeyInfo & { key?: string }>('/auth/api-keys', { name: newName.trim() });
       if (data.key) setNewKey(data.key);
       setNewName('');
       void load();
@@ -165,7 +158,7 @@ function ApiKeySection() {
 
   const handleRevoke = async (id: string) => {
     if (!window.confirm('Bu API anahtarını iptal etmek istediğinizden emin misiniz?')) return;
-    await fetch(`/api/v1/auth/api-keys/${id}`, { method: 'DELETE', headers: getAuthHeader() });
+    await apiDelete(`/auth/api-keys/${id}`);
     void load();
   };
 
@@ -269,7 +262,6 @@ interface UserInfo {
 
 function UserManagementSection() {
   const currentUser = useAuthStore((s) => s.user);
-  const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUsername, setNewUsername] = useState('');
@@ -286,12 +278,11 @@ function UserManagementSection() {
     if (!isAdmin) { setLoading(false); return; }
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/users', { headers: getAuthHeader() });
-      const data = await res.json() as UserInfo[];
+      const data = await apiGet<UserInfo[]>('/auth/users');
       setUsers(Array.isArray(data) ? data : []);
     } catch { /* ignore */ }
     setLoading(false);
-  }, [isAdmin, getAuthHeader]);
+  }, [isAdmin]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -306,13 +297,7 @@ function UserManagementSection() {
     if (!newUsername.trim() || !newPassword.trim()) return;
     setCreating(true);
     try {
-      const res = await fetch('/api/v1/auth/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ username: newUsername.trim(), password: newPassword, role: newRole }),
-      });
-      const data = await res.json() as UserInfo & { error?: string };
-      if (!res.ok) throw new Error(data.error ?? 'Oluşturulamadı');
+      const data = await apiPost<UserInfo>('/auth/users', { username: newUsername.trim(), password: newPassword, role: newRole });
       setMsg({ type: 'success', text: `"${data.username}" kullanıcısı oluşturuldu` });
       setNewUsername(''); setNewPassword(''); setNewRole('viewer');
       void load();
@@ -326,8 +311,7 @@ function UserManagementSection() {
   const handleDelete = async (id: string, username: string) => {
     if (!window.confirm(`"${username}" kullanıcısını silmek istediğinizden emin misiniz?`)) return;
     try {
-      const res = await fetch(`/api/v1/auth/users/${id}`, { method: 'DELETE', headers: getAuthHeader() });
-      if (!res.ok) throw new Error('Silinemedi');
+      await apiDelete(`/auth/users/${id}`);
       setMsg({ type: 'success', text: `"${username}" silindi` });
       void load();
     } catch {
@@ -341,12 +325,7 @@ function UserManagementSection() {
       return;
     }
     try {
-      const res = await fetch(`/api/v1/auth/users/${id}/reset-password`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ newPassword: resetPasswordValue }),
-      });
-      if (!res.ok) throw new Error('Şifre sıfırlanamadı');
+      await apiPut(`/auth/users/${id}/reset-password`, { newPassword: resetPasswordValue });
       setMsg({ type: 'success', text: 'Şifre sıfırlandı' });
       setResetPasswordUserId(null);
       setResetPasswordValue('');
@@ -357,12 +336,7 @@ function UserManagementSection() {
 
   const handleRoleChange = async (id: string, role: 'admin' | 'viewer') => {
     try {
-      const res = await fetch(`/api/v1/auth/users/${id}/role`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ role }),
-      });
-      if (!res.ok) throw new Error('Rol değiştirilemedi');
+      await apiPut(`/auth/users/${id}/role`, { role });
       setMsg({ type: 'success', text: 'Rol güncellendi' });
       void load();
     } catch {
@@ -533,33 +507,23 @@ const TTL_PRESETS = [
 
 function SecuritySection() {
   const user = useAuthStore((s) => s.user);
-  const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
   const [ttl, setTtl] = useState('8h');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    fetch('/api/v1/setup/auth-settings', { headers: getAuthHeader() })
-      .then((r) => r.json())
-      .then((d: { jwtAccessTtl?: string }) => {
-        if (d.jwtAccessTtl) setTtl(d.jwtAccessTtl);
-      })
+    apiGet<{ jwtAccessTtl?: string }>('/setup/auth-settings')
+      .then((d) => { if (d.jwtAccessTtl) setTtl(d.jwtAccessTtl); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [getAuthHeader]);
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
     setMsg(null);
     try {
-      const res = await fetch('/api/v1/setup/auth-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ jwtAccessTtl: ttl }),
-      });
-      const data = await res.json() as { jwtAccessTtl?: string; error?: string };
-      if (!res.ok) throw new Error(data.error ?? 'Kayıt başarısız');
+      const data = await apiPost<{ jwtAccessTtl?: string }>('/setup/auth-settings', { jwtAccessTtl: ttl });
       if (data.jwtAccessTtl) setTtl(data.jwtAccessTtl);
       setMsg({ type: 'success', text: `Token süresi "${data.jwtAccessTtl}" olarak güncellendi. Yeni giriş yapıldığında geçerli olur.` });
     } catch (err) {
@@ -655,7 +619,6 @@ function SecuritySection() {
 
 function AccountSection() {
   const user = useAuthStore((s) => s.user);
-  const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -675,13 +638,7 @@ function AccountSection() {
     setSaving(true);
     setMsg(null);
     try {
-      const res = await fetch('/api/v1/auth/change-password', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
-      });
-      const data = await res.json() as { success?: boolean; error?: string };
-      if (!res.ok) throw new Error(data.error ?? 'Şifre değiştirilemedi');
+      await apiPut('/auth/change-password', { currentPassword: currentPw, newPassword: newPw });
       setMsg({ type: 'success', text: 'Şifre başarıyla değiştirildi' });
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
     } catch (err) {

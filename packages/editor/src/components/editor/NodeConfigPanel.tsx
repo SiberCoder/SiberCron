@@ -242,7 +242,9 @@ function CronPreview({ expression }: { expression: string }) {
 function WebhookUrlBanner({ path }: { path: string }) {
   const [copied, setCopied] = useState(false);
   const webhookPath = path?.startsWith('/') ? path : `/${path || 'webhook'}`;
-  const url = `${window.location.protocol}//${window.location.hostname}:3001/api/v1/webhook${webhookPath}`;
+  // Use configured API base URL; fall back to same-host when running behind a proxy
+  const apiBase = API_BASE_URL || `${window.location.protocol}//${window.location.host}`;
+  const url = `${apiBase}/api/v1/webhook${webhookPath}`;
 
   const copy = () => {
     navigator.clipboard.writeText(url).then(() => {

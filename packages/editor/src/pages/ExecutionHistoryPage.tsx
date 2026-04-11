@@ -287,7 +287,7 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
       .catch(() => { /* best-effort */ });
 
     // WebSocket: subscribe to real-time log events from the server
-    const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
+    const socket = io(SOCKET_URL, { transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: 3, timeout: 10000 });
 
     socket.on('connect', () => {
       socket.emit('subscribe:execution', executionId);
@@ -488,7 +488,7 @@ export default function ExecutionHistoryPage() {
 
   // WebSocket: subscribe to running executions for live updates
   useEffect(() => {
-    const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
+    const socket = io(SOCKET_URL, { transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: 3, timeout: 10000 });
     socketRef.current = socket;
 
     socket.on('execution:node:done', (data: WsNodeDone & { executionId?: string }) => {

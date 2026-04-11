@@ -31,6 +31,8 @@ import { GoogleSheetsNode } from './core/GoogleSheets.node.js';
 import { FtpSftpNode } from './core/FtpSftp.node.js';
 import { GoogleDriveNode } from './core/GoogleDrive.node.js';
 import { NotionDatabaseNode } from './core/NotionDatabase.node.js';
+import { SwitchNode } from './core/Switch.node.js';
+import { DateTimeNode } from './core/DateTime.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -64,6 +66,8 @@ export const builtinNodes: INodeType[] = [
   FtpSftpNode,
   GoogleDriveNode,
   NotionDatabaseNode,
+  SwitchNode,
+  DateTimeNode,
 ];
 
 export {
@@ -98,4 +102,6 @@ export {
   FtpSftpNode,
   GoogleDriveNode,
   NotionDatabaseNode,
+  SwitchNode,
+  DateTimeNode,
 };

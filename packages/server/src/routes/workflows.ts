@@ -16,6 +16,21 @@ import { z } from 'zod';
 import { db } from '../db/database.js';
 import { schedulerService } from '../services/schedulerService.js';
 
+// ── Helpers ────────────────────────────────────────────────────────────
+
+/** Valid URL-safe webhook path: starts with /, only alphanumeric/-/_ */
+const WEBHOOK_PATH_RE = /^\/[a-zA-Z0-9\-_/]+$/;
+
+/** Reserved system prefixes that cannot be used as webhook paths */
+const RESERVED_PATHS = ['/health', '/metrics', '/auth', '/api', '/docs'];
+
+function validateWebhookPath(path: string): string | null {
+  if (!path.startsWith('/')) path = `/${path}`;
+  if (!WEBHOOK_PATH_RE.test(path)) return 'Webhook path must contain only letters, numbers, hyphens, underscores, and slashes';
+  if (RESERVED_PATHS.some((r) => path.startsWith(r))) return `Webhook path cannot start with reserved prefix: ${RESERVED_PATHS.join(', ')}`;
+  return null; // valid
+}
+
 // ── Zod Schemas ───────────────────────────────────────────────────────
 
 const CreateWorkflowSchema = z.object({

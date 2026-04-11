@@ -59,7 +59,7 @@ export default function LiveExecutionPanel() {
   useEffect(() => {
     if (!activeExecutionId) return;
 
-    const socket = io(SOCKET_URL, { transports: ['websocket'] });
+    const socket = io(SOCKET_URL, { transports: ['polling', 'websocket'], reconnection: true, timeout: 10000 });
     socketRef.current = socket;
 
     socket.on('connect', () => {

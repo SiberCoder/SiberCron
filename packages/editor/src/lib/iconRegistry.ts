@@ -41,6 +41,10 @@ import {
   Shield,
   Users,
   Layers,
+  CalendarClock,
+  Rss,
+  HardDrive,
+  FolderOpen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -78,6 +82,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Shield,
   Users,
   Layers,
+  CalendarClock,
+  Rss,
+  HardDrive,
+  FolderOpen,
 };
 
 /**

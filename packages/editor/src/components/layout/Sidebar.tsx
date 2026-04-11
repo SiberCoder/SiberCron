@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   GitBranch,
@@ -16,7 +17,10 @@ import {
   User,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { io } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
+import { SOCKET_URL } from '../../lib/config';
+import { apiGet } from '../../api/client';
 
 const NAV_ITEMS = [
   { to: '/chat', icon: Brain, label: 'AI Sohbet', accent: true },
@@ -34,10 +38,31 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+/** Running execution count badge — updates via socket events */
+function useRunningCount() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    // Initial fetch
+    apiGet<{ data: { status: string }[] }>('/executions?status=running&limit=50')
+      .then((r) => setCount(r.data?.filter((e) => e.status === 'running').length ?? 0))
+      .catch(() => {});
+
+    // Socket: update on execution start/complete
+    const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
+    socket.on('execution:started', () => setCount((c) => c + 1));
+    socket.on('execution:completed', () => setCount((c) => Math.max(0, c - 1)));
+    return () => { socket.disconnect(); };
+  }, []);
+
+  return count;
+}
+
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
+  const runningCount = useRunningCount();
 
   function handleLogout() {
     logout();
@@ -142,7 +167,18 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   />
                 </div>
                 {!collapsed && (
-                  <span className="relative z-10">{label}</span>
+                  <span className="relative z-10 flex-1">{label}</span>
+                )}
+                {/* Running executions badge on Executions nav item */}
+                {to === '/executions' && runningCount > 0 && (
+                  <span
+                    className={clsx(
+                      'relative z-10 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold bg-aurora-blue text-white animate-pulse',
+                      collapsed && 'absolute top-1 right-1 min-w-[14px] h-[14px] text-[8px]',
+                    )}
+                  >
+                    {runningCount > 9 ? '9+' : runningCount}
+                  </span>
                 )}
               </>
             )}

@@ -285,7 +285,8 @@ export class Database {
   }
 
   listWorkflows(query: WorkflowListQuery = {}): PaginatedResponse<IWorkflow> {
-    const { page = 1, limit = 20, search, isActive, triggerType } = query;
+    const { page = 1, search, isActive, triggerType } = query;
+    const limit = Math.min(query.limit ?? 20, 1000); // cap at 1000 to prevent DoS
 
     let items = Array.from(this.workflows.values());
 
@@ -400,7 +401,8 @@ export class Database {
   }
 
   listExecutions(query: ExecutionListQuery = {}): PaginatedResponse<IExecution> {
-    const { page = 1, limit = 20, workflowId, status, workflowName, startDate, endDate, triggeredBy } = query;
+    const { page = 1, workflowId, status, workflowName, startDate, endDate, triggeredBy } = query;
+    const limit = Math.min(query.limit ?? 20, 1000); // cap at 1000 to prevent DoS
 
     let items = Array.from(this.executions.values());
 

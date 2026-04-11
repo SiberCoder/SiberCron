@@ -53,14 +53,23 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
     }
 
     const socket = io(SOCKET_URL, {
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      timeout: 10000,
     });
 
     socket.on('connect', () => {
       socket.emit('subscribe:execution', executionId);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('[ExecutionStore] Socket connection error:', err.message);
+    });
+
+    socket.on('error', (err) => {
+      console.error('[ExecutionStore] Socket error:', err);
     });
 
     socket.io.on('reconnect', () => {
@@ -144,14 +153,18 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
     });
 
     // ── Live execution logs (AutonomousDev, agentLoop, etc.) ──────────
+    const VALID_LOG_TYPES: LogEntry['type'][] = ['info', 'success', 'error', 'ai_request', 'ai_response', 'auto_answer', 'iteration', 'system'];
     socket.on('execution:log', (data: { executionId: string; level: string; message: string; data?: Record<string, unknown> }) => {
+      const logType: LogEntry['type'] = VALID_LOG_TYPES.includes(data.level as LogEntry['type'])
+        ? (data.level as LogEntry['type'])
+        : 'info';
       set((state) => ({
         executionLog: [
           ...state.executionLog,
           {
             timestamp: new Date().toISOString(),
             message: data.message,
-            type: data.level as LogEntry['type'],
+            type: logType,
           },
         ],
       }));

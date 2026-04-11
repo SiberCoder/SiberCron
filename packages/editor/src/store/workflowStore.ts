@@ -391,7 +391,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   importWorkflow: (json: string) => {
-    const data = JSON.parse(json);
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(json) as Record<string, unknown>;
+    } catch {
+      throw new Error('Invalid workflow JSON: could not parse file');
+    }
     if (!data.nodes || !data.edges) {
       throw new Error('Invalid workflow JSON: missing nodes or edges');
     }
