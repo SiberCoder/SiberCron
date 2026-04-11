@@ -89,9 +89,9 @@ Tümü `/api/v1/` altında:
 ## Node Tipleri (packages/nodes/src/)
 
 **Trigger:** ManualTrigger, CronTrigger, WebhookTrigger
-**Core:** HttpRequest, Code, Conditional, Transform, Merge, Delay, Log, Loop, Split
+**Core:** HttpRequest (auth: bearer/basic/apiKey, query params, timeout), Code (vm sandbox: Date/JSON/Math/console/URL/Promise), Conditional (19 operatör: equals, contains, startsWith, regex, exists, isEmpty, isType...), Transform (pick/remove/rename/set/flatten/wrap, çoklu field, auto-type), Merge (append/combineByPosition/combineByField/keepFirst/keepLast/multiplex), Delay, Log (select logLevel, expression desteği), Loop (each/count/arrayField), Split (chunk/byField/splitText)
 **AI:** AIAgent (çoklu provider), AutonomousDev (Claude CLI loop)
-**Messaging:** TelegramSend, DiscordSend, SlackSend, WhatsAppReceive, WhatsAppSend, EmailSMTP
+**Messaging:** TelegramSend (text/photo/document, parseMode, reply), DiscordSend (webhook + bot API, embeds, username/avatar override), SlackSend (blocks, attachments, thread reply, unfurl control), WhatsAppReceive, WhatsAppSend, EmailSMTP (HTML/text, CC/BCC)
 
 Her node `INodeType` interface'ini implemente eder: `{ definition: INodeTypeDefinition, execute(context) }`
 

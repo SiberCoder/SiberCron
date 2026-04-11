@@ -16,11 +16,12 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
   - [x] NodeExecutor (tekil node calistirma, timeout, error handling)
   - [x] NodeRegistry (node kayit ve kesfetme)
   - [x] ExecutionContext (node'lara input/parameter/credential saglar)
-- [x] **@sibercron/nodes** - 13 hazir node
+  - [x] ExpressionEvaluator ({{ $json.field }} template syntax)
+- [x] **@sibercron/nodes** - 20 hazir node (guncellendi)
   - [x] Triggers: ManualTrigger, CronTrigger, WebhookTrigger
-  - [x] AI: AIAgent (OpenAI + Anthropic destegi)
-  - [x] Core: HttpRequest, Code, Conditional, Transform, Merge, Delay
-  - [x] Messaging: TelegramSend, DiscordSend, SlackSend
+  - [x] AI: AIAgent (coklu provider), AutonomousDev (Claude CLI loop)
+  - [x] Core: HttpRequest (auth/timeout/queryParams), Code (guvenli sandbox), Conditional (19 operator), Transform (pick/remove/rename/set/flatten/wrap), Merge (6 mod), Delay, Log (select logLevel), Loop (3 mod), Split (3 mod)
+  - [x] Messaging: TelegramSend (text/photo/doc), DiscordSend (webhook+bot/embed), SlackSend (blocks/thread), WhatsAppReceive, WhatsAppSend, EmailSMTP
 - [x] **@sibercron/server** - Fastify REST API
   - [x] Workflow CRUD + execute + activate/deactivate
   - [x] Execution history API
@@ -29,6 +30,10 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
   - [x] Health check endpoint
   - [x] Socket.io gercek zamanli execution streaming
   - [x] In-memory database (MVP icin)
+  - [x] BullMQ queue (Redis opsiyonel, fallback var)
+  - [x] Cron scheduler (node-cron)
+  - [x] Webhook endpoint handler
+  - [x] Credential sifreleme (AES-256-GCM)
 - [x] **@sibercron/editor** - React gorsel editor
   - [x] React Flow tabanli workflow canvas
   - [x] Node Palette (kategorili, surukleme destekli)
@@ -43,6 +48,10 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
   - [x] Templates sayfasi (4 hazir sablon)
   - [x] Zustand state management (workflow, execution, nodeRegistry stores)
   - [x] Socket.io client (canli execution takibi)
+  - [x] Undo/Redo (history stack, max 50)
+  - [x] Workflow import/export (JSON)
+  - [x] Node output viewer (collapsible JSON tree)
+  - [x] Keyboard shortcuts (Delete, Ctrl+S, Ctrl+Z, Ctrl+Shift+Z, Ctrl+E, Escape)
 - [x] **Docker** - Dockerfile (multi-stage) + docker-compose + nginx
 - [x] **Dokumantasyon** - README, CONTRIBUTING, LICENSE (MIT), architecture.md, plugin-development.md, self-hosting.md
 - [x] **GitHub** - CI workflow, issue templates (bug + feature)
@@ -52,54 +61,43 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 ### Yapilacaklar (Oncelik Sirasina Gore)
 
 #### Oncelik 1: Calisir Hale Getirme
-- [ ] pnpm install + tum paketleri build etme
-- [ ] TypeScript derleme hatalarini duzeltme
+- [x] pnpm install + tum paketleri build etme
+- [x] TypeScript derleme hatalarini duzeltme
 - [ ] Server + Editor'u birlikte calistirma testi
 - [ ] Temel akis testi: workflow olustur -> kaydet -> calistir
 
-#### Oncelik 2: Eksik Ozellikler (Kisa Vade)
-- [ ] Gercek SQLite/PostgreSQL veritabani (simdilik in-memory)
-- [ ] Knex.js migration dosyalari
-- [ ] BullMQ queue entegrasyonu (simdilik senkron calistirma)
-- [ ] Cron scheduler (aktif workflow'lari zamaninda calistirma)
-- [ ] Webhook endpoint handler (dinamik route olusturma)
-- [ ] Credential sifreleme (AES-256-GCM)
-- [ ] Expression evaluator ({{ $json.field }} sablonlari)
-
-#### Oncelik 3: Ek Node'lar
-- [ ] AISummarizer node
-- [ ] AIClassifier node
-- [ ] AIWebBrowser node (web scraping)
+#### Oncelik 2: Ek Node'lar
+- [ ] AISummarizer node (metin ozetleme)
+- [ ] AIClassifier node (metin siniflandirma)
+- [ ] AIWebBrowser node (web scraping + AI ozet)
 - [ ] TelegramTrigger node (incoming messages)
-- [ ] GoogleSheets node
+- [ ] GoogleSheets node (read/write/append)
 - [ ] MySQL / PostgreSQL query node
-- [ ] Redis node
-- [ ] Loop node
-- [ ] Split node
-- [ ] Email (SMTP) node
+- [ ] Redis node (get/set/del/publish)
+- [ ] FTP/SFTP node
+- [ ] RSS Feed node
 
-#### Oncelik 4: Editor Gelistirmeleri
-- [ ] Undo/Redo (workflow editor'de)
-- [ ] Workflow import/export (JSON)
-- [ ] Template'den workflow olusturma
-- [ ] Node output viewer (execution sonrasi JSON agaci)
-- [ ] Keyboard shortcuts (Delete, Ctrl+S, Ctrl+Z)
+#### Oncelik 3: Editor Gelistirmeleri
+- [ ] Template'den workflow olusturma (templates sayfasindan)
 - [ ] Minimap iyilestirmeleri
 - [ ] Edge animasyonlari (calistirma sirasinda)
 - [ ] Command palette (Ctrl+K)
 - [ ] Workflow arama ve filtreleme
+- [ ] Node klonlama (Ctrl+D)
+- [ ] Coklu node secimi + topluca silme/tasima
+- [ ] Node gruoplama / sub-workflow
 
-#### Oncelik 5: Production Ozellikleri
+#### Oncelik 4: Production Ozellikleri
 - [ ] Kullanici kimlik dogrulama (auth)
 - [ ] Rol bazli erisim kontrolu (RBAC)
 - [ ] Workflow versiyonlama
 - [ ] Execution log retention policy
-- [ ] Rate limiting
+- [ ] Rate limiting (gelismis)
 - [ ] API anahtari yonetimi
 - [ ] Monitoring / metricsler
 - [ ] Webhook guvenligi (HMAC imza dogrulama)
 
-#### Oncelik 6: Ekosistem
+#### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
 - [ ] Community node marketplace sayfasi
 - [ ] Plugin auto-discovery (`sibercron-node-*` npm taramasi)
@@ -108,34 +106,12 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 
 ---
 
-## Dosya Sayilari
-
-| Paket | Kaynak Dosya | Aciklama |
-|-------|-------------|----------|
-| shared | 8 dosya | TypeScript types + constants |
-| core | 5 dosya | Engine + Registry |
-| nodes | 14 dosya | 13 node + index |
-| server | 9 dosya | API routes + config + db |
-| editor | 20 dosya | React components + pages + stores |
-| root | 15 dosya | Config, docs, docker, CI |
-| **Toplam** | **~71 kaynak dosya** | |
-
----
-
-## Hizli Baslangic (WSL)
+## Hizli Baslangic
 
 ```bash
-# WSL'de projeyi kopyala
-cp -r /mnt/e/SiberCron ~/sibercron
-cd ~/sibercron
-
-# Bagimliliklari yukle
+cd e:/SiberCron
 pnpm install
-
-# Tum paketleri derle
 pnpm build
-
-# Gelistirme sunucularini baslat
 pnpm dev
 # Editor: http://localhost:5173
 # API: http://localhost:3001

@@ -22,6 +22,7 @@ import clsx from 'clsx';
 import { io, type Socket } from 'socket.io-client';
 import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsExecutionCompleted } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
+import { SOCKET_URL } from '../lib/config';
 
 const STATUS_CONFIG: Record<
   ExecutionStatus,
@@ -285,7 +286,7 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
       .catch(() => { /* best-effort */ });
 
     // WebSocket: subscribe to real-time log events from the server
-    const socket = io('/', { transports: ['websocket'], reconnection: true });
+    const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
 
     socket.on('connect', () => {
       socket.emit('subscribe:execution', executionId);
@@ -458,7 +459,7 @@ export default function ExecutionHistoryPage() {
 
   // WebSocket: subscribe to running executions for live updates
   useEffect(() => {
-    const socket = io('/', { transports: ['websocket'], reconnection: true });
+    const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
     socketRef.current = socket;
 
     socket.on('execution:node:done', (data: WsNodeDone & { executionId?: string }) => {

@@ -18,15 +18,29 @@ export const LogNode: INodeType = {
         type: 'string',
         default: 'Log message',
         required: true,
-        description: 'Message to log. Use {{timestamp}} for current time, {{json}} for input data.',
-        placeholder: 'Workflow executed at {{timestamp}}',
+        description: 'Message to log. Supports expression syntax: {{ $json.field }}',
+        placeholder: 'Processing item: {{ $json.name }}',
       },
       {
         name: 'logLevel',
         displayName: 'Log Level',
-        type: 'string',
+        type: 'select',
         default: 'info',
-        description: 'Log level: info, warn, error',
+        required: true,
+        description: 'Log level',
+        options: [
+          { name: 'Info', value: 'info' },
+          { name: 'Warning', value: 'warn' },
+          { name: 'Error', value: 'error' },
+          { name: 'Debug', value: 'debug' },
+        ],
+      },
+      {
+        name: 'includeData',
+        displayName: 'Include Input Data',
+        type: 'boolean',
+        default: false,
+        description: 'Whether to include input JSON data in the log output',
       },
     ],
   },
@@ -34,36 +48,38 @@ export const LogNode: INodeType = {
   async execute(context: IExecutionContext): Promise<INodeExecutionData[]> {
     const message = context.getParameter<string>('message') ?? 'Log';
     const logLevel = context.getParameter<string>('logLevel') ?? 'info';
+    const includeData = context.getParameter<boolean>('includeData') ?? false;
     const items = context.getInputData();
 
     const now = new Date().toISOString();
 
-    // Interpolate template variables
-    const interpolated = message
-      .replace(/\{\{timestamp\}\}/g, now)
-      .replace(/\{\{json\}\}/g, JSON.stringify(items.map((i) => i.json)));
-
-    switch (logLevel) {
-      case 'warn':
-        console.warn(`[SiberCron Log] ${interpolated}`);
-        break;
-      case 'error':
-        console.error(`[SiberCron Log] ${interpolated}`);
-        break;
-      default:
-        console.log(`[SiberCron Log] ${interpolated}`);
+    // Build the full log message
+    let fullMessage = message;
+    if (includeData) {
+      fullMessage += ` | Data: ${JSON.stringify(items.map((i) => i.json))}`;
     }
 
-    context.helpers.log(interpolated);
+    // Log with appropriate level
+    const prefix = `[SiberCron][${logLevel.toUpperCase()}]`;
+    switch (logLevel) {
+      case 'warn':
+        console.warn(`${prefix} ${fullMessage}`);
+        break;
+      case 'error':
+        console.error(`${prefix} ${fullMessage}`);
+        break;
+      case 'debug':
+        console.debug(`${prefix} ${fullMessage}`);
+        break;
+      default:
+        console.log(`${prefix} ${fullMessage}`);
+    }
 
-    // Pass input data through with log metadata added
+    context.helpers.log(fullMessage);
+
+    // Pass through without polluting the data with _log metadata
     return items.length > 0
-      ? items.map((item) => ({
-          json: {
-            ...item.json,
-            _log: { message: interpolated, loggedAt: now, level: logLevel },
-          },
-        }))
-      : [{ json: { _log: { message: interpolated, loggedAt: now, level: logLevel } } }];
+      ? items
+      : [{ json: { _logged: true, message: fullMessage, loggedAt: now, level: logLevel } }];
   },
 };

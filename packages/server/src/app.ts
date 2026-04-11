@@ -35,6 +35,9 @@ for (const node of builtinNodes) {
 const app = Fastify({
   logger: true,
   bodyLimit: 10 * 1024 * 1024, // 10 MB
+  // Trust the X-Forwarded-For header from reverse proxies (nginx, Caddy, etc.)
+  // so that rate limiting and IP-based features work correctly in production.
+  trustProxy: true,
 });
 
 // ── Optional API key auth ──────────────────────────────────────────────

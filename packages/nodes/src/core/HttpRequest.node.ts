@@ -1,4 +1,4 @@
-import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import type { INodeType, IExecutionContext, INodeExecutionData, HttpRequestOptions } from '@sibercron/shared';
 
 export const HttpRequestNode: INodeType = {
   definition: {
@@ -34,44 +34,137 @@ export const HttpRequestNode: INodeType = {
           { name: 'PUT', value: 'PUT' },
           { name: 'DELETE', value: 'DELETE' },
           { name: 'PATCH', value: 'PATCH' },
+          { name: 'HEAD', value: 'HEAD' },
         ],
+      },
+      {
+        name: 'authentication',
+        displayName: 'Authentication',
+        type: 'select',
+        default: 'none',
+        description: 'Authentication method',
+        options: [
+          { name: 'None', value: 'none' },
+          { name: 'Bearer Token', value: 'bearer' },
+          { name: 'Basic Auth', value: 'basic' },
+          { name: 'API Key Header', value: 'apiKey' },
+        ],
+      },
+      {
+        name: 'authValue',
+        displayName: 'Auth Value',
+        type: 'string',
+        default: '',
+        description: 'Bearer token, "user:password" for Basic, or API key value',
+        displayOptions: {
+          show: { authentication: ['bearer', 'basic', 'apiKey'] },
+        },
+      },
+      {
+        name: 'apiKeyHeader',
+        displayName: 'API Key Header Name',
+        type: 'string',
+        default: 'X-API-Key',
+        description: 'Header name for API key authentication',
+        displayOptions: {
+          show: { authentication: ['apiKey'] },
+        },
+      },
+      {
+        name: 'queryParams',
+        displayName: 'Query Parameters',
+        type: 'json',
+        default: '',
+        description: 'Query parameters as JSON object (e.g. {"page": 1, "limit": 10})',
       },
       {
         name: 'headers',
         displayName: 'Headers',
         type: 'json',
-        default: '{}',
-        description: 'HTTP headers to send with the request (JSON object)',
+        default: '',
+        description: 'HTTP headers as JSON object',
       },
       {
         name: 'body',
         displayName: 'Body',
         type: 'json',
-        default: '{}',
-        description: 'Request body (JSON object, used for POST/PUT/PATCH)',
+        default: '',
+        description: 'Request body as JSON (for POST/PUT/PATCH)',
+      },
+      {
+        name: 'timeout',
+        displayName: 'Timeout (ms)',
+        type: 'number',
+        default: 30000,
+        description: 'Request timeout in milliseconds',
+      },
+      {
+        name: 'responseType',
+        displayName: 'Response Type',
+        type: 'select',
+        default: 'auto',
+        description: 'How to parse the response',
+        options: [
+          { name: 'Auto Detect', value: 'auto' },
+          { name: 'JSON', value: 'json' },
+          { name: 'Text', value: 'text' },
+          { name: 'Full Response', value: 'full' },
+        ],
       },
     ],
   },
 
   async execute(context: IExecutionContext): Promise<INodeExecutionData[]> {
-    const url = context.getParameter<string>('url');
-    const method = context.getParameter<string>('method') as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-    const headersRaw = context.getParameter<string>('headers');
-    const bodyRaw = context.getParameter<string>('body');
+    let url = context.getParameter<string>('url');
+    const method = context.getParameter<string>('method') as HttpRequestOptions['method'];
+    const authentication = context.getParameter<string>('authentication') ?? 'none';
+    const authValue = context.getParameter<string>('authValue') ?? '';
+    const apiKeyHeader = context.getParameter<string>('apiKeyHeader') ?? 'X-API-Key';
+    const queryParamsRaw = context.getParameter<string>('queryParams') ?? '';
+    const headersRaw = context.getParameter<string>('headers') ?? '';
+    const bodyRaw = context.getParameter<string>('body') ?? '';
+    const timeout = context.getParameter<number>('timeout') ?? 30000;
+    const responseType = context.getParameter<string>('responseType') ?? 'auto';
 
+    // Parse headers
     let headers: Record<string, string> = {};
     if (headersRaw) {
       try {
-        headers = JSON.parse(headersRaw);
+        headers = typeof headersRaw === 'object' ? headersRaw as unknown as Record<string, string> : JSON.parse(headersRaw);
       } catch {
         throw new Error('Headers must be valid JSON (e.g. {"Authorization": "Bearer token"})');
       }
     }
 
-    let body: unknown;
-    if (bodyRaw) {
+    // Apply authentication
+    if (authentication === 'bearer' && authValue) {
+      headers['Authorization'] = `Bearer ${authValue}`;
+    } else if (authentication === 'basic' && authValue) {
+      const encoded = Buffer.from(authValue).toString('base64');
+      headers['Authorization'] = `Basic ${encoded}`;
+    } else if (authentication === 'apiKey' && authValue) {
+      headers[apiKeyHeader] = authValue;
+    }
+
+    // Parse query parameters and append to URL
+    if (queryParamsRaw) {
       try {
-        body = JSON.parse(bodyRaw);
+        const params = typeof queryParamsRaw === 'object' ? queryParamsRaw as unknown as Record<string, unknown> : JSON.parse(queryParamsRaw);
+        const urlObj = new URL(url);
+        for (const [key, value] of Object.entries(params)) {
+          urlObj.searchParams.set(key, String(value));
+        }
+        url = urlObj.toString();
+      } catch {
+        throw new Error('Query Parameters must be valid JSON (e.g. {"page": 1})');
+      }
+    }
+
+    // Parse body
+    let body: unknown;
+    if (bodyRaw && method !== 'GET' && method !== 'HEAD') {
+      try {
+        body = typeof bodyRaw === 'object' ? bodyRaw : JSON.parse(bodyRaw);
       } catch {
         throw new Error('Body must be valid JSON');
       }
@@ -83,8 +176,15 @@ export const HttpRequestNode: INodeType = {
       url,
       method,
       headers,
-      body: method !== 'GET' ? body : undefined,
+      body,
+      timeout,
+      returnFullResponse: responseType === 'full',
     });
+
+    // Build output based on responseType
+    if (responseType === 'full') {
+      return [{ json: response as Record<string, unknown> }];
+    }
 
     const responseData = typeof response === 'object' && response !== null
       ? (response as Record<string, unknown>)

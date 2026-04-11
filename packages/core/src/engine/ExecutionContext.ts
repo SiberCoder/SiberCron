@@ -2,6 +2,7 @@ import type {
   IExecutionContext,
   INodeExecutionData,
   HttpRequestOptions,
+  HttpFullResponse,
 } from '@sibercron/shared';
 
 /**
@@ -53,7 +54,7 @@ export class ExecutionContext implements IExecutionContext {
   // ── helpers ──────────────────────────────────────────────────────────
 
   private async httpRequest(options: HttpRequestOptions): Promise<unknown> {
-    const { url, method = 'GET', headers, body, timeout } = options;
+    const { url, method = 'GET', headers, body, timeout, returnFullResponse } = options;
 
     const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -83,18 +84,36 @@ export class ExecutionContext implements IExecutionContext {
 
       const contentType = response.headers.get('content-type') ?? '';
 
+      // Parse body regardless of status for full-response mode
+      let parsedBody: unknown;
+      if (contentType.includes('application/json')) {
+        try { parsedBody = await response.json(); } catch { parsedBody = await response.text(); }
+      } else {
+        parsedBody = await response.text();
+      }
+
+      if (returnFullResponse) {
+        // Collect all response headers into a plain object
+        const responseHeaders: Record<string, string> = {};
+        response.headers.forEach((value, key) => { responseHeaders[key] = value; });
+
+        return {
+          statusCode: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders,
+          body: parsedBody,
+          ok: response.ok,
+        } satisfies HttpFullResponse;
+      }
+
       if (!response.ok) {
-        const text = await response.text();
+        const bodyStr = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
         throw new Error(
-          `HTTP ${response.status} ${response.statusText}: ${text}`,
+          `HTTP ${response.status} ${response.statusText}: ${bodyStr}`,
         );
       }
 
-      if (contentType.includes('application/json')) {
-        return (await response.json()) as unknown;
-      }
-
-      return await response.text();
+      return parsedBody;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
         throw new Error(`HTTP request timed out after ${timeout ?? 0}ms for ${url}`);

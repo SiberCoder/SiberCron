@@ -18,9 +18,12 @@
   },
   "dependencies": {
     "@sibercron/shared": "workspace:*",
+    "ioredis": "^5.10.1",
+    "mysql2": "^3.22.0",
     "nodemailer": "^8.0.5"
   },
   "devDependencies": {
-    "@types/nodemailer": "^8.0.0"
+    "@types/nodemailer": "^8.0.0",
+    "@types/pg": "^8.20.0"
   }
 }

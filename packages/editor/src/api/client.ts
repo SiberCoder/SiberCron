@@ -1,4 +1,6 @@
-const API_BASE = '/api/v1';
+import { API_BASE_URL } from '../lib/config.js';
+
+const API_BASE = `${API_BASE_URL}/api/v1`;
 
 class ApiError extends Error {
   constructor(

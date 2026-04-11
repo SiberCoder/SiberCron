@@ -38,8 +38,9 @@ async function callClaude(
   cwd: string,
   timeoutMs: number,
   setupToken?: string,
+  signal?: AbortSignal,
 ): Promise<string> {
-  const { spawn } = await import('child_process');
+  const { spawn, execSync } = await import('child_process');
 
   const env = { ...process.env };
   if (setupToken) {
@@ -50,8 +51,10 @@ async function callClaude(
   if (model) args.push('--model', model);
 
   return new Promise((resolve, reject) => {
+    let timedOut = false;
+    let aborted = false;
+
     const proc = spawn('claude', args, {
-      timeout: timeoutMs,
       cwd,
       env,
       shell: true,
@@ -60,7 +63,46 @@ async function callClaude(
     let stderr = '';
     proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
     proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+
+    // Kill entire process tree on Windows, single process on Unix
+    const killProc = () => {
+      try {
+        if (process.platform === 'win32' && proc.pid) {
+          execSync(`taskkill /F /T /PID ${proc.pid}`, { stdio: 'ignore' });
+        } else {
+          proc.kill('SIGTERM');
+        }
+      } catch { /* process may already be dead */ }
+    };
+
+    // Per-iteration timeout
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killProc();
+    }, timeoutMs);
+
+    // External abort signal (NodeExecutor timeout)
+    if (signal) {
+      const onAbort = () => {
+        aborted = true;
+        killProc();
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+      proc.on('close', () => signal.removeEventListener('abort', onAbort));
+    }
+
     proc.on('close', (code: number | null) => {
+      clearTimeout(timer);
+
+      if (timedOut) {
+        reject(new Error(`Claude CLI ${timeoutMs}ms zaman asimina ugradi`));
+        return;
+      }
+      if (aborted) {
+        reject(new Error('Claude CLI iptal edildi'));
+        return;
+      }
+
       // code === null on Windows when process exits via stdin close - treat as success if we have output
       if (code !== 0 && code !== null && !stdout.trim()) {
         reject(new Error(`Claude CLI hata (${code}): ${stderr.trim() || stdout.trim()}`));
@@ -71,6 +113,7 @@ async function callClaude(
       }
     });
     proc.on('error', (err: Error) => {
+      clearTimeout(timer);
       reject(err);
     });
 
@@ -163,8 +206,8 @@ export const AutonomousDevNode: INodeType = {
         name: 'iterationTimeoutMs',
         displayName: 'Iterasyon Zaman Asimi (ms)',
         type: 'number',
-        default: 300000,
-        description: 'Her bir AI cagrisi icin maks sure (5dk varsayilan)',
+        default: 900000,
+        description: 'Her bir AI cagrisi icin maks sure (15dk varsayilan)',
       },
       {
         name: 'systemContext',

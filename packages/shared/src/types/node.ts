@@ -68,10 +68,20 @@ export interface INodeExecutionData {
 
 export interface HttpRequestOptions {
   url: string;
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
   headers?: Record<string, string>;
   body?: unknown;
   timeout?: number;
+  /** When true, returns { statusCode, statusText, headers, body } instead of throwing on non-2xx */
+  returnFullResponse?: boolean;
+}
+
+export interface HttpFullResponse {
+  statusCode: number;
+  statusText: string;
+  headers: Record<string, string>;
+  body: unknown;
+  ok: boolean;
 }
 
 export interface IExecutionContext {

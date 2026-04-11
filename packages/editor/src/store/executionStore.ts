@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io, type Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../lib/config';
 import type {
   WsExecutionStarted,
   WsNodeStart,
@@ -51,7 +52,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       existing.disconnect();
     }
 
-    const socket = io('/', {
+    const socket = io(SOCKET_URL, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,

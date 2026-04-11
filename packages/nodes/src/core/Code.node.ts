@@ -19,44 +19,89 @@ export const CodeNode: INodeType = {
         type: 'code',
         default: 'return items;',
         required: true,
-        description: 'JavaScript code to execute. Receives "items" (INodeExecutionData[]) and must return an array.',
+        description: 'JavaScript code to execute. Receives "items" array and "$input" (first item json). Must return an array of {json: {...}} objects.',
+      },
+      {
+        name: 'timeout',
+        displayName: 'Timeout (ms)',
+        type: 'number',
+        default: 25000,
+        required: false,
+        description: 'Maximum execution time in milliseconds',
       },
     ],
   },
 
   async execute(context: IExecutionContext): Promise<INodeExecutionData[]> {
     const code = context.getParameter<string>('code');
+    const timeoutMs = context.getParameter<number>('timeout') ?? 25000;
     const items = context.getInputData();
+    const $input = items[0]?.json ?? {};
 
     context.helpers.log('Executing custom code');
 
-    // Wrap code in an async function so users can use await
-    const wrappedCode = `(async function(items) { ${code} })`;
+    const wrappedCode = `(async function(items, $input, $helpers) { ${code} })`;
 
-    let fn: (items: INodeExecutionData[]) => Promise<INodeExecutionData[]>;
+    // Build a sandbox with safe builtins — no process, require, import, __dirname, etc.
+    const sandbox: Record<string, unknown> = {
+      Object, Array, String, Number, Boolean, Symbol,
+      Date, RegExp, Error, TypeError, RangeError, SyntaxError,
+      JSON, Math, parseInt, parseFloat, isNaN, isFinite,
+      encodeURI, decodeURI, encodeURIComponent, decodeURIComponent,
+      Map, Set, WeakMap, WeakSet,
+      Promise, setTimeout, clearTimeout,
+      console: {
+        log: (...args: unknown[]) => context.helpers.log(args.map(String).join(' ')),
+        warn: (...args: unknown[]) => context.helpers.log(`[WARN] ${args.map(String).join(' ')}`),
+        error: (...args: unknown[]) => context.helpers.log(`[ERROR] ${args.map(String).join(' ')}`),
+      },
+      structuredClone: globalThis.structuredClone,
+      atob: globalThis.atob,
+      btoa: globalThis.btoa,
+      URL: globalThis.URL,
+      URLSearchParams: globalThis.URLSearchParams,
+      TextEncoder: globalThis.TextEncoder,
+      TextDecoder: globalThis.TextDecoder,
+    };
+    vm.createContext(sandbox);
+
+    type CodeFn = (
+      items: INodeExecutionData[],
+      $input: Record<string, unknown>,
+      $helpers: { log: (msg: string) => void },
+    ) => Promise<unknown>;
+
+    let fn: CodeFn;
     try {
-      // Run in a sandboxed context — no access to process, require, globalThis, etc.
-      const sandbox = Object.create(null) as Record<string, unknown>;
-      vm.createContext(sandbox);
       fn = vm.runInContext(wrappedCode, sandbox, {
-        timeout: 25_000,
+        timeout: timeoutMs,
         filename: 'code-node.js',
-      }) as (items: INodeExecutionData[]) => Promise<INodeExecutionData[]>;
+      }) as CodeFn;
     } catch (err) {
       throw new Error(`Code syntax error: ${(err as Error).message}`);
     }
 
+    const $helpers = { log: (msg: string) => context.helpers.log(msg) };
+
     let result: unknown;
     try {
-      result = await fn(items);
+      result = await fn(items, $input, $helpers);
     } catch (err) {
       throw new Error(`Code execution error: ${(err as Error).message}`);
     }
 
     if (!Array.isArray(result)) {
-      throw new Error('Code node must return an array of items');
+      throw new Error(
+        'Code node must return an array of items (e.g. return items; or return [{json: {key: "value"}}])',
+      );
     }
 
-    return result as INodeExecutionData[];
+    // Normalize: if user returns plain objects, wrap them in {json: ...}
+    return result.map((item: unknown) => {
+      if (item && typeof item === 'object' && 'json' in (item as Record<string, unknown>)) {
+        return item as INodeExecutionData;
+      }
+      return { json: (item ?? {}) as Record<string, unknown> };
+    });
   },
 };

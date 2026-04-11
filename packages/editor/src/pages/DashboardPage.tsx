@@ -17,6 +17,7 @@ import clsx from 'clsx';
 import { io } from 'socket.io-client';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
 import { apiGet } from '../api/client';
+import { SOCKET_URL } from '../lib/config';
 
 // ── Execution Trend Chart ─────────────────────────────────────────────
 
@@ -184,7 +185,7 @@ export default function DashboardPage() {
 
   // Socket.io: refresh stats when any execution completes
   useEffect(() => {
-    const socket = io('/', { transports: ['websocket'] });
+    const socket = io(SOCKET_URL, { transports: ['websocket'] });
     socket.on('execution:completed', () => {
       fetchDashboardData(true);
     });
