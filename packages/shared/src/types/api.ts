@@ -31,6 +31,10 @@ export interface ExecutionListQuery {
   limit?: number;
   workflowId?: string;
   status?: ExecutionStatus;
+  workflowName?: string; // partial match, case-insensitive
+  startDate?: string;    // ISO 8601, inclusive lower bound on startedAt/createdAt
+  endDate?: string;      // ISO 8601, inclusive upper bound on startedAt/createdAt
+  triggeredBy?: string;  // filter by userId or username (partial match)
 }
 
 // Pagination

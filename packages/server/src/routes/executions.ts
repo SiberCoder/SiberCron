@@ -8,14 +8,23 @@ import { queueService } from '../services/queueService.js';
 export async function executionRoutes(
   fastify: FastifyInstance,
 ): Promise<void> {
-  // GET / - List executions (filterable by workflowId, status)
+  // GET / - List executions (filterable)
   fastify.get('/', async (request: FastifyRequest, _reply: FastifyReply) => {
-    const query = request.query as ExecutionListQuery;
+    const query = request.query as ExecutionListQuery & {
+      startDate?: string;
+      endDate?: string;
+      workflowName?: string;
+      triggeredBy?: string;
+    };
     const result = db.listExecutions({
       page: query.page ? Number(query.page) : undefined,
       limit: query.limit ? Number(query.limit) : undefined,
       workflowId: query.workflowId,
       status: query.status as ExecutionStatus | undefined,
+      workflowName: query.workflowName,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      triggeredBy: query.triggeredBy,
     });
     return result;
   });

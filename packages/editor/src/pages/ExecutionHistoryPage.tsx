@@ -17,6 +17,7 @@ import {
   Trash2,
   AlertTriangle,
   RotateCcw,
+  X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { io, type Socket } from 'socket.io-client';
@@ -438,18 +439,45 @@ export default function ExecutionHistoryPage() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [page, setPage] = useState(1);
+  // Filter state
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterWorkflow, setFilterWorkflow] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
   const socketRef = useRef<Socket | null>(null);
   const subscribedIds = useRef<Set<string>>(new Set());
   const pageSize = 10;
-  const totalPages = useMemo(() => Math.ceil(executions.length / pageSize), [executions.length]);
+
+  // Client-side filtering (applied on top of server data for instant feedback)
+  const filteredExecutions = useMemo(() => {
+    return executions.filter((e) => {
+      if (filterStatus && e.status !== filterStatus) return false;
+      if (filterWorkflow) {
+        const q = filterWorkflow.toLowerCase();
+        if (!(e.workflowName ?? '').toLowerCase().includes(q)) return false;
+      }
+      if (filterStartDate) {
+        const ts = e.startedAt ?? e.createdAt;
+        if (ts < filterStartDate) return false;
+      }
+      if (filterEndDate) {
+        const ts = e.startedAt ?? e.createdAt;
+        // Add 'T23:59:59' so the end date is inclusive for the whole day
+        if (ts > filterEndDate + 'T23:59:59') return false;
+      }
+      return true;
+    });
+  }, [executions, filterStatus, filterWorkflow, filterStartDate, filterEndDate]);
+
+  const totalPages = useMemo(() => Math.ceil(filteredExecutions.length / pageSize), [filteredExecutions.length]);
   const paginatedExecutions = useMemo(
-    () => executions.slice((page - 1) * pageSize, page * pageSize),
-    [executions, page],
+    () => filteredExecutions.slice((page - 1) * pageSize, page * pageSize),
+    [filteredExecutions, page],
   );
 
   const load = async () => {
     try {
-      const res = await apiGet<{ data: IExecution[] }>('/executions?limit=200');
+      const res = await apiGet<{ data: IExecution[] }>('/executions?limit=500');
       setExecutions(res.data ?? []);
     } catch {
       setExecutions([]);
@@ -665,6 +693,81 @@ export default function ExecutionHistoryPage() {
           <button onClick={load} className="btn-ghost text-xs">
             <RefreshCw size={12} /> Yenile
           </button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="glass-card rounded-2xl p-4 flex flex-wrap gap-3 items-end">
+        {/* Workflow name search */}
+        <div className="flex-1 min-w-[160px]">
+          <label className="block text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider mb-1.5 font-body">
+            Workflow Adı
+          </label>
+          <input
+            type="text"
+            placeholder="Ara..."
+            value={filterWorkflow}
+            onChange={(e) => { setFilterWorkflow(e.target.value); setPage(1); }}
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white placeholder-obsidian-500 focus:outline-none focus:border-aurora-cyan/40 font-body"
+          />
+        </div>
+
+        {/* Status filter */}
+        <div className="min-w-[130px]">
+          <label className="block text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider mb-1.5 font-body">
+            Durum
+          </label>
+          <select
+            value={filterStatus}
+            onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-aurora-cyan/40 font-body"
+          >
+            <option value="">Tümü</option>
+            <option value="success">Başarılı</option>
+            <option value="error">Hata</option>
+            <option value="running">Çalışıyor</option>
+            <option value="cancelled">İptal</option>
+            <option value="pending">Bekliyor</option>
+          </select>
+        </div>
+
+        {/* Date range */}
+        <div className="min-w-[140px]">
+          <label className="block text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider mb-1.5 font-body">
+            Başlangıç Tarihi
+          </label>
+          <input
+            type="date"
+            value={filterStartDate}
+            onChange={(e) => { setFilterStartDate(e.target.value); setPage(1); }}
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-aurora-cyan/40 font-body [color-scheme:dark]"
+          />
+        </div>
+        <div className="min-w-[140px]">
+          <label className="block text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider mb-1.5 font-body">
+            Bitiş Tarihi
+          </label>
+          <input
+            type="date"
+            value={filterEndDate}
+            onChange={(e) => { setFilterEndDate(e.target.value); setPage(1); }}
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-aurora-cyan/40 font-body [color-scheme:dark]"
+          />
+        </div>
+
+        {/* Clear filters */}
+        {(filterStatus || filterWorkflow || filterStartDate || filterEndDate) && (
+          <button
+            onClick={() => { setFilterStatus(''); setFilterWorkflow(''); setFilterStartDate(''); setFilterEndDate(''); setPage(1); }}
+            className="btn-ghost text-xs self-end"
+          >
+            <X size={12} /> Temizle
+          </button>
+        )}
+
+        {/* Result count */}
+        <div className="self-end ml-auto text-xs text-obsidian-500 font-body whitespace-nowrap">
+          {filteredExecutions.length} / {executions.length} kayıt
         </div>
       </div>
 

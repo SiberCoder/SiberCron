@@ -178,33 +178,60 @@ if (!config.authEnabled && config.apiKey) {
   console.log('[Auth] API key authentication enabled.');
 }
 
-// ── Simple in-memory rate limiter ──────────────────────────────────────
+// ── Endpoint-based rate limiter ─────────────────────────────────────────────
+//
+// Limits are per-IP, per-route-bucket, per minute.
+// Buckets (checked in order, first match wins):
+//   auth      — /api/v1/auth/*     10 req/min  (anti-brute-force)
+//   chat      — /api/v1/chat       20 req/min  (AI cost control)
+//   workflows — /api/v1/workflows  60 req/min  (includes /execute)
+//   general   — everything else   200 req/min
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100; // requests per window
+interface RateLimitBucket {
+  prefix: string;
+  limit: number;
+}
+
+const RATE_BUCKETS: RateLimitBucket[] = [
+  { prefix: '/api/v1/auth/',     limit: 10  },
+  { prefix: '/api/v1/chat',      limit: 20  },
+  { prefix: '/api/v1/workflows', limit: 60  },
+  { prefix: '/api/v1/',          limit: 200 },
+];
+
 const RATE_WINDOW = 60_000; // 1 minute
+// key: `${ip}::${bucketPrefix}`
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 app.addHook('onRequest', async (request, reply) => {
+  const url = request.url.split('?')[0];
+  const bucket = RATE_BUCKETS.find((b) => url.startsWith(b.prefix));
+  if (!bucket) return;
+
   const ip = request.ip;
+  const key = `${ip}::${bucket.prefix}`;
   const now = Date.now();
-  const entry = rateLimitMap.get(ip);
+
+  let entry = rateLimitMap.get(key);
   if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
-    return;
+    entry = { count: 1, resetAt: now + RATE_WINDOW };
+    rateLimitMap.set(key, entry);
+  } else {
+    entry.count++;
   }
-  entry.count++;
-  const remaining = Math.max(0, RATE_LIMIT - entry.count);
-  if (entry.count > RATE_LIMIT) {
-    void reply.header('X-RateLimit-Limit', String(RATE_LIMIT));
-    void reply.header('X-RateLimit-Remaining', '0');
-    void reply.header('X-RateLimit-Reset', String(Math.ceil(entry.resetAt / 1000)));
-    void reply.header('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)));
-    reply.status(429).send({ error: 'Too many requests' });
-    return;
-  }
-  void reply.header('X-RateLimit-Limit', String(RATE_LIMIT));
+
+  const { limit } = bucket;
+  const remaining = Math.max(0, limit - entry.count);
+
+  void reply.header('X-RateLimit-Limit', String(limit));
   void reply.header('X-RateLimit-Remaining', String(remaining));
   void reply.header('X-RateLimit-Reset', String(Math.ceil(entry.resetAt / 1000)));
+
+  if (entry.count > limit) {
+    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+    void reply.header('Retry-After', String(retryAfter));
+    reply.status(429).send({ error: 'Too many requests', retryAfter });
+  }
 });
 
 // Periodic cleanup of expired rate-limit entries (every 5 minutes)

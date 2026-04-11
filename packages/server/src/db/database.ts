@@ -389,7 +389,7 @@ export class Database {
   }
 
   listExecutions(query: ExecutionListQuery = {}): PaginatedResponse<IExecution> {
-    const { page = 1, limit = 20, workflowId, status } = query;
+    const { page = 1, limit = 20, workflowId, status, workflowName, startDate, endDate, triggeredBy } = query;
 
     let items = Array.from(this.executions.values());
 
@@ -399,6 +399,28 @@ export class Database {
 
     if (status) {
       items = items.filter((e) => e.status === status);
+    }
+
+    if (workflowName) {
+      const q = workflowName.toLowerCase();
+      items = items.filter((e) => e.workflowName?.toLowerCase().includes(q));
+    }
+
+    if (startDate) {
+      items = items.filter((e) => (e.startedAt ?? e.createdAt) >= startDate);
+    }
+
+    if (endDate) {
+      items = items.filter((e) => (e.startedAt ?? e.createdAt) <= endDate);
+    }
+
+    if (triggeredBy) {
+      const q = triggeredBy.toLowerCase();
+      items = items.filter(
+        (e) =>
+          e.triggeredBy?.userId?.toLowerCase().includes(q) ||
+          e.triggeredBy?.username?.toLowerCase().includes(q),
+      );
     }
 
     // Sort by createdAt descending

@@ -106,11 +106,21 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 
 #### Oncelik 4b: Devam
 - [x] Workflow execution'larinda user bazli audit log — her execution'a `triggeredBy: { userId, username }` ekle
-- [ ] Rate limiting gelismis: endpoint bazli farkli limit (auth: 10/min, exec: 30/min, genel: 200/min)
+- [x] Rate limiting gelismis: endpoint bazli farkli limit (auth: 10/min, chat: 20/min, workflows: 60/min, genel: 200/min)
 - [ ] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
-- [ ] Execution list sayfasinda workflow adiyla filtre + tarih aralik filtresi
+- [x] Execution list sayfasinda workflow adiyla filtre + tarih aralik filtresi (client-side, anlık)
 - [ ] Node config panelinde expression builder: `{{ }}` sözdizimine tıklayınca değişken listesi göster
 - [ ] FTP/SFTP node: büyük dosyalar için streaming download desteği (şu an tüm dosyayı belleğe çekiyor)
+- [x] Minimap iyilestirmeleri: node tipine gore renk, toggle butonu, konum duzeltme
+
+#### Oncelik 4c: Yeni Gorevler
+- [ ] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
+- [ ] Node config panelinde expression builder: `{{ $json. }}` yazinca workflow input degiskenlerini onerir
+- [ ] Execution list'te `triggeredBy` sutunu (kim tetikledi) goster
+- [ ] WorkflowListPage'de workflow kategorilendirme / tag sistemi
+- [ ] Settings sayfasina JWT token suresi ve rate limit degerlerini gosterme/duzenle paneli
+- [ ] Webhook tetikleyici node'unda beklenen payload schema validation (Zod)
+- [ ] Dashboard: en cok hata veren node istatistigi (node-level error chart)
 
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci

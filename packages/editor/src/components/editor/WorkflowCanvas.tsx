@@ -9,7 +9,7 @@ import {
   type ReactFlowInstance,
   type Node,
 } from '@xyflow/react';
-import { Trash2, Copy, X } from 'lucide-react';
+import { Trash2, Copy, X, Map } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
@@ -22,11 +22,22 @@ const nodeTypes = {
 
 const EMPTY_NODE_STATUSES: Record<string, string> = {};
 
+// Color node dots in minimap by group
+function getMinimapNodeColor(node: Node): string {
+  const group = (node.data as { nodeType?: string })?.nodeType ?? '';
+  if (/trigger/i.test(group)) return 'rgba(6, 214, 160, 0.7)';   // cyan — triggers
+  if (/ai|agent|dev|summar|classif/i.test(group)) return 'rgba(139, 92, 246, 0.7)'; // violet — AI
+  if (/telegram|discord|slack|whatsapp|email|smtp/i.test(group)) return 'rgba(59, 130, 246, 0.7)'; // blue — messaging
+  if (/database|redis|ftp|sftp|google|notion/i.test(group)) return 'rgba(245, 158, 11, 0.7)'; // amber — data
+  return 'rgba(148, 163, 184, 0.5)'; // slate — core
+}
+
 export default function WorkflowCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reactFlowInstance = useRef<ReactFlowInstance<any, any> | null>(null);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [showMinimap, setShowMinimap] = useState(true);
 
   const nodes = useWorkflowStore((s) => s.nodes);
   const edges = useWorkflowStore((s) => s.edges);
@@ -226,13 +237,32 @@ export default function WorkflowCanvas() {
           showInteractive={false}
           className="!bottom-4 !right-4 !left-auto"
         />
-        <MiniMap
-          nodeColor="rgba(20, 28, 40, 0.8)"
-          maskColor="rgba(10, 16, 24, 0.8)"
-          className="!bottom-4 !right-16"
-          pannable
-          zoomable
-        />
+        {/* Minimap toggle button */}
+        <div className="absolute bottom-4 right-32 z-10">
+          <button
+            onClick={() => setShowMinimap((v) => !v)}
+            title={showMinimap ? 'Haritayı gizle' : 'Haritayı göster'}
+            className={`
+              w-8 h-8 flex items-center justify-center rounded-lg border transition-all
+              ${showMinimap
+                ? 'bg-aurora-cyan/10 border-aurora-cyan/30 text-aurora-cyan'
+                : 'bg-white/[0.04] border-white/[0.08] text-obsidian-400 hover:text-white'}
+            `}
+          >
+            <Map size={14} />
+          </button>
+        </div>
+        {showMinimap && (
+          <MiniMap
+            nodeColor={getMinimapNodeColor}
+            maskColor="rgba(6, 10, 18, 0.75)"
+            nodeStrokeWidth={0}
+            className="!bottom-16 !right-4"
+            style={{ width: 160, height: 100 }}
+            pannable
+            zoomable
+          />
+        )}
       </ReactFlow>
     </div>
   );
