@@ -81,7 +81,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 
 #### Oncelik 3: Editor Gelistirmeleri
 - [x] Template'den workflow olusturma (templates sayfasindan)
-- [ ] Minimap iyilestirmeleri
+- [x] Minimap iyilestirmeleri
 - [x] Edge animasyonlari (calistirma sirasinda)
 - [x] Command palette (Ctrl+K)
 - [x] Workflow arama ve filtreleme
@@ -99,7 +99,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Monitoring / metricsler: /api/v1/metrics endpoint (uptime, memory, node error stats, execution trends)
 - [x] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
 - [x] Workflow execution'larinda user bazli audit log (kim tetikledi)
-- [ ] LoginPage'e "sifre unut" / ilk kurulum wizard'ina admin ayarla adimi ekle
+- [x] LoginPage'e "sifre unut" / ilk kurulum wizard'ina admin ayarla adimi ekle
 - [x] Webhook guvenligi (HMAC-SHA256 imza dogrulama)
 - [x] Node palette arama iyilestirmesi (otomatik grup acma)
 - [x] Settings sayfasi sistem bilgisi paneli
@@ -110,7 +110,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
 - [x] Execution list sayfasinda workflow adiyla filtre + tarih aralik filtresi + triggeredBy filtresi (client-side, anlık)
 - [x] Node config panelinde expression builder: kategorili, filtrelenebilir degisken listesi
-- [ ] FTP/SFTP node: büyük dosyalar için streaming download desteği (şu an tüm dosyayı belleğe çekiyor)
+- [x] FTP/SFTP node: büyük dosyalar için streaming download desteği (şu an tüm dosyayı belleğe çekiyor)
 - [x] Minimap iyilestirmeleri: node tipine gore renk, toggle butonu, konum duzeltme
 
 #### Oncelik 4c: Yeni Gorevler
@@ -129,7 +129,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 
 #### Oncelik 4d: Kalan Gelistirmeler
 - [x] LoginPage'e "sifre unut" senaryosu (admin reset flow)
-- [ ] FTP/SFTP node: buyuk dosyalar icin streaming download (su an tum dosyayi belleğe cekiyor)
+- [x] FTP/SFTP node: buyuk dosyalar icin streaming download (su an tum dosyayi belleğe cekiyor)
 - [ ] Node gruplama / sub-workflow (complex, lower priority)
 - [x] Minimap toggle butonu ve konum duzeltme (minor)
 - [x] Execution history export (CSV/JSON)

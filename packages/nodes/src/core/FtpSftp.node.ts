@@ -81,6 +81,13 @@ export const FtpSftpNode: INodeType = {
         ],
         default: 'utf8',
       },
+      {
+        name: 'maxSizeMB',
+        displayName: 'Maksimum İndirme Boyutu (MB)',
+        type: 'number',
+        default: 50,
+        description: 'Bu boyutu aşan dosyalar indirilmez. 0 = sınırsız (dikkatli kullanın).',
+      },
     ],
   } as INodeTypeDefinition,
 
@@ -91,6 +98,8 @@ export const FtpSftpNode: INodeType = {
     const newPath = context.getParameter('newPath') as string ?? '';
     const content = context.getParameter('content') as string ?? '';
     const encoding = context.getParameter('encoding') as string ?? 'utf8';
+    const maxSizeMB = (context.getParameter('maxSizeMB') as number) ?? 50;
+    const maxSizeBytes = maxSizeMB > 0 ? maxSizeMB * 1024 * 1024 : Infinity;
 
     const creds = await context.getCredential('ftpSftp') as {
       host: string;
@@ -111,9 +120,9 @@ export const FtpSftpNode: INodeType = {
     const password = creds.password ?? '';
 
     if (protocol === 'sftp') {
-      return await executeSftp(operation, { host, port, username, password, privateKey: creds.privateKey }, remotePath, newPath, content, encoding);
+      return await executeSftp(operation, { host, port, username, password, privateKey: creds.privateKey }, remotePath, newPath, content, encoding, maxSizeBytes);
     } else {
-      return await executeFtp(operation, { host, port, user: username, password, secure: protocol === 'ftps' }, remotePath, newPath, content, encoding);
+      return await executeFtp(operation, { host, port, user: username, password, secure: protocol === 'ftps' }, remotePath, newPath, content, encoding, maxSizeBytes);
     }
   },
 };
@@ -129,6 +138,7 @@ async function executeFtp(
   newPath: string,
   content: string,
   encoding: string,
+  maxSizeBytes = Infinity,
 ): Promise<INodeExecutionData[]> {
   const client = new ftp.Client(30000);
   client.ftp.verbose = false;
@@ -159,6 +169,23 @@ async function executeFtp(
       }
 
       case 'download': {
+        // Check file size before downloading to avoid loading huge files into memory
+        if (maxSizeBytes !== Infinity) {
+          try {
+            const fileSize = await client.size(remotePath);
+            if (fileSize > maxSizeBytes) {
+              const sizeMB = (fileSize / 1024 / 1024).toFixed(1);
+              const limitMB = (maxSizeBytes / 1024 / 1024).toFixed(0);
+              throw new Error(
+                `Dosya çok büyük: ${sizeMB}MB (limit: ${limitMB}MB). ` +
+                `"Maksimum İndirme Boyutu" değerini artırın veya 0 yaparak sınırsız indirmeyi etkinleştirin.`
+              );
+            }
+          } catch (e) {
+            // If stat fails (e.g., server doesn't support SIZE), proceed anyway
+            if ((e as Error).message?.includes('Dosya çok büyük')) throw e;
+          }
+        }
         const { Writable } = await import('node:stream');
         const chunks: Buffer[] = [];
         const writable = new Writable({
@@ -216,6 +243,7 @@ async function executeSftp(
   newPath: string,
   content: string,
   encoding: string,
+  maxSizeBytes = Infinity,
 ): Promise<INodeExecutionData[]> {
   // Dynamic import so build doesn't fail if native modules missing
   const SFTPClient = (await import('ssh2-sftp-client')).default;
@@ -255,6 +283,22 @@ async function executeSftp(
       }
 
       case 'download': {
+        // Check file size before downloading to avoid loading huge files into memory
+        if (maxSizeBytes !== Infinity) {
+          try {
+            const stat = await sftp.stat(remotePath);
+            if (stat.size > maxSizeBytes) {
+              const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
+              const limitMB = (maxSizeBytes / 1024 / 1024).toFixed(0);
+              throw new Error(
+                `Dosya çok büyük: ${sizeMB}MB (limit: ${limitMB}MB). ` +
+                `"Maksimum İndirme Boyutu" değerini artırın veya 0 yaparak sınırsız indirmeyi etkinleştirin.`
+              );
+            }
+          } catch (e) {
+            if ((e as Error).message?.includes('Dosya çok büyük')) throw e;
+          }
+        }
         const buf = await sftp.get(remotePath) as Buffer;
         const result = encoding === 'base64' ? buf.toString('base64') : buf.toString('utf8');
         return [{ json: { path: remotePath, content: result, encoding, size: buf.length } }];
