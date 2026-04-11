@@ -230,6 +230,18 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] Variables node: execution-scoped key-value store (set/get/delete/dump, 2sa TTL)
 - [x] DashboardPage: yüksek hata oranlı (≥80%) aktif workflow'lar için sağlık uyarı paneli
 - [x] iconRegistry: FileCode, Lock, Braces ikonları eklendi
+- [x] Code node: async timeout (Promise.race), 256KB boyut limiti, console.info/debug/table, JSON object logging
+- [x] ExecutionHistoryPage: urlWorkflowId useMemo bağımlılık hatası düzeltildi
+- [x] ExecutionHistoryPage: skipped node durumu "Atlandı" gösteriyor (NODE_STATUS_CONFIG)
+- [x] ExecutionHistoryPage: truncated output (>500 item) banner ile uyarı
+- [x] ExecutionHistoryPage: onNodeStart ile node "running" anında gösteriliyor
+- [x] ExecutionHistoryPage: workflow filtre banner + editöre aç bağlantısı
+- [x] WorkflowCanvas: farklı node tıklandığında output viewer sıfırlanıyor
+- [x] schedulerService: cronExpression whitespace farkları gereksiz yeniden zamanlamayı önlüyor
+- [x] app.ts: /api/v1/metrics PUBLIC_PREFIXES'e eklendi (monitoring araçları erişebilir)
+- [x] app.ts: executionIdMap için monkey-patching yerine TtlMap sınıfı kullanıldı
+- [x] NodeConfigPanel: cronstrue Türkçe locale ile gösteriyor
+- [x] WsNodeStart/WsNodeDone: startedAt/finishedAt alanları shared types'a eklendi
 
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
