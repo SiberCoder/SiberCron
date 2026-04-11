@@ -542,11 +542,38 @@ export default function WorkflowListPage() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <Search size={32} className="text-obsidian-600 mb-4" />
-          <p className="text-sm text-obsidian-500 font-body">
-            "<strong className="text-obsidian-300">{search}</strong>" icin sonuc bulunamadi
+          <p className="text-sm text-obsidian-500 font-body mb-3">
+            {search
+              ? <><span className="text-obsidian-300">"{search}"</span> için sonuç bulunamadı</>
+              : 'Aktif filtrelerle eşleşen workflow yok'}
           </p>
-          <button onClick={() => setSearch('')} className="mt-4 text-xs text-aurora-cyan hover:underline font-body">
-            Aramayı temizle
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            {search && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-aurora-cyan/10 border border-aurora-cyan/20 text-[10px] font-medium text-aurora-cyan font-body">
+                Arama: {search}
+              </span>
+            )}
+            {statusFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-aurora-emerald/10 border border-aurora-emerald/20 text-[10px] font-medium text-aurora-emerald font-body">
+                Durum: {statusFilter === 'active' ? 'Aktif' : 'Pasif'}
+              </span>
+            )}
+            {triggerFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-aurora-blue/10 border border-aurora-blue/20 text-[10px] font-medium text-aurora-blue font-body">
+                Trigger: {triggerFilter}
+              </span>
+            )}
+            {tagFilter && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-aurora-violet/10 border border-aurora-violet/20 text-[10px] font-medium text-aurora-violet font-body">
+                #{tagFilter}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => { setSearch(''); setStatusFilter('all'); setTriggerFilter('all'); setTagFilter(null); setPage(1); }}
+            className="text-xs text-aurora-cyan hover:underline font-body"
+          >
+            Tüm filtreleri temizle
           </button>
         </div>
       ) : (

@@ -729,6 +729,39 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
       );
       break;
 
+    case 'multiSelect': {
+      const selectedValues: string[] = Array.isArray(value)
+        ? (value as string[])
+        : typeof value === 'string' && value
+          ? value.split(',').map((s) => s.trim()).filter(Boolean)
+          : [];
+      const toggleOption = (optValue: string) => {
+        const next = selectedValues.includes(optValue)
+          ? selectedValues.filter((v) => v !== optValue)
+          : [...selectedValues, optValue];
+        onChange(name, next);
+      };
+      input = (
+        <div className={clsx('rounded-xl border bg-white/[0.02] p-2 space-y-1', errorBorder || 'border-white/[0.08]')}>
+          {options && options.length > 0 ? options.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 px-1 py-1 rounded-lg hover:bg-white/[0.04] cursor-pointer transition-colors">
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(opt.value)}
+                onChange={() => toggleOption(opt.value)}
+                className="w-3.5 h-3.5 rounded accent-aurora-cyan"
+              />
+              <span className="text-xs text-obsidian-300 font-body">{opt.name}</span>
+              {opt.description && <span className="text-[10px] text-obsidian-600 font-body truncate">{opt.description}</span>}
+            </label>
+          )) : (
+            <p className="text-[10px] text-obsidian-600 px-1 font-body">No options defined</p>
+          )}
+        </div>
+      );
+      break;
+    }
+
     case 'code':
       input = (
         <textarea
@@ -1208,11 +1241,23 @@ export default function NodeConfigPanel() {
         ) : (
           definition.properties
             .filter((prop) => {
+              // displayOptions.show: property visible only when ALL show conditions match
               const show = prop.displayOptions?.show;
-              if (!show) return true;
-              for (const [paramName, allowedValues] of Object.entries(show)) {
-                const currentValue = parameters[paramName] ?? definition.properties.find((p) => p.name === paramName)?.default;
-                if (!(allowedValues as unknown[]).includes(currentValue)) return false;
+              if (show) {
+                for (const [paramName, allowedValues] of Object.entries(show)) {
+                  const currentValue = parameters[paramName] ?? definition.properties.find((p) => p.name === paramName)?.default;
+                  if (!(allowedValues as unknown[]).includes(currentValue)) return false;
+                }
+              }
+              // displayOptions.hide: property hidden when ALL hide conditions match
+              const hide = prop.displayOptions?.hide;
+              if (hide) {
+                let allHideMatch = true;
+                for (const [paramName, hiddenValues] of Object.entries(hide)) {
+                  const currentValue = parameters[paramName] ?? definition.properties.find((p) => p.name === paramName)?.default;
+                  if (!(hiddenValues as unknown[]).includes(currentValue)) { allHideMatch = false; break; }
+                }
+                if (allHideMatch) return false;
               }
               return true;
             })
