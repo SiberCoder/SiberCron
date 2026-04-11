@@ -7,6 +7,7 @@ import { getNodeIcon } from '../../lib/iconRegistry';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
 import { apiGet } from '../../api/client';
+import { API_BASE_URL } from '../../lib/config';
 
 // ── Visual Cron Builder ──────────────────────────────────────────────
 

@@ -21,6 +21,8 @@ import {
   Copy,
   Plus,
   X,
+  User,
+  Users,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiGet, apiPost } from '../api/client';
@@ -250,6 +252,268 @@ function ApiKeySection() {
           </div>
         )}
       </div>
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  User Management Section (admin only)                               */
+/* ------------------------------------------------------------------ */
+
+interface UserInfo {
+  id: string;
+  username: string;
+  role: 'admin' | 'viewer';
+  createdAt: string;
+}
+
+function UserManagementSection() {
+  const currentUser = useAuthStore((s) => s.user);
+  const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
+  const [users, setUsers] = useState<UserInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState<'admin' | 'viewer'>('viewer');
+  const [creating, setCreating] = useState(false);
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const isAdmin = currentUser?.role === 'admin';
+
+  const load = useCallback(async () => {
+    if (!isAdmin) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/users', { headers: getAuthHeader() });
+      const data = await res.json() as UserInfo[];
+      setUsers(Array.isArray(data) ? data : []);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [isAdmin, getAuthHeader]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  // Auto-dismiss messages
+  useEffect(() => {
+    if (!msg) return;
+    const t = setTimeout(() => setMsg(null), 4000);
+    return () => clearTimeout(t);
+  }, [msg]);
+
+  const handleCreate = async () => {
+    if (!newUsername.trim() || !newPassword.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch('/api/v1/auth/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ username: newUsername.trim(), password: newPassword, role: newRole }),
+      });
+      const data = await res.json() as UserInfo & { error?: string };
+      if (!res.ok) throw new Error(data.error ?? 'Oluşturulamadı');
+      setMsg({ type: 'success', text: `"${data.username}" kullanıcısı oluşturuldu` });
+      setNewUsername(''); setNewPassword(''); setNewRole('viewer');
+      void load();
+    } catch (err) {
+      setMsg({ type: 'error', text: err instanceof Error ? err.message : 'Hata' });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (id: string, username: string) => {
+    if (!window.confirm(`"${username}" kullanıcısını silmek istediğinizden emin misiniz?`)) return;
+    try {
+      const res = await fetch(`/api/v1/auth/users/${id}`, { method: 'DELETE', headers: getAuthHeader() });
+      if (!res.ok) throw new Error('Silinemedi');
+      setMsg({ type: 'success', text: `"${username}" silindi` });
+      void load();
+    } catch {
+      setMsg({ type: 'error', text: 'Silme başarısız' });
+    }
+  };
+
+  const handleResetPassword = async (id: string) => {
+    if (!resetPasswordValue || resetPasswordValue.length < 6) {
+      setMsg({ type: 'error', text: 'Şifre en az 6 karakter olmalı' });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/v1/auth/users/${id}/reset-password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ newPassword: resetPasswordValue }),
+      });
+      if (!res.ok) throw new Error('Şifre sıfırlanamadı');
+      setMsg({ type: 'success', text: 'Şifre sıfırlandı' });
+      setResetPasswordUserId(null);
+      setResetPasswordValue('');
+    } catch {
+      setMsg({ type: 'error', text: 'Şifre sıfırlama başarısız' });
+    }
+  };
+
+  const handleRoleChange = async (id: string, role: 'admin' | 'viewer') => {
+    try {
+      const res = await fetch(`/api/v1/auth/users/${id}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error('Rol değiştirilemedi');
+      setMsg({ type: 'success', text: 'Rol güncellendi' });
+      void load();
+    } catch {
+      setMsg({ type: 'error', text: 'Rol değiştirme başarısız' });
+    }
+  };
+
+  return (
+    <Section icon={Users} title="Kullanıcı Yönetimi" description="Kullanıcı hesapları, roller ve şifre yönetimi" defaultOpen={false}>
+      {!isAdmin ? (
+        <div className="flex items-center gap-2 py-2">
+          <AlertTriangle size={13} className="text-aurora-amber shrink-0" />
+          <p className="text-xs text-obsidian-400">Bu bölüm yalnızca admin kullanıcılar için görünür.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {msg && (
+            <div className={clsx(
+              'text-xs px-3 py-2 rounded-lg',
+              msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400',
+            )}>{msg.text}</div>
+          )}
+
+          {/* User list */}
+          {loading ? (
+            <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-obsidian-500" /></div>
+          ) : (
+            <div className="space-y-2">
+              {users.map((u) => (
+                <div key={u.id} className="glass-panel rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-aurora-cyan/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-aurora-cyan">{u.username[0]?.toUpperCase()}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{u.username}</span>
+                        {u.id === currentUser?.id && (
+                          <span className="text-[9px] text-aurora-cyan bg-aurora-cyan/10 px-1.5 py-0.5 rounded font-body">Sen</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-obsidian-500">
+                        Oluşturuldu: {new Date(u.createdAt).toLocaleDateString('tr-TR')}
+                      </p>
+                    </div>
+
+                    {/* Role select */}
+                    <select
+                      value={u.role}
+                      disabled={u.id === currentUser?.id}
+                      onChange={(e) => void handleRoleChange(u.id, e.target.value as 'admin' | 'viewer')}
+                      className="text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-white focus:outline-none disabled:opacity-50"
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+
+                    {/* Reset password toggle */}
+                    <button
+                      onClick={() => {
+                        setResetPasswordUserId(resetPasswordUserId === u.id ? null : u.id);
+                        setResetPasswordValue('');
+                      }}
+                      title="Şifre sıfırla"
+                      className="p-1.5 rounded-lg text-obsidian-500 hover:text-aurora-amber hover:bg-aurora-amber/10 transition-colors"
+                    >
+                      <Key size={13} />
+                    </button>
+
+                    {/* Delete */}
+                    {u.id !== currentUser?.id && (
+                      <button
+                        onClick={() => void handleDelete(u.id, u.username)}
+                        title="Sil"
+                        className="p-1.5 rounded-lg text-red-400/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Reset password inline form */}
+                  {resetPasswordUserId === u.id && (
+                    <div className="mt-3 flex gap-2 animate-fade-in">
+                      <input
+                        type="password"
+                        placeholder="Yeni şifre (min 6 karakter)"
+                        value={resetPasswordValue}
+                        onChange={(e) => setResetPasswordValue(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && void handleResetPassword(u.id)}
+                        className="flex-1 text-xs bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-aurora-amber/40 transition-all"
+                      />
+                      <button
+                        onClick={() => void handleResetPassword(u.id)}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold bg-aurora-amber/10 text-aurora-amber hover:bg-aurora-amber/20 transition-colors"
+                      >
+                        Sıfırla
+                      </button>
+                      <button
+                        onClick={() => { setResetPasswordUserId(null); setResetPasswordValue(''); }}
+                        className="p-2 rounded-lg text-obsidian-500 hover:text-white transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Create new user */}
+          <div className="glass-panel rounded-xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-white">Yeni Kullanıcı Ekle</p>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="Kullanıcı adı"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                className="text-xs bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-aurora-cyan/40 transition-all"
+              />
+              <input
+                type="password"
+                placeholder="Şifre (min 6 karakter)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="text-xs bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-aurora-cyan/40 transition-all"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value as 'admin' | 'viewer')}
+                className="text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-2 text-white focus:outline-none"
+              >
+                <option value="viewer">Viewer</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button
+                onClick={() => void handleCreate()}
+                disabled={creating || !newUsername.trim() || !newPassword.trim()}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-aurora-cyan/10 text-aurora-cyan text-xs font-semibold hover:bg-aurora-cyan/20 disabled:opacity-50 transition-colors"
+              >
+                {creating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                Ekle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Section>
   );
 }
@@ -903,6 +1167,9 @@ export default function SettingsPage() {
             </Field>
           </div>
         </Section>
+
+        {/* User Management Section (admin only) */}
+        <UserManagementSection />
 
         {/* Security Section */}
         <SecuritySection />

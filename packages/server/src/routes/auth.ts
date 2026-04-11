@@ -150,6 +150,48 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ success: true });
   });
 
+  // PUT /api/v1/auth/users/:id/reset-password  (admin only)
+  app.put<{
+    Params: { id: string };
+    Body: { newPassword: string };
+  }>('/users/:id/reset-password', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const jwt = request.user as { role: string };
+    if (jwt.role !== 'admin') return reply.status(403).send({ error: 'Admin access required' });
+
+    const { newPassword } = request.body;
+    if (!newPassword || newPassword.length < 6) {
+      return reply.status(400).send({ error: 'Password must be at least 6 characters' });
+    }
+
+    const user = db.findUserById(request.params.id);
+    if (!user) return reply.status(404).send({ error: 'User not found' });
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    db.updateUserPassword(request.params.id, passwordHash);
+    return reply.send({ success: true });
+  });
+
+  // PUT /api/v1/auth/users/:id/role  (admin only)
+  app.put<{
+    Params: { id: string };
+    Body: { role: 'admin' | 'viewer' };
+  }>('/users/:id/role', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const jwt = request.user as { sub: string; role: string };
+    if (jwt.role !== 'admin') return reply.status(403).send({ error: 'Admin access required' });
+    if (jwt.sub === request.params.id) return reply.status(400).send({ error: 'Cannot change your own role' });
+
+    const { role } = request.body;
+    if (!['admin', 'viewer'].includes(role)) {
+      return reply.status(400).send({ error: 'Role must be admin or viewer' });
+    }
+
+    const user = db.findUserById(request.params.id);
+    if (!user) return reply.status(404).send({ error: 'User not found' });
+
+    db.updateUserRole(request.params.id, role);
+    return reply.send({ success: true, id: request.params.id, role });
+  });
+
   // ── API Key Management ─────────────────────────────────────────────────
 
   // GET /api/v1/auth/api-keys  — list own API keys

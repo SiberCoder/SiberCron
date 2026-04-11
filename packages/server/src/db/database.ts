@@ -239,6 +239,14 @@ export class Database {
     return true;
   }
 
+  updateUserRole(id: string, role: IUser['role']): boolean {
+    const user = this.users.get(id);
+    if (!user) return false;
+    this.users.set(id, { ...user, role, updatedAt: new Date().toISOString() });
+    this.save();
+    return true;
+  }
+
   deleteUser(id: string): boolean {
     const result = this.users.delete(id);
     if (result) this.save();
