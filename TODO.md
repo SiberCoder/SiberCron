@@ -132,8 +132,8 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [ ] FTP/SFTP node: buyuk dosyalar icin streaming download (su an tum dosyayi belleğe cekiyor)
 - [ ] Node gruplama / sub-workflow (complex, lower priority)
 - [ ] Minimap toggle butonu ve konum duzeltme (minor)
-- [ ] Execution history export (CSV/JSON)
-- [ ] Workflow bulk operations (coklu aktifle/pasifle, toplu sil)
+- [x] Execution history export (CSV/JSON)
+- [x] Workflow bulk operations (coklu aktifle/pasifle, toplu sil)
 - [ ] AIAgent node: streaming output destegi (SSE)
 - [ ] Node config paneli: JSON field icin syntax highlighting editor
 

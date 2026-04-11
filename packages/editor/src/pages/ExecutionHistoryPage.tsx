@@ -19,6 +19,9 @@ import {
   AlertTriangle,
   RotateCcw,
   X,
+  Download,
+  FileText,
+  FileJson,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { io, type Socket } from 'socket.io-client';
@@ -643,6 +646,42 @@ export default function ExecutionHistoryPage() {
     }
   };
 
+  const handleExport = (format: 'csv' | 'json') => {
+    const data = filteredExecutions;
+    let blob: Blob;
+    let filename: string;
+
+    if (format === 'json') {
+      blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      filename = `executions_${new Date().toISOString().slice(0, 10)}.json`;
+    } else {
+      const headers = ['id', 'workflowName', 'workflowId', 'status', 'triggerType', 'startedAt', 'finishedAt', 'durationMs', 'triggeredBy'];
+      const csvRows = [
+        headers.join(','),
+        ...data.map((e) => [
+          e.id,
+          `"${(e.workflowName ?? e.workflowId).replace(/"/g, '""')}"`,
+          e.workflowId,
+          e.status,
+          e.triggerType ?? '',
+          e.startedAt ?? '',
+          e.finishedAt ?? '',
+          e.durationMs ?? '',
+          `"${[e.triggeredBy?.username, e.triggeredBy?.method].filter(Boolean).join(' / ')}"`,
+        ].join(',')),
+      ];
+      blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      filename = `executions_${new Date().toISOString().slice(0, 10)}.csv`;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Auto-refresh every 5 seconds when enabled
   useEffect(() => {
     if (!autoRefresh) return;
@@ -678,6 +717,31 @@ export default function ExecutionHistoryPage() {
             Otomatik Yenile
             {autoRefresh && <Loader2 size={10} className="animate-spin text-aurora-cyan" />}
           </label>
+          {filteredExecutions.length > 0 && (
+            <div className="relative group">
+              <button className="btn-ghost text-xs">
+                <Download size={12} /> Dışa Aktar
+              </button>
+              <div className="absolute right-0 top-full mt-1 glass-card rounded-xl p-2 min-w-[160px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 space-y-1">
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-obsidian-300 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors font-body"
+                >
+                  <FileText size={12} className="text-aurora-emerald shrink-0" />
+                  CSV olarak indir
+                  <span className="block text-[10px] text-obsidian-500">Excel/Sheets uyumlu</span>
+                </button>
+                <button
+                  onClick={() => handleExport('json')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-obsidian-300 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors font-body"
+                >
+                  <FileJson size={12} className="text-aurora-blue shrink-0" />
+                  JSON olarak indir
+                  <span className="block text-[10px] text-obsidian-500">Tam veri, tüm alanlar</span>
+                </button>
+              </div>
+            </div>
+          )}
           {executions.length > 0 && (
             <div className="relative group">
               <button className="btn-ghost text-xs">

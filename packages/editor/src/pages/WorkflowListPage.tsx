@@ -21,6 +21,8 @@ import {
   XCircle,
   Activity,
   Loader2,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
@@ -68,6 +70,10 @@ export default function WorkflowListPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [executingId, setExecutingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkToggling, setBulkToggling] = useState(false);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [triggerFilter, setTriggerFilter] = useState<'all' | TriggerType>('all');
@@ -231,6 +237,71 @@ export default function WorkflowListPage() {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const pageIds = filtered.slice((page - 1) * pageSize, page * pageSize).map((w) => w.id);
+    const allSelected = pageIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const handleBulkToggleActive = async (activate: boolean) => {
+    setBulkToggling(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        apiPost<IWorkflow>(`/workflows/${id}/${activate ? 'activate' : 'deactivate'}`),
+      ),
+    );
+    const updated = results
+      .map((r, i) => ({ id: ids[i], result: r }))
+      .filter((r) => r.result.status === 'fulfilled')
+      .map((r) => (r.result as PromiseFulfilledResult<IWorkflow>).value);
+    if (updated.length > 0) {
+      setWorkflows((prev) =>
+        prev.map((w) => {
+          const u = updated.find((u) => u.id === w.id);
+          return u ? { ...w, isActive: u.isActive } : w;
+        }),
+      );
+      toast.success(`${updated.length} workflow ${activate ? 'aktif edildi' : 'durduruldu'}`);
+    }
+    setSelectedIds(new Set());
+    setBulkToggling(false);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(ids.map((id) => apiDelete(`/workflows/${id}`)));
+    const deletedCount = results.filter((r) => r.status === 'fulfilled').length;
+    if (deletedCount > 0) {
+      setWorkflows((prev) => prev.filter((w) => !selectedIds.has(w.id)));
+      toast.success(`${deletedCount} workflow silindi`);
+    }
+    setSelectedIds(new Set());
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(false);
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
       {/* Header */}
@@ -274,6 +345,48 @@ export default function WorkflowListPage() {
           </button>
         </div>
       </div>
+
+      {/* Bulk action toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="glass-card rounded-2xl p-3 flex items-center gap-3 border border-aurora-cyan/20 animate-fade-in">
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="p-1.5 rounded-lg text-obsidian-500 hover:text-white hover:bg-white/[0.04] transition-all"
+            title="Seçimi kaldır"
+          >
+            <X size={14} />
+          </button>
+          <span className="text-sm font-semibold text-aurora-cyan font-body">
+            {selectedIds.size} seçili
+          </span>
+          <div className="aurora-divider h-6 w-px bg-white/[0.08]" />
+          <button
+            onClick={() => handleBulkToggleActive(true)}
+            disabled={bulkToggling}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-emerald hover:bg-aurora-emerald/10 rounded-lg transition-all font-body disabled:opacity-50"
+          >
+            {bulkToggling ? <Loader2 size={12} className="animate-spin" /> : <Power size={12} />}
+            Tümünü Aktif Et
+          </button>
+          <button
+            onClick={() => handleBulkToggleActive(false)}
+            disabled={bulkToggling}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-amber hover:bg-aurora-amber/10 rounded-lg transition-all font-body disabled:opacity-50"
+          >
+            {bulkToggling ? <Loader2 size={12} className="animate-spin" /> : <PowerOff size={12} />}
+            Tümünü Durdur
+          </button>
+          <div className="flex-1" />
+          <button
+            onClick={() => setBulkDeleteConfirm(true)}
+            disabled={bulkDeleting}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-rose hover:bg-aurora-rose/10 rounded-lg transition-all font-body disabled:opacity-50"
+          >
+            {bulkDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+            Tümünü Sil
+          </button>
+        </div>
+      )}
 
       {/* Search + Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
@@ -424,24 +537,57 @@ export default function WorkflowListPage() {
         </div>
       ) : (
         <>
+        {/* Select-all row */}
+        {filtered.length > 0 && (
+          <div className="flex items-center gap-2 px-1">
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-1.5 text-[11px] text-obsidian-500 hover:text-white transition-colors font-body"
+            >
+              {filtered.slice((page - 1) * pageSize, page * pageSize).every((w) => selectedIds.has(w.id))
+                ? <CheckSquare size={13} className="text-aurora-cyan" />
+                : <Square size={13} />}
+              Sayfayı Seç
+            </button>
+            {selectedIds.size > 0 && (
+              <span className="text-[10px] text-aurora-cyan/70 font-body">
+                ({selectedIds.size} seçili)
+              </span>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.slice((page - 1) * pageSize, page * pageSize).map((wf, i) => {
             const TriggerIcon = TRIGGER_ICONS[wf.triggerType] ?? Play;
             const triggerColor = TRIGGER_COLORS[wf.triggerType] ?? 'text-obsidian-400';
+            const isSelected = selectedIds.has(wf.id);
             return (
               <div
                 key={wf.id}
                 className={clsx(
                   'glass-card rounded-2xl p-5 text-left group hover:shadow-aurora-sm transition-all duration-300 animate-slide-up',
                   `stagger-${(i % 6) + 1}`,
+                  isSelected && 'ring-1 ring-aurora-cyan/40',
                 )}
                 style={{ animationFillMode: 'both' }}
               >
                 <div className="relative">
                   <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-white group-hover:text-aurora-cyan transition-colors truncate pr-3 font-body">
-                      {wf.name}
-                    </h3>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleSelect(wf.id); }}
+                        className={clsx(
+                          'shrink-0 transition-colors',
+                          isSelected ? 'text-aurora-cyan' : 'text-obsidian-600 hover:text-obsidian-400 opacity-0 group-hover:opacity-100',
+                        )}
+                        title="Seç"
+                      >
+                        {isSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+                      </button>
+                      <h3 className="text-sm font-semibold text-white group-hover:text-aurora-cyan transition-colors truncate font-body">
+                        {wf.name}
+                      </h3>
+                    </div>
                     <button
                       onClick={(e) => handleToggleActive(e, wf)}
                       disabled={togglingId === wf.id}
@@ -669,6 +815,41 @@ export default function WorkflowListPage() {
             </div>
           </div>
         )}
+        {/* Bulk delete confirmation modal */}
+        {bulkDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="glass-card rounded-2xl p-6 max-w-sm w-full mx-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-aurora-rose/10 flex items-center justify-center">
+                  <AlertTriangle size={20} className="text-aurora-rose" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-display font-semibold text-white">Toplu Silme</h3>
+                  <p className="text-xs text-obsidian-400 font-body">Bu işlem geri alınamaz</p>
+                </div>
+              </div>
+              <p className="text-xs text-obsidian-300 font-body">
+                <strong className="text-white">{selectedIds.size} workflow</strong> silinecek. Emin misiniz?
+              </p>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  onClick={() => setBulkDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2.5 text-xs font-semibold text-obsidian-300 border border-white/[0.08] rounded-xl hover:bg-white/[0.04] transition-all font-body"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="flex-1 px-4 py-2.5 text-xs font-semibold text-white bg-aurora-rose/80 hover:bg-aurora-rose rounded-xl transition-all font-body disabled:opacity-50"
+                >
+                  {bulkDeleting ? 'Siliniyor...' : `Evet, ${selectedIds.size} Workflow Sil`}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Pagination Controls */}
         {filtered.length > pageSize && (
           <div className="flex items-center justify-center gap-4 pt-4">
