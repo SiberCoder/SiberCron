@@ -780,10 +780,10 @@ export default function WorkflowListPage() {
                     <button
                       onClick={() => navigate(`/workflows/${wf.id}`)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-obsidian-300 hover:text-aurora-cyan hover:bg-aurora-cyan/5 rounded-lg transition-all font-body"
-                      title="Duzenle"
+                      title="Düzenle"
                     >
                       <Edit3 size={12} />
-                      Duzenle
+                      Düzenle
                     </button>
                     <button
                       onClick={(e) => handleToggleActive(e, wf)}
@@ -804,8 +804,9 @@ export default function WorkflowListPage() {
                         e.stopPropagation();
                         setExecutingId(wf.id);
                         try {
-                          await apiPost(`/workflows/${wf.id}/execute`, {});
+                          const exec = await apiPost<{ id: string }>(`/workflows/${wf.id}/execute`, {});
                           toast.success(`"${wf.name}" başlatıldı`);
+                          if (exec?.id) navigate(`/executions/${exec.id}`);
                         } catch (err) {
                           if (err instanceof ApiError && err.status === 409) {
                             toast.warning(`"${wf.name}" zaten çalışıyor`);

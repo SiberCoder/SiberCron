@@ -80,7 +80,12 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] NotionDatabase node (query/create/update sayfa)
 - [x] GitHub node (issue/PR/repo/release/comment, REST API v3)
 - [x] GitHub Trigger node (push/PR/issue/release webhook events)
-- [x] Airtable node (record CRUD, arama, upsert, REST API)
+- [x] Airtable node (record CRUD, arama, uysert, REST API)
+- [x] Jira node (issue CRUD + JQL, comments, transitions, projects — Cloud REST API v3)
+- [x] Filter node (AND/OR kosul kombinasyonu, JSON kosul listesi)
+- [x] Aggregate node (count/sum/avg/min/max/concat/groupBy/unique)
+- [x] Sort node (alan bazli + rastgele, coklu anahtarli JSON siralama)
+- [x] ExecuteWorkflow node (baska workflow'u API ile calistir, polling veya fire-and-forget)
 
 #### Oncelik 3: Editor Gelistirmeleri
 - [x] Template'den workflow olusturma (templates sayfasindan)

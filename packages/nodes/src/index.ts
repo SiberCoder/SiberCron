@@ -40,6 +40,7 @@ import { JiraNode } from './core/Jira.node.js';
 import { FilterNode } from './core/Filter.node.js';
 import { AggregateNode } from './core/Aggregate.node.js';
 import { SortNode } from './core/Sort.node.js';
+import { ExecuteWorkflowNode } from './core/ExecuteWorkflow.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -82,6 +83,7 @@ export const builtinNodes: INodeType[] = [
   FilterNode,
   AggregateNode,
   SortNode,
+  ExecuteWorkflowNode,
 ];
 
 export {
@@ -125,4 +127,5 @@ export {
   FilterNode,
   AggregateNode,
   SortNode,
+  ExecuteWorkflowNode,
 };

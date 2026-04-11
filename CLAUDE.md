@@ -89,7 +89,7 @@ Tümü `/api/v1/` altında:
 ## Node Tipleri (packages/nodes/src/)
 
 **Trigger:** ManualTrigger, CronTrigger, WebhookTrigger, TelegramTrigger (incoming messages, command/text filter)
-**Core:** HttpRequest (auth: bearer/basic/apiKey, query params, timeout), Code (vm sandbox: Date/JSON/Math/console/URL/Promise), Conditional (19 operatör), Transform (pick/remove/rename/set/flatten/wrap), Merge (6 mod), Delay, Log (select logLevel), Loop (each/count/arrayField), Split (chunk/byField/splitText)
+**Core:** HttpRequest (auth: bearer/basic/apiKey, query params, timeout), Code (vm sandbox: Date/JSON/Math/console/URL/Promise), Conditional (19 operatör), Transform (pick/remove/rename/set/flatten/wrap), Merge (6 mod), Delay, Log (select logLevel), Loop (each/count/arrayField), Split (chunk/byField/splitText), Filter (AND/OR koşul, JSON koşul listesi), Aggregate (count/sum/avg/min/max/concat/groupBy/unique), Sort (alan bazlı/rastgele, çoklu anahtar JSON), ExecuteWorkflow (başka workflow'u çalıştır, sonuç bekle/polling)
 **AI:** AIAgent (çoklu provider), AutonomousDev (Claude CLI loop), AISummarizer (concise/paragraph/bullets/keypoints/custom, çoklu dil), AIClassifier (multi-label, confidence score, çoklu provider)
 **Data:** DatabaseQuery (PostgreSQL/MySQL, parameterized queries, CRUD), Redis (16 operasyon: get/set/del/hget/hset/lpush/lrange/sadd/publish...), GitHub (issue/PR/repo/release/comment, REST API v3), Airtable (record CRUD, arama, upsert, REST API), Jira (issue CRUD + JQL search, comments, transitions, projects, Cloud REST API v3)
 **Messaging:** TelegramSend (text/photo/document, parseMode, reply), DiscordSend (webhook + bot API, embeds), SlackSend (blocks, thread reply), WhatsAppReceive, WhatsAppSend, EmailSMTP (HTML/text, CC/BCC)
@@ -178,6 +178,10 @@ Ana interface'ler:
 - **GitHub Trigger Node**: push/pull_request/issues/release webhook tetikleyici, HMAC-SHA256 imza doğrulama, event/repo/branch filtreleme. `sibercron.githubTrigger`
 - **Airtable Node**: record list/get/create/update/upsert/delete/search, REST API v0, personal access token auth. `sibercron.airtable`
 - **Jira Node**: issue CRUD + JQL arama, comment CRUD, transition yönetimi, project listesi. Jira Cloud REST API v3, Basic Auth (email+token). `sibercron.jira`
+- **Filter Node**: Item array'ini AND/OR kombinasyon modunda JSON koşul listesiyle filtreler. `sibercron.filter`
+- **Aggregate Node**: count/sum/avg/min/max/concat/groupBy/unique operasyonları. `sibercron.aggregate`
+- **Sort Node**: Alan bazlı veya rastgele sıralama, çoklu sıralama anahtarı JSON ile. `sibercron.sort`
+- **ExecuteWorkflow Node**: Başka bir workflow'u API üzerinden çalıştırır, tamamlanmasını polling ile bekler veya fire-and-forget modunda çalışır. `sibercron.executeWorkflow`
 
 ## Kurallar
 
