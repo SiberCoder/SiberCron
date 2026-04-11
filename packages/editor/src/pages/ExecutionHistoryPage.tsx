@@ -311,11 +311,17 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
     let cancelled = false;
 
     // Initial HTTP fetch to get logs that accumulated before this component mounted
-    apiGet<{ logs: LogEntry[]; total: number }>(`/executions/${executionId}/logs`)
-      .then((res) => {
-        if (!cancelled && res.logs.length > 0) setLogs(res.logs);
-      })
-      .catch(() => { /* best-effort */ });
+    const fetchLogs = () => {
+      apiGet<{ logs: LogEntry[]; total: number }>(`/executions/${executionId}/logs`)
+        .then((res) => {
+          if (!cancelled && res.logs && res.logs.length > 0) setLogs(res.logs);
+        })
+        .catch(() => {});
+    };
+    fetchLogs();
+    // Re-fetch every 3 seconds as fallback when socket.io is not delivering
+    const pollInterval = setInterval(fetchLogs, 3000);
+
 
     // WebSocket: subscribe to real-time log events from the server
     // If already connected, subscribe immediately (onConnect won't fire again)
@@ -349,6 +355,7 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
 
     return () => {
       cancelled = true;
+      clearInterval(pollInterval);
       socket.emit('unsubscribe:execution', executionId);
       socket.off('connect', onConnect);
       socket.io.off('reconnect', onReconnect);
