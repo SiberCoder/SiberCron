@@ -48,9 +48,12 @@ function useWorkflowValidation() {
     }
 
     const connectedIds = new Set<string>();
+    const adjacency = new Map<string, string[]>();
+    nodes.forEach((n) => adjacency.set(n.id, []));
     edges.forEach((e) => {
       connectedIds.add(e.source);
       connectedIds.add(e.target);
+      adjacency.get(e.source)?.push(e.target);
     });
 
     if (nodes.length > 1) {
@@ -58,6 +61,27 @@ function useWorkflowValidation() {
       if (isolated.length > 0) {
         const names = isolated.map((n) => (n.data.label as string) || n.id).join(', ');
         warnings.push(`Bağlantısız node${isolated.length > 1 ? 'lar' : ''}: ${names}`);
+      }
+    }
+
+    // DFS cycle detection
+    const visited = new Set<string>();
+    const inStack = new Set<string>();
+    const detectCycle = (nodeId: string): boolean => {
+      if (inStack.has(nodeId)) return true;
+      if (visited.has(nodeId)) return false;
+      visited.add(nodeId);
+      inStack.add(nodeId);
+      for (const neighbor of adjacency.get(nodeId) ?? []) {
+        if (detectCycle(neighbor)) return true;
+      }
+      inStack.delete(nodeId);
+      return false;
+    };
+    for (const node of nodes) {
+      if (!visited.has(node.id) && detectCycle(node.id)) {
+        warnings.push('Döngüsel bağlantı tespit edildi — workflow sonsuz döngüye girebilir');
+        break;
       }
     }
 

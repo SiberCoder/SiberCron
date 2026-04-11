@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { schedule, validate, type ScheduledTask } from 'node-cron';
 import type { IWorkflow } from '@sibercron/shared';
 import { db } from '../db/database.js';
@@ -108,6 +109,22 @@ class SchedulerService {
             );
             db.updateWorkflow(id, { isActive: false });
             this.unschedule(id);
+            // Create a visible error execution so the user sees the failure in the UI
+            const now = new Date().toISOString();
+            db.createExecution({
+              id: crypto.randomUUID(),
+              workflowId: id,
+              workflowName: name,
+              status: 'error',
+              triggerType: 'cron',
+              triggeredBy: { method: 'cron' },
+              nodeResults: {},
+              errorMessage: `Workflow otomatik devre dışı bırakıldı: queue'ya 5 ardışık ekleme başarısız oldu. Son hata: ${(err as Error).message}`,
+              startedAt: now,
+              finishedAt: now,
+              durationMs: 0,
+              createdAt: now,
+            });
             return;
           }
         }

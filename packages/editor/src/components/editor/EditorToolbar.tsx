@@ -84,6 +84,12 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
   }, [saveWorkflow, meta.id, meta.name, nodes, navigate]);
 
   const handleExecute = useCallback(async () => {
+    // Fast local checks before any network request
+    if (nodes.length === 0) {
+      toast.error('Workflow boş — çalıştırmak için en az bir node ekleyin.');
+      return;
+    }
+
     setIsExecuting(true);
     try {
       if (isDirty) {
@@ -118,7 +124,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
     } finally {
       setIsExecuting(false);
     }
-  }, [isDirty, saveWorkflow, executeWorkflow, connectExecution, meta.id]);
+  }, [isDirty, saveWorkflow, executeWorkflow, connectExecution, meta.id, nodes.length]);
 
   // Keep refs up-to-date
   handleSaveRef.current = handleSave;

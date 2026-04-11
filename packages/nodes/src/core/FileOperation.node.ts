@@ -15,17 +15,33 @@ function getAllowedRoots(): string[] {
   return [process.cwd()];
 }
 
-async function safePath(inputPath: string): Promise<string> {
+async function safePath(inputPath: string, existsMustBeTrue = false): Promise<string> {
   const resolved = path.resolve(inputPath);
   const roots = getAllowedRoots();
-  const allowed = roots.some((root) => resolved.startsWith(root + path.sep) || resolved === root);
+
+  // For existing paths, resolve symlinks to catch symlink-based traversal attacks.
+  // For paths that may not yet exist (write/append), resolve the parent's realpath
+  // and reconstruct the final segment to avoid blocking new file creation.
+  let canonical: string;
+  try {
+    canonical = await fs.realpath(resolved);
+  } catch {
+    if (existsMustBeTrue) {
+      throw new Error(`Path not found: "${resolved}"`);
+    }
+    // Path doesn't exist yet — check the parent instead
+    const parentReal = await fs.realpath(path.dirname(resolved)).catch(() => path.dirname(resolved));
+    canonical = path.join(parentReal, path.basename(resolved));
+  }
+
+  const allowed = roots.some((root) => canonical.startsWith(root + path.sep) || canonical === root);
   if (!allowed) {
     throw new Error(
-      `Path traversal blocked: "${resolved}" is outside allowed roots [${roots.join(', ')}]. ` +
+      `Path traversal blocked: "${canonical}" is outside allowed roots [${roots.join(', ')}]. ` +
       'Set FILE_OP_ROOTS env var to allow additional directories.',
     );
   }
-  return resolved;
+  return canonical;
 }
 
 export const FileOperationNode: INodeType = {
@@ -146,7 +162,7 @@ export const FileOperationNode: INodeType = {
 
     switch (operation) {
       case 'read': {
-        const filePath = await safePath(context.getParameter<string>('filePath'));
+        const filePath = await safePath(context.getParameter<string>('filePath'), true);
         context.helpers.log(`FileOperation: read ${filePath}`);
         const raw = await fs.readFile(filePath);
         const content = encoding === 'base64' ? raw.toString('base64')
@@ -177,7 +193,7 @@ export const FileOperationNode: INodeType = {
       }
 
       case 'delete': {
-        const filePath = await safePath(context.getParameter<string>('filePath'));
+        const filePath = await safePath(context.getParameter<string>('filePath'), true);
         context.helpers.log(`FileOperation: delete ${filePath}`);
         const stat = await fs.stat(filePath).catch(() => null);
         if (!stat) return [{ json: { path: filePath, success: false, error: 'File not found' } }];
@@ -190,10 +206,14 @@ export const FileOperationNode: INodeType = {
       }
 
       case 'list': {
-        const dirPath = await safePath(context.getParameter<string>('dirPath'));
-        context.helpers.log(`FileOperation: list ${dirPath} (recursive=${recursive})`);
+        const dirPath = await safePath(context.getParameter<string>('dirPath'), true);
+        const MAX_DEPTH = 10;
+        context.helpers.log(`FileOperation: list ${dirPath} (recursive=${recursive}, maxDepth=${MAX_DEPTH})`);
 
-        async function listDir(dir: string, base: string): Promise<Record<string, unknown>[]> {
+        async function listDir(dir: string, base: string, depth: number): Promise<Record<string, unknown>[]> {
+          if (depth > MAX_DEPTH) {
+            return [{ name: '…', path: dir, relativePath: path.relative(base, dir), isDirectory: true, isFile: false, size: 0, modifiedAt: null, _truncated: true }];
+          }
           const entries = await fs.readdir(dir, { withFileTypes: true });
           const results: Record<string, unknown>[] = [];
           for (const entry of entries) {
@@ -210,27 +230,27 @@ export const FileOperationNode: INodeType = {
               modifiedAt: stat?.mtime?.toISOString() ?? null,
             });
             if (recursive && entry.isDirectory()) {
-              results.push(...await listDir(fullPath, base));
+              results.push(...await listDir(fullPath, base, depth + 1));
             }
           }
           return results;
         }
 
-        const entries = await listDir(dirPath, dirPath);
+        const entries = await listDir(dirPath, dirPath, 0);
         return entries.length > 0
           ? entries.map((e) => ({ json: e }))
           : [{ json: { path: dirPath, entries: [], count: 0 } }];
       }
 
       case 'exists': {
-        const filePath = await safePath(context.getParameter<string>('filePath'));
+        const filePath = await safePath(context.getParameter<string>('filePath'), false);
         const stat = await fs.stat(filePath).catch(() => null);
         return [{ json: { path: filePath, exists: stat !== null, isFile: stat?.isFile() ?? false, isDirectory: stat?.isDirectory() ?? false } }];
       }
 
       case 'move': {
-        const filePath = await safePath(context.getParameter<string>('filePath'));
-        const destPath = await safePath(context.getParameter<string>('destinationPath'));
+        const filePath = await safePath(context.getParameter<string>('filePath'), true);
+        const destPath = await safePath(context.getParameter<string>('destinationPath'), false);
         context.helpers.log(`FileOperation: move ${filePath} → ${destPath}`);
         await fs.mkdir(path.dirname(destPath), { recursive: true });
         await fs.rename(filePath, destPath);
@@ -238,7 +258,7 @@ export const FileOperationNode: INodeType = {
       }
 
       case 'stat': {
-        const filePath = await safePath(context.getParameter<string>('filePath'));
+        const filePath = await safePath(context.getParameter<string>('filePath'), true);
         const stat = await fs.stat(filePath);
         return [{
           json: {

@@ -33,10 +33,12 @@ function parseCsv(csv: string, delimiter: string, hasHeader: boolean): Record<st
       const obj: Record<string, unknown> = {};
       for (let i = 0; i < headers.length; i++) {
         const cell = row[i] ?? '';
-        // Auto-cast numbers and booleans
+        // Auto-cast numbers and booleans.
+        // Skip leading-zero strings like "007" or "09" — they are likely IDs/zip codes.
+        const isNumeric = cell !== '' && !isNaN(Number(cell)) && !/^0\d/.test(cell);
         if (cell === '') {
           obj[headers[i]] = null;
-        } else if (!isNaN(Number(cell)) && cell !== '') {
+        } else if (isNumeric) {
           obj[headers[i]] = Number(cell);
         } else if (cell === 'true' || cell === 'TRUE') {
           obj[headers[i]] = true;

@@ -152,6 +152,8 @@ export class Database {
   private workflowVersions: Map<string, IWorkflowVersion[]> = new Map();
   private users: Map<string, IUser> = new Map();
   private apiKeys: Map<string, IApiKey> = new Map();
+  /** Secondary index: hash → apiKey.id for O(1) lookup */
+  private apiKeyHashIndex: Map<string, string> = new Map();
 
   // ── API Key CRUD ─────────────────────────────────────────────────────
 
@@ -171,15 +173,15 @@ export class Database {
       expiresAt: data.expiresAt ?? null,
     };
     this.apiKeys.set(apiKey.id, apiKey);
+    this.apiKeyHashIndex.set(keyHash, apiKey.id);
     this.save();
     return { key: apiKey, plaintext: raw };
   }
 
   findApiKeyByHash(hash: string): IApiKey | null {
-    for (const k of this.apiKeys.values()) {
-      if (k.keyHash === hash) return k;
-    }
-    return null;
+    const id = this.apiKeyHashIndex.get(hash);
+    if (!id) return null;
+    return this.apiKeys.get(id) ?? null;
   }
 
   listApiKeys(userId: string): IApiKey[] {
@@ -187,6 +189,8 @@ export class Database {
   }
 
   deleteApiKey(id: string): boolean {
+    const key = this.apiKeys.get(id);
+    if (key) this.apiKeyHashIndex.delete(key.keyHash);
     const result = this.apiKeys.delete(id);
     if (result) this.save();
     return result;
@@ -484,6 +488,20 @@ export class Database {
     return result;
   }
 
+  /** Returns the most recent completed/errored execution for a workflow (for status badges). */
+  getLastExecution(workflowId: string): Pick<IExecution, 'id' | 'status' | 'startedAt' | 'durationMs'> | null {
+    let latest: IExecution | null = null;
+    for (const exec of this.executions.values()) {
+      if (exec.workflowId !== workflowId) continue;
+      if (exec.status === 'running' || exec.status === 'pending') continue;
+      if (!latest || (exec.startedAt ?? exec.createdAt) > (latest.startedAt ?? latest.createdAt)) {
+        latest = exec;
+      }
+    }
+    if (!latest) return null;
+    return { id: latest.id, status: latest.status, startedAt: latest.startedAt, durationMs: latest.durationMs };
+  }
+
   // ── Credential CRUD ──────────────────────────────────────────────────
 
   createCredential(data: { name: string; type: string; data: Record<string, unknown> }): ICredentialWithData {
@@ -758,7 +776,14 @@ export class Database {
         );
       }
       if (data.users) this.users = new Map(Object.entries(data.users as Record<string, IUser>));
-      if (data.apiKeys) this.apiKeys = new Map(Object.entries(data.apiKeys as Record<string, IApiKey>));
+      if (data.apiKeys) {
+        this.apiKeys = new Map(Object.entries(data.apiKeys as Record<string, IApiKey>));
+        // Rebuild hash index from persisted keys
+        this.apiKeyHashIndex.clear();
+        for (const k of this.apiKeys.values()) {
+          this.apiKeyHashIndex.set(k.keyHash, k.id);
+        }
+      }
       console.log('[DB] Loaded from', DATA_FILE);
     } catch (err) {
       console.error('[DB] Load error:', (err as Error).message);

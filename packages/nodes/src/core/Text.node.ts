@@ -270,7 +270,11 @@ function processOperation(value: unknown, operation: string, context: IExecution
       const replace = context.getParameter<string>('replaceValue') ?? '';
       const flags = context.getParameter<string>('regexFlags') ?? 'g';
       if (!pattern) return str;
-      return str.replace(new RegExp(pattern, flags), replace);
+      try {
+        return str.replace(new RegExp(pattern, flags), replace);
+      } catch (e) {
+        throw new Error(`Invalid regex pattern "${pattern}": ${(e as Error).message}`);
+      }
     }
 
     // ── Split / Join ──────────────────────────────────────────────────────
@@ -382,12 +386,16 @@ function processOperation(value: unknown, operation: string, context: IExecution
       const pattern = context.getParameter<string>('regexPattern') ?? '';
       const flags = context.getParameter<string>('regexFlags') ?? '';
       if (!pattern) return null;
-      const match = str.match(new RegExp(pattern, flags));
-      if (!match) return null;
-      // Return array of matches (capture groups if any)
-      return match.length > 1
-        ? { fullMatch: match[0], groups: match.slice(1) }
-        : { fullMatch: match[0], groups: [] };
+      try {
+        const match = str.match(new RegExp(pattern, flags));
+        if (!match) return null;
+        // Return array of matches (capture groups if any)
+        return match.length > 1
+          ? { fullMatch: match[0], groups: match.slice(1) }
+          : { fullMatch: match[0], groups: [] };
+      } catch (e) {
+        throw new Error(`Invalid regex pattern "${pattern}": ${(e as Error).message}`);
+      }
     }
 
     default:
