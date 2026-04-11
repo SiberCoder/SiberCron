@@ -391,9 +391,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       edges: edges.map((e) => ({
         id: e.id,
         source: e.source,
-        sourceHandle: e.sourceHandle ?? 'output',
+        sourceHandle: e.sourceHandle ?? null,
         target: e.target,
-        targetHandle: e.targetHandle ?? 'input',
+        targetHandle: e.targetHandle ?? null,
       })),
       triggerType: detectedTriggerType,
       cronExpression: detectedCronExpr || undefined,

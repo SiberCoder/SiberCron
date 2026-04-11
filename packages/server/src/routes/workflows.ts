@@ -472,6 +472,7 @@ export async function workflowRoutes(
     const duplicate = db.createWorkflow({
       name: `${original.name} (Copy)`,
       description: original.description,
+      tags: original.tags,
       nodes: original.nodes,
       edges: original.edges,
       settings: original.settings,

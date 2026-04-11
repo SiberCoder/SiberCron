@@ -391,6 +391,9 @@ export const AutonomousDevNode: INodeType = {
 
     const path = await import('node:path');
     const cwd = path.resolve(workingDirectory);
+    // Data directory for session files — always use server's DATA_DIR so executions.ts
+    // can find them during resume, regardless of the workingDirectory parameter.
+    const dataDir = process.env['DATA_DIR'] ?? path.join(process.cwd(), 'data');
 
     let setupToken: string | undefined;
     try {
@@ -492,7 +495,7 @@ export const AutonomousDevNode: INodeType = {
             emitLog('system', `Session ID: ${sid.slice(0, 8)}...`, { sessionId: sid });
             // Use dynamic import for ESM compatibility, write async but don't await
             import('node:fs').then((fs) => {
-              const sessionFile = path.join(cwd, 'data', `.autonomousDev-session-${executionId}.json`);
+              const sessionFile = path.join(dataDir, `.autonomousDev-session-${executionId}.json`);
               fs.writeFileSync(sessionFile, JSON.stringify({
                 sessionId: sid,
                 executionId,
