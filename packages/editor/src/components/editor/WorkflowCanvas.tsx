@@ -1,4 +1,4 @@
-import { useCallback, useRef, useMemo, useState, type DragEvent } from 'react';
+import { useCallback, useRef, useMemo, useState, useEffect, type DragEvent } from 'react';
 import {
   ReactFlow,
   Background,
@@ -165,6 +165,18 @@ export default function WorkflowCanvas() {
   // Duplicate selected nodes — preserves parameters/credentials
   const handleBulkDuplicate = useCallback(() => {
     duplicateNodes(selectedNodeIds);
+  }, [selectedNodeIds, duplicateNodes]);
+
+  // Ctrl+D: duplicate selected nodes without triggering browser bookmark shortcut
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && selectedNodeIds.length > 0) {
+        e.preventDefault();
+        duplicateNodes(selectedNodeIds);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedNodeIds, duplicateNodes]);
 
   return (
