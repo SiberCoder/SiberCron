@@ -20,6 +20,7 @@ import clsx from 'clsx';
 import { useAuthStore } from '../../store/authStore';
 import { getSocket, releaseSocket } from '../../lib/socket';
 import { apiGet } from '../../api/client';
+import { toast } from '../../store/toastStore';
 
 const NAV_ITEMS = [
   { to: '/chat', icon: Brain, label: 'AI Sohbet', accent: true },
@@ -47,15 +48,23 @@ function useRunningCount() {
       .then((r) => setCount(r.data?.filter((e) => e.status === 'running').length ?? 0))
       .catch(() => {});
 
-    // Socket: update on execution start/complete
+    // Socket: update on execution start/complete/fail
     const socket = getSocket();
     const onStarted = () => setCount((c) => c + 1);
     const onCompleted = () => setCount((c) => Math.max(0, c - 1));
+    const onFailed = (data: { workflowName?: string; errorMessage?: string }) => {
+      setCount((c) => Math.max(0, c - 1));
+      const name = data?.workflowName ?? 'Workflow';
+      const msg = data?.errorMessage ? `: ${data.errorMessage}` : '';
+      toast.error(`${name} başarısız oldu${msg}`, 6000);
+    };
     socket.on('execution:started', onStarted);
     socket.on('execution:completed', onCompleted);
+    socket.on('workflow:execution:failed', onFailed);
     return () => {
       socket.off('execution:started', onStarted);
       socket.off('execution:completed', onCompleted);
+      socket.off('workflow:execution:failed', onFailed);
       releaseSocket();
     };
   }, []);

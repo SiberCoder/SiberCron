@@ -2,7 +2,7 @@
   "name": "sibercron",
   "version": "0.1.0",
   "private": true,
-  "description": "AI-powered workflow automation platform",
+  "description": "Open-source, self-hosted autonomous AI development & workflow automation platform — n8n + OpenClaw hybrid",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
@@ -14,10 +14,14 @@
     "workflow",
     "automation",
     "ai",
+    "autonomous-development",
     "cron",
     "scheduler",
     "n8n",
-    "openclaw"
+    "openclaw",
+    "self-hosted",
+    "ai-agent",
+    "llm"
   ],
   "author": "SiberCron",
   "license": "MIT",

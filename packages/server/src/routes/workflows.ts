@@ -32,6 +32,21 @@ function validateWebhookPath(path: string): string | null {
   return null; // valid
 }
 
+/** Validate that every edge references existing node IDs */
+function validateEdges(
+  nodes: Array<{ id: string }> | undefined,
+  edges: Array<{ id: string; source: string; target: string }> | undefined,
+): string | null {
+  if (!edges?.length || !nodes) return null;
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  for (const edge of edges) {
+    if (!nodeIds.has(edge.source)) return `Edge "${edge.id}" references unknown source node "${edge.source}"`;
+    if (!nodeIds.has(edge.target)) return `Edge "${edge.id}" references unknown target node "${edge.target}"`;
+    if (edge.source === edge.target) return `Edge "${edge.id}" creates a self-loop on node "${edge.source}"`;
+  }
+  return null;
+}
+
 // ── Zod Schemas ───────────────────────────────────────────────────────
 
 const TagsSchema = z
@@ -101,6 +116,10 @@ export async function workflowRoutes(
       }
     }
 
+    // Validate edge references
+    const edgeErr = validateEdges(body.nodes as Array<{ id: string }>, body.edges as Array<{ id: string; source: string; target: string }>);
+    if (edgeErr) { reply.code(400); return { error: edgeErr }; }
+
     // Validate and normalize webhook path
     if (body.webhookPath) {
       const pathErr = validateWebhookPath(body.webhookPath);
@@ -147,6 +166,12 @@ export async function workflowRoutes(
         reply.code(400);
         return { error: `Invalid cron expression: "${body.cronExpression}"` };
       }
+    }
+
+    // Validate edge references when both nodes and edges are supplied
+    if (body.nodes && body.edges) {
+      const edgeErr = validateEdges(body.nodes as Array<{ id: string }>, body.edges as Array<{ id: string; source: string; target: string }>);
+      if (edgeErr) { reply.code(400); return { error: edgeErr }; }
     }
 
     // Validate and enforce webhook path uniqueness (skip check if path unchanged)

@@ -88,11 +88,18 @@ export async function socialAccountRoutes(
       return { error: 'Hesap bulunamadı.' };
     }
 
+    const TEST_TIMEOUT_MS = 8000;
+    const fetchWithTimeout = (url: string, options?: RequestInit) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TEST_TIMEOUT_MS);
+      return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+    };
+
     try {
       switch (account.platform) {
         case 'telegram': {
           const botToken = account.config.botToken as string;
-          const res = await fetch(
+          const res = await fetchWithTimeout(
             `https://api.telegram.org/bot${botToken}/getMe`,
           );
           const data = (await res.json()) as { ok: boolean };
@@ -107,7 +114,7 @@ export async function socialAccountRoutes(
         case 'whatsapp': {
           const accessToken = account.config.accessToken as string;
           const phoneNumberId = account.config.phoneNumberId as string;
-          const res = await fetch(
+          const res = await fetchWithTimeout(
             `https://graph.facebook.com/v18.0/${phoneNumberId}`,
             { headers: { Authorization: `Bearer ${accessToken}` } },
           );
@@ -122,7 +129,7 @@ export async function socialAccountRoutes(
         case 'discord': {
           const webhookUrl = account.config.webhookUrl as string;
           // Discord webhook GET ile doğrulama
-          const res = await fetch(webhookUrl, { method: 'GET' });
+          const res = await fetchWithTimeout(webhookUrl, { method: 'GET' });
           if (res.ok) {
             db.updateSocialAccount(id, { status: 'connected' });
             return { success: true, message: 'Discord webhook aktif.' };
@@ -133,7 +140,7 @@ export async function socialAccountRoutes(
 
         case 'slack': {
           const botToken = account.config.botToken as string;
-          const res = await fetch('https://slack.com/api/auth.test', {
+          const res = await fetchWithTimeout('https://slack.com/api/auth.test', {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${botToken}`,

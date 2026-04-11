@@ -4,6 +4,7 @@ import { ManualTriggerNode } from './triggers/ManualTrigger.node.js';
 import { CronTriggerNode } from './triggers/CronTrigger.node.js';
 import { WebhookTriggerNode } from './triggers/WebhookTrigger.node.js';
 import { TelegramTriggerNode } from './triggers/TelegramTrigger.node.js';
+import { GitHubTriggerNode } from './triggers/GitHubTrigger.node.js';
 import { HttpRequestNode } from './core/HttpRequest.node.js';
 import { CodeNode } from './core/Code.node.js';
 import { LogNode } from './core/Log.node.js';
@@ -33,12 +34,16 @@ import { GoogleDriveNode } from './core/GoogleDrive.node.js';
 import { NotionDatabaseNode } from './core/NotionDatabase.node.js';
 import { SwitchNode } from './core/Switch.node.js';
 import { DateTimeNode } from './core/DateTime.node.js';
+import { GitHubNode } from './core/GitHub.node.js';
+import { AirtableNode } from './core/Airtable.node.js';
+import { JiraNode } from './core/Jira.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
   CronTriggerNode,
   WebhookTriggerNode,
   TelegramTriggerNode,
+  GitHubTriggerNode,
   HttpRequestNode,
   CodeNode,
   LogNode,
@@ -68,6 +73,9 @@ export const builtinNodes: INodeType[] = [
   NotionDatabaseNode,
   SwitchNode,
   DateTimeNode,
+  GitHubNode,
+  AirtableNode,
+  JiraNode,
 ];
 
 export {
@@ -75,6 +83,7 @@ export {
   CronTriggerNode,
   WebhookTriggerNode,
   TelegramTriggerNode,
+  GitHubTriggerNode,
   HttpRequestNode,
   CodeNode,
   LogNode,
@@ -104,4 +113,7 @@ export {
   NotionDatabaseNode,
   SwitchNode,
   DateTimeNode,
+  GitHubNode,
+  AirtableNode,
+  JiraNode,
 };

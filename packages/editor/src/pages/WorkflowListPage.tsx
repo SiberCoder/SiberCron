@@ -720,6 +720,34 @@ export default function WorkflowListPage() {
                     </div>
                   ) : null}
 
+                  {/* Success rate progress bar */}
+                  {summary[wf.id] && summary[wf.id].total > 0 && (() => {
+                    const s = summary[wf.id];
+                    const rate = Math.round((s.success / s.total) * 100);
+                    return (
+                      <div className="mt-2.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] text-obsidian-600 font-body uppercase tracking-wider">Başarı Oranı</span>
+                          <span className={clsx(
+                            'text-[10px] font-semibold font-body',
+                            rate >= 80 ? 'text-aurora-emerald' : rate >= 50 ? 'text-aurora-amber' : 'text-aurora-rose',
+                          )}>
+                            %{rate}
+                          </span>
+                        </div>
+                        <div className="h-1 w-full bg-white/[0.06] rounded-full overflow-hidden">
+                          <div
+                            className={clsx(
+                              'h-full rounded-full transition-all duration-500',
+                              rate >= 80 ? 'bg-aurora-emerald' : rate >= 50 ? 'bg-aurora-amber' : 'bg-aurora-rose',
+                            )}
+                            style={{ width: `${rate}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Action buttons */}
                   <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/[0.04]">
                     <button

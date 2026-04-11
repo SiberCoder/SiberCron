@@ -299,13 +299,27 @@ const executionIdMap = new Map<string, string>();
 
 process.on('autonomousDev:log' as any, (data: { executionId: string; level: string; message: string; data?: Record<string, unknown> }) => {
   if (data.executionId) {
-    // Write to both the engine's ID and the mapped API ID
+    // Always store under the engine ID so logs are never lost
     executionLogStore.add(data.executionId, {
       level: data.level as any,
       message: data.message,
       data: data.data,
     });
-    const mappedId = executionIdMap.get(data.executionId);
+
+    // Look up the API execution ID via the mapping set on execution:started
+    let mappedId = executionIdMap.get(data.executionId);
+
+    // Secondary check: maybe the incoming ID is already the API ID
+    if (!mappedId) {
+      for (const [engineId, apiId] of executionIdMap) {
+        if (apiId === data.executionId || engineId === data.executionId) {
+          mappedId = apiId;
+          break;
+        }
+      }
+    }
+
+    // If we found a distinct API ID, also store under that for direct log lookups
     if (mappedId && mappedId !== data.executionId) {
       executionLogStore.add(mappedId, {
         level: data.level as any,
@@ -313,8 +327,7 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
         data: data.data,
       });
     }
-    // Emit to the execution room (subscribers only) for efficiency.
-    // Fall back to broadcast when the ID mapping hasn't been established yet.
+
     const targetId = mappedId ?? data.executionId;
     io.to(`execution:${targetId}`).emit('execution:log', { ...data, apiExecutionId: targetId });
   }
@@ -613,8 +626,12 @@ function runRetentionCleanup() {
 runRetentionCleanup();
 const retentionInterval = setInterval(runRetentionCleanup, RETENTION_INTERVAL_MS);
 
-// Clean up interval on process exit
-process.on('SIGINT', () => clearInterval(retentionInterval));
-process.on('SIGTERM', () => clearInterval(retentionInterval));
+// Graceful shutdown: clean up timers and live-log buffers
+const gracefulShutdown = () => {
+  clearInterval(retentionInterval);
+  executionLogStore.destroy();
+};
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
 
 export { app, io, engine, registry, schedulerService, queueService };

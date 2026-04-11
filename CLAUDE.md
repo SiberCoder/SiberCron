@@ -1,6 +1,6 @@
-# SiberCron - AI-Powered Workflow Automation Platform
+# SiberCron - Autonomous AI Development & Workflow Automation Platform
 
-n8n benzeri, açık kaynak, self-hosted workflow otomasyon platformu. Görsel editörle node'ları sürükle-bırak ile AI destekli otomasyon akışları oluşturulur.
+n8n + OpenClaw karışımı, açık kaynak, self-hosted otonom AI geliştirme ve workflow otomasyon platformu. Kendi bilgisayarınızda/sunucunuzda çalışan, görsel editörle node'ları sürükle-bırak ile otonom yazılım geliştirme ve AI destekli otomasyon akışları oluşturulur. Temel amaç: tam otonom yazılım geliştirme görevleri yapma.
 
 ## Monorepo Yapısı
 
@@ -8,7 +8,7 @@ n8n benzeri, açık kaynak, self-hosted workflow otomasyon platformu. Görsel ed
 packages/
   shared/   → TypeScript type'ları ve sabitler (bağımlılık yok)
   core/     → Workflow execution engine (sadece shared'e bağlı, saf logic)
-  nodes/    → 17 built-in node implementasyonu (sadece shared'e bağlı)
+  nodes/    → 35 built-in node implementasyonu (sadece shared'e bağlı)
   server/   → Fastify REST API + Socket.io backend (core + nodes + shared)
   editor/   → React + Vite frontend (shared types, HTTP/WS ile server'a bağlanır)
 ```
@@ -91,7 +91,7 @@ Tümü `/api/v1/` altında:
 **Trigger:** ManualTrigger, CronTrigger, WebhookTrigger, TelegramTrigger (incoming messages, command/text filter)
 **Core:** HttpRequest (auth: bearer/basic/apiKey, query params, timeout), Code (vm sandbox: Date/JSON/Math/console/URL/Promise), Conditional (19 operatör), Transform (pick/remove/rename/set/flatten/wrap), Merge (6 mod), Delay, Log (select logLevel), Loop (each/count/arrayField), Split (chunk/byField/splitText)
 **AI:** AIAgent (çoklu provider), AutonomousDev (Claude CLI loop), AISummarizer (concise/paragraph/bullets/keypoints/custom, çoklu dil), AIClassifier (multi-label, confidence score, çoklu provider)
-**Data:** DatabaseQuery (PostgreSQL/MySQL, parameterized queries, CRUD), Redis (16 operasyon: get/set/del/hget/hset/lpush/lrange/sadd/publish...)
+**Data:** DatabaseQuery (PostgreSQL/MySQL, parameterized queries, CRUD), Redis (16 operasyon: get/set/del/hget/hset/lpush/lrange/sadd/publish...), GitHub (issue/PR/repo/release/comment, REST API v3), Airtable (record CRUD, arama, upsert, REST API)
 **Messaging:** TelegramSend (text/photo/document, parseMode, reply), DiscordSend (webhook + bot API, embeds), SlackSend (blocks, thread reply), WhatsAppReceive, WhatsAppSend, EmailSMTP (HTML/text, CC/BCC)
 
 Her node `INodeType` interface'ini implemente eder: `{ definition: INodeTypeDefinition, execute(context) }`

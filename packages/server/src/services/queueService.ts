@@ -166,6 +166,16 @@ class QueueService {
       return;
     }
 
+    // Prevent concurrent execution for workflows that don't explicitly allow it.
+    // This mirrors the guard in the manual-execute HTTP route.
+    if (!workflow.settings?.allowConcurrent) {
+      const runningExecs = db.listExecutions({ workflowId, status: 'running', limit: 1 });
+      if (runningExecs.total > 0) {
+        console.log(`[${logPrefix}] Workflow "${workflowName}" is already running (concurrent execution disabled). Skipping.`);
+        return;
+      }
+    }
+
     if (!this.engine) {
       throw new Error('WorkflowEngine not initialized');
     }
@@ -250,6 +260,15 @@ class QueueService {
       });
 
       console.log(`[${logPrefix}] Workflow "${workflowName}" execution ${engineResult.status}: ${executionId}`);
+
+      if (engineResult.status === 'error' && this.io) {
+        this.io.emit('workflow:execution:failed', {
+          workflowId,
+          workflowName,
+          executionId,
+          errorMessage: engineResult.errorMessage,
+        });
+      }
     } catch (err) {
       db.updateExecution(executionId, {
         status: 'error',

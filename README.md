@@ -1,76 +1,112 @@
 # SiberCron
 
-**Open-source AI-powered workflow automation platform.**
+**Open-source, self-hosted autonomous AI development & workflow automation platform.**
 
-Combine visual drag-and-drop workflow building with AI agent capabilities. Build, schedule, and monitor automation workflows — all self-hosted and fully under your control.
+n8n'in gorsel workflow editoru ile OpenClaw'un otonom AI gelistirme yeteneklerini tek bir platformda birlestiren, kendi bilgisayarinizda veya sunucunuzda calisan tam otonom yazilim gelistirme ve otomasyon sistemi.
 
-> Think **n8n** meets **AI Agents** — visual workflow editor + AI-powered automation with 9+ LLM providers.
+> **n8n + OpenClaw** = Gorsel workflow builder + Otonom AI gelistirici + 35+ entegrasyon node'u + 13 AI provider destegi. Hepsi sizin kontrolunuzde, self-hosted.
 
 ---
 
-## Features
+## Ne Yapar?
 
-### Visual Workflow Editor
-- Drag-and-drop node-based editor built with React Flow
-- Dynamic node configuration panel
-- Real-time execution monitoring via Socket.io
-- Workflow templates for quick start
+### Otonom Yazilim Gelistirme
+- **AutonomousDev Node** — Claude CLI uzerinden tam otonom gelistirme dongusu. Kod yazar, test eder, hatalari duzeltir, commit atar
+- **AI Brain** — Dogal dil ile workflow yonetimi, dosya islemleri, shell komutlari, mesajlasma
+- **Agent Loop** — 14+ tool ile AI ajaninin sistemi yonetmesi: workflow CRUD, execution, dosya okuma/yazma, kabuk komutlari
+- **Canli Streaming** — Otonom gelistirme ciktisini gercek zamanli izleme (session-aware devam, `--continue`)
 
-### AI Integration (9+ Providers)
-- **OpenAI** — GPT-4, GPT-4o, o3-mini
-- **Anthropic** — Claude Sonnet 4.6, Haiku 4.5, Opus 4.6
+### Gorsel Workflow Editor
+- Surukle-birak node-tabanli editor (React Flow)
+- Gercek zamanli calistirma izleme (Socket.io)
+- Node cikti goruntuleyici, expression builder, command palette (Ctrl+K)
+- Workflow sablonlari, import/export, undo/redo, versiyon gecmisi
+
+### 35+ Hazir Node
+
+#### Trigger'lar (4)
+| Node | Aciklama |
+|------|----------|
+| **Manual Trigger** | UI'dan manuel calistirma |
+| **Cron Trigger** | Cron expression ile zamanlanmis calistirma |
+| **Webhook Trigger** | HTTP istekleri ile tetikleme (HMAC-SHA256 imza dogrulama, payload schema validation) |
+| **Telegram Trigger** | Gelen Telegram mesajlari ile tetikleme (komut/metin/regex filtre) |
+
+#### AI (5)
+| Node | Aciklama |
+|------|----------|
+| **AI Agent** | Coklu provider chat completions, JSON mode, streaming output |
+| **Autonomous Dev** | Claude CLI ile tam otonom yazilim gelistirme dongusu |
+| **AI Summarizer** | Metin ozetleme (5 mod, coklu dil, coklu provider) |
+| **AI Classifier** | Metin siniflandirma (multi-label, confidence score) |
+| **AI Web Browser** | Web sayfa icerigini AI ile analiz, ozet, soru-cevap, yapilandirilmis veri cikarma |
+
+#### Core (20)
+| Node | Aciklama |
+|------|----------|
+| **HTTP Request** | API cagrilari (bearer/basic/apiKey auth, query params, timeout, retry) |
+| **Code** | Guvenli sandbox'ta JavaScript calistirma |
+| **Conditional** | 19 operator ile if/else dallama |
+| **Switch** | N-yollu routing (5 case + default, regex/contains/gt/lt) |
+| **Transform** | Veri donusturme: pick/remove/rename/set/flatten/wrap |
+| **Merge** | 6 mod ile coklu girisi birlestirme |
+| **Loop** | 3 mod: each item, count, array field |
+| **Split** | 3 mod: chunk, by field, split text |
+| **Delay** | Belirli sure bekleme |
+| **Log** | Template interpolation ile loglama |
+| **DateTime** | Tarih/saat islemleri (12 operasyon, timezone, Intl API) |
+| **DatabaseQuery** | PostgreSQL/MySQL parameterized queries |
+| **Redis** | 16 operasyon (get/set/del/hget/hset/lpush/sadd/publish...) |
+| **Google Sheets** | Service account ile satir okuma/yazma/guncelleme |
+| **Google Drive** | Dosya listeleme/yukleme/indirme/silme/klasor olusturma |
+| **Notion Database** | Sayfa sorgulama/olusturma/guncelleme/arsivleme/arama |
+| **GitHub** | Issue/PR/repo/release/comment islemleri (REST API v3) |
+| **Airtable** | Record CRUD, arama, upsert, filtreleme (REST API) |
+| **FTP/SFTP** | Dosya transferi (list/download/upload/delete/rename/mkdir) |
+| **RSS Feed** | RSS/Atom feed okuma ve parse etme |
+
+#### Mesajlasma (6)
+| Node | Aciklama |
+|------|----------|
+| **Telegram Send** | Mesaj/foto/dosya gonderme |
+| **Discord Send** | Webhook + Bot API, embeds destegi |
+| **Slack Send** | Block kit, thread reply |
+| **WhatsApp Receive** | Gelen mesaj tetikleyici |
+| **WhatsApp Send** | Cloud API ile mesaj gonderme |
+| **Email SMTP** | HTML/text email, CC/BCC |
+
+### AI Provider'lar (13+)
+- **OpenAI** — GPT-4o, GPT-4o-mini, o3-mini
+- **Anthropic** — Claude Opus 4.6, Sonnet 4.6, Haiku 4.5
 - **Google Gemini** — 2.0 Flash, 2.5 Pro
-- **Ollama** — Local models (fully offline)
-- **Groq, Mistral, DeepSeek, X.AI, OpenRouter, Together, Perplexity**
-- **Custom Endpoints** — Any OpenAI-compatible API
-- **Claude CLI Delegation** — Use your local `claude` CLI directly
+- **Ollama** — Local modeller (tamamen offline)
+- **Groq, Mistral, DeepSeek, X.AI, OpenRouter, Together, Perplexity, GitHub Copilot**
+- **Custom Endpoint** — Herhangi bir OpenAI-uyumlu API
+- **Claude CLI Delegation** — Yerel `claude` CLI'yi dogrudan kullanma
 
-### AI Brain & Chat
-- Natural language workflow management ("create a workflow that...")
-- 14+ tool calling capabilities (workflow CRUD, execution, messaging, file ops, shell commands)
-- Conversation history with context awareness
-- Autonomous development loop for AI-driven task execution
-
-### Multi-Channel Messaging
-- **Telegram** — Bot API integration
-- **Discord** — Webhook-based messaging
-- **Slack** — Channel messaging via API
-- **WhatsApp** — Cloud API with QR code pairing & incoming message triggers
-
-### 17+ Built-in Nodes
-- **Triggers** — Manual, Cron, Webhook, WhatsApp Receive
-- **AI** — AI Agent (multi-provider), Autonomous Dev
-- **Core** — HTTP Request, Code (JavaScript), Conditional, Transform, Merge, Delay, Log
-- **Messaging** — Telegram Send, Discord Send, Slack Send, WhatsApp Send
-
-### Scheduling & Execution
-- Cron expressions for recurring workflows
-- BullMQ job queue with Redis backend
-- Real-time execution logs & status tracking
-- Node-level error handling and conditional branching
-- Topological sort execution order (Kahn's algorithm)
-
-### Credential Management
-- Encrypted credential storage
-- Secrets never exposed in API responses
-- Multiple auth methods: API key, OAuth 2.0, environment variables, CLI delegation
-
-### Extensible Plugin System
-- Create community nodes as npm packages (`sibercron-node-*`)
-- Full TypeScript plugin interface
-- Auto-discovery and dynamic registration
+### Production Ozellikleri
+- **JWT Authentication** + RBAC (admin/viewer rolleri)
+- **API Key Yonetimi** — Kullanici basi token uretimi (`scx_` prefix, SHA-256 hash)
+- **Rate Limiting** — Endpoint bazli (auth: 10/dk, chat: 20/dk, workflows: 60/dk)
+- **Webhook Guvenligi** — HMAC-SHA256 imza dogrulama
+- **Credential Sifreleme** — AES-256-GCM
+- **Execution Retention** — Otomatik eski kayit temizligi
+- **Concurrent Execution Guard** — Ayni workflow'un es zamanli calismasini onleme (devre disi birakilabilir)
+- **BullMQ Job Queue** — Redis ile guvenilir is kuyrugu (Redis yoksa direkt calistirma fallback)
+- **OpenAPI/Swagger** — `/api/docs` endpoint'i
+- **Docker** — Multi-stage Dockerfile + docker-compose + nginx
 
 ---
 
-## Quick Start
+## Hizli Baslangic
 
-### Prerequisites
+### Gereksinimler
 
 - **Node.js** >= 18
 - **pnpm** >= 9
-- **Redis** (required for BullMQ job queue)
+- **Redis** (opsiyonel — BullMQ is kuyrugu icin)
 
-### 1. Clone & Install
+### 1. Klon & Kurulum
 
 ```bash
 git clone https://github.com/SiberCoder/SiberCron.git
@@ -78,158 +114,127 @@ cd SiberCron
 pnpm install
 ```
 
-### 2. Configure Environment
+### 2. Ortam Yapilandirmasi
 
 ```bash
-# Copy the example env file
+# .env dosyasini kopyala
 cp .env.example .env
 
-# Generate a secure encryption key
+# Sifreleme anahtari olustur
 # Linux/macOS:
 openssl rand -hex 32
 # Windows (PowerShell):
 -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
 ```
 
-Open `.env` and fill in your `ENCRYPTION_KEY` and any API keys you plan to use. See [.env.example](.env.example) for all available options.
+`.env` dosyasini acip `ENCRYPTION_KEY` ve kullanacaginiz API anahtarlarini girin.
 
-### 3. Start Development Servers
+### 3. Gelistirme Sunucularini Baslat
 
 ```bash
 pnpm dev
 ```
 
-This starts:
-- **Editor** at [http://localhost:5173](http://localhost:5173)
-- **API Server** at [http://localhost:3001](http://localhost:3001)
+- **Editor** — [http://localhost:5173](http://localhost:5173)
+- **API Server** — [http://localhost:3001](http://localhost:3001)
+- **API Docs** — [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
 
-### Using Docker
+### Docker ile
 
 ```bash
 git clone https://github.com/SiberCoder/SiberCron.git
 cd SiberCron
 cp .env.example .env
-# Edit .env with your settings, then:
+# .env dosyasini duzenle, sonra:
 docker compose up -d
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
 ---
 
-## Architecture
+## Mimari
 
 ```
 sibercron/
 ├── packages/
-│   ├── shared/    # TypeScript types & constants
-│   ├── core/      # Workflow execution engine
-│   ├── nodes/     # 17+ built-in node implementations
-│   ├── server/    # Fastify REST API + WebSocket + AI Brain
-│   └── editor/    # React visual workflow editor
+│   ├── shared/    # TypeScript tipleri & sabitler
+│   ├── core/      # Workflow execution engine (DAG, topological sort)
+│   ├── nodes/     # 35+ hazir node implementasyonu
+│   ├── server/    # Fastify REST API + Socket.io + AI Brain + Agent Loop
+│   └── editor/    # React gorsel workflow editor
 ├── docker/        # Dockerfile, Compose, nginx
-├── docs/          # Architecture, plugin dev, self-hosting
-└── templates/     # Pre-built workflow templates
+├── docs/          # Mimari, plugin gelistirme, self-hosting
+└── templates/     # Hazir workflow sablonlari
 ```
 
-### Tech Stack
+### Teknoloji Yigini
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19 + TypeScript + Vite + Tailwind CSS + React Flow |
-| State | Zustand |
-| Backend | Node.js + Fastify + TypeScript |
-| Database | In-memory / SQLite / PostgreSQL |
-| Queue | BullMQ + Redis |
-| Realtime | Socket.io |
-| AI | OpenAI, Anthropic, Gemini, Ollama, Groq, Mistral, DeepSeek + more |
+| Katman | Teknoloji |
+|--------|-----------|
+| Frontend | React 19 + TypeScript + Vite 6 + Tailwind CSS 3 + React Flow 12 |
+| State | Zustand 5 |
+| Backend | Node.js + Fastify 5 + TypeScript 5.6 |
+| Database | In-memory JSON store (MVP) |
+| Queue | BullMQ 5 + Redis (opsiyonel) |
+| Realtime | Socket.io 4 |
+| AI | 13+ provider (OpenAI, Anthropic, Gemini, Ollama, Groq, vb.) |
 | Monorepo | pnpm workspaces + Turborepo |
+| Sifreleme | AES-256-GCM (Node.js crypto) |
 
 ---
 
-## Built-in Nodes
+## AI Brain — Otonom Yonetim
 
-### Triggers
-| Node | Description |
-|------|-------------|
-| **Manual Trigger** | Execute workflows manually via UI |
-| **Cron Trigger** | Schedule with cron expressions |
-| **Webhook Trigger** | Trigger via HTTP requests (GET, POST, PUT, DELETE) |
-| **WhatsApp Receive** | Trigger on incoming WhatsApp messages |
-
-### AI
-| Node | Description |
-|------|-------------|
-| **AI Agent** | Multi-provider chat completions with JSON mode, system prompts, temperature control |
-| **Autonomous Dev** | AI-powered autonomous loop that iterates on instructions with configurable max iterations |
-
-### Core
-| Node | Description |
-|------|-------------|
-| **HTTP Request** | Make API calls with headers & JSON body |
-| **Code** | Execute custom JavaScript |
-| **Conditional** | If/else branching (equals, contains, greaterThan, etc.) |
-| **Transform** | Data mapping: pick fields, rename, set values |
-| **Merge** | Combine multiple inputs into single output |
-| **Delay** | Wait for specified duration |
-| **Log** | Log messages with template interpolation |
-
-### Messaging
-| Node | Description |
-|------|-------------|
-| **Telegram Send** | Send messages via Telegram Bot API |
-| **Discord Send** | Send to Discord via webhooks |
-| **Slack Send** | Post messages to Slack channels |
-| **WhatsApp Send** | Send via WhatsApp Cloud API (text & templates) |
-
----
-
-## AI Brain
-
-SiberCron includes a built-in AI assistant that can manage your workflows through natural language:
+SiberCron'un dahili AI asistani, dogal dil ile sisteminizi yonetir:
 
 ```
-"Create a workflow that checks my API every 5 minutes and sends a Telegram alert if it's down"
+"Her 5 dakikada API'mi kontrol et, dusukse Telegram'dan bana bildir"
+"GitHub repo'mdaki acik issue'lari listele ve Airtable'a kaydet"
+"Bu projedeki hatalari bul ve duzelt"
 ```
 
-Available AI tools:
-- Workflow management (list, create, execute, activate, delete)
-- Execution history & log retrieval
-- Send messages across platforms
-- File operations (read, write, list)
-- Shell command execution
-- System status monitoring
+AI Brain araclari:
+- Workflow yonetimi (listele, olustur, calistir, aktifle, sil)
+- Calistirma gecmisi ve log erisimi
+- Platform arasi mesaj gonderme
+- Dosya islemleri (oku, yaz, listele)
+- Kabuk komutlari calistirma
+- Sistem durumu izleme
 
 ---
 
-## API Reference
+## API Referansi
 
 Base URL: `http://localhost:3001/api/v1`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/workflows` | List workflows (pagination, search, filter) |
-| POST | `/workflows` | Create workflow |
-| GET | `/workflows/:id` | Get workflow details |
-| PUT | `/workflows/:id` | Update workflow |
-| DELETE | `/workflows/:id` | Delete workflow |
-| POST | `/workflows/:id/execute` | Execute workflow |
-| GET | `/executions` | List executions (filter by status, workflowId) |
-| GET | `/executions/:id` | Get execution details |
-| GET | `/executions/:id/logs` | Get live execution logs |
-| POST | `/chat` | Send message to AI Brain |
-| GET | `/chat/history` | Get conversation history |
-| GET | `/nodes` | List available node types |
-| GET | `/credentials` | List credentials (secrets hidden) |
-| POST | `/credentials` | Create encrypted credential |
-| GET | `/social-accounts` | List connected messaging accounts |
-| GET | `/health` | Health check |
+| Method | Endpoint | Aciklama |
+|--------|----------|----------|
+| GET | `/workflows` | Workflow listesi (pagination, arama, filtre) |
+| POST | `/workflows` | Workflow olustur |
+| GET | `/workflows/:id` | Workflow detaylari |
+| PUT | `/workflows/:id` | Workflow guncelle |
+| DELETE | `/workflows/:id` | Workflow sil |
+| POST | `/workflows/:id/execute` | Workflow calistir |
+| POST | `/workflows/:id/validate` | Workflow dogrulama |
+| GET | `/executions` | Calistirma gecmisi (filtre: status, workflowId, tarih) |
+| GET | `/executions/:id` | Calistirma detaylari |
+| GET | `/executions/:id/logs` | Canli loglar |
+| GET | `/executions/trend` | 7 gunluk trend verisi |
+| GET | `/executions/node-errors` | En cok hata veren node'lar |
+| POST | `/chat` | AI Brain mesaj gonder |
+| GET | `/chat/history` | Konusma gecmisi |
+| GET | `/nodes` | Mevcut node tipleri |
+| CRUD | `/credentials` | Sifrelenmis kimlik bilgileri |
+| GET | `/health` | Sistem durumu |
+| GET | `/metrics` | Metrikler (uptime, memory, error stats) |
+| POST/GET | `/webhook/*` | Webhook tetikleme |
+
+Tam dokumantasyon: [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
 
 ---
 
-## Plugin Development
+## Plugin Gelistirme
 
-Create community nodes by publishing npm packages with the `sibercron-node-` prefix:
+`sibercron-node-` prefix'i ile npm paketleri olusturarak topluluk node'lari gelistirebilirsiniz:
 
 ```typescript
 import type { INodeType } from '@sibercron/shared';
@@ -264,18 +269,18 @@ export const MyCustomNode: INodeType = {
 };
 ```
 
-See [Plugin Development Guide](docs/plugin-development.md) for details.
+Detaylar: [Plugin Development Guide](docs/plugin-development.md)
 
 ---
 
-## Contributing
+## Katki
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Katkilarinizi bekliyoruz! [CONTRIBUTING.md](CONTRIBUTING.md) dosyasina bakiniz.
 
-## License
+## Lisans
 
-[MIT](LICENSE) — Free and open-source.
+[MIT](LICENSE) — Ozgur ve acik kaynak.
 
 ---
 
-Built with care in Turkey.
+Turkiye'de gelistirildi.

@@ -45,6 +45,8 @@ import {
   Rss,
   HardDrive,
   FolderOpen,
+  Github,
+  Table2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -86,6 +88,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Rss,
   HardDrive,
   FolderOpen,
+  Github,
+  Table2,
 };
 
 /**

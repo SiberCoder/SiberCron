@@ -1,7 +1,7 @@
 # SiberCron - Proje Durumu & TODO
 
 ## Proje Amaci
-OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, self-hosted bir workflow otomasyon platformu. Kullanicilar gorsel editorle node'lari suruklayip birakarak AI destekli otomasyon akislari olusturabilecek.
+OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik kaynak, self-hosted otonom AI gelistirme ve workflow otomasyon platformu. Temel amac: kendi bilgisayarinizda/sunucunuzda calisan, tam otonom yazilim gelistirme gorevleri yapabilen, gorsel editorle node'lari suruklayip birakarak AI destekli otomasyon akislari olusturulabilen bir sistem.
 
 ---
 
@@ -17,7 +17,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
   - [x] NodeRegistry (node kayit ve kesfetme)
   - [x] ExecutionContext (node'lara input/parameter/credential saglar)
   - [x] ExpressionEvaluator ({{ $json.field }} template syntax)
-- [x] **@sibercron/nodes** - 20 hazir node (guncellendi)
+- [x] **@sibercron/nodes** - 36 hazir node (guncellendi)
   - [x] Triggers: ManualTrigger, CronTrigger, WebhookTrigger
   - [x] AI: AIAgent (coklu provider), AutonomousDev (Claude CLI loop)
   - [x] Core: HttpRequest (auth/timeout/queryParams), Code (guvenli sandbox), Conditional (19 operator), Transform (pick/remove/rename/set/flatten/wrap), Merge (6 mod), Delay, Log (select logLevel), Loop (3 mod), Split (3 mod)
@@ -78,6 +78,9 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] RSS Feed node
 - [x] GoogleDrive node (upload/download/list/delete dosyalar)
 - [x] NotionDatabase node (query/create/update sayfa)
+- [x] GitHub node (issue/PR/repo/release/comment, REST API v3)
+- [x] GitHub Trigger node (push/PR/issue/release webhook events)
+- [x] Airtable node (record CRUD, arama, upsert, REST API)
 
 #### Oncelik 3: Editor Gelistirmeleri
 - [x] Template'den workflow olusturma (templates sayfasindan)
@@ -151,6 +154,16 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] WorkflowEngine: node timeout > workflow timeout ise otomatik uzatma (AutonomousDev fix)
 - [x] Startup: pending status'taki stale execution'lar da temizlenir
 - [x] agentLoop/aiBrainService: isActive kontrolu execute oncesi
+
+#### Oncelik 4f: Bug Fixes & New Nodes
+- [x] AutonomousDev log mapping: "write to ALL tracked IDs" fallback kaldirildi — concurrent execution log pollution duzeltildi
+- [x] SocialAccounts test endpoint: her platform icin 8s AbortController timeout eklendi
+- [x] Workflow edge validation: POST/PUT sirasinda gecersiz node referanslari ve self-loop yakalanir (400)
+- [x] Graceful shutdown: SIGINT/SIGTERM'de executionLogStore.destroy() cagrisi eklendi
+- [x] GitHubTrigger node: HMAC-SHA256 imza dogrulama, event/repo/branch filtreleme
+- [x] Jira node: Issues CRUD + JQL search, Comments, Transitions, Projects (Jira Cloud REST API v3)
+- [x] QueueService: concurrent execution guard (scheduled workflows icin)
+- [x] DashboardPage: zaman etiketleri Turkce'ye cevrildi
 
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
