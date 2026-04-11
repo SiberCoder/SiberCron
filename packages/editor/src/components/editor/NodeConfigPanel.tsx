@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw, Eye, EyeOff, Tag, FileText, Settings2, Timer, SkipForward } from 'lucide-react';
+import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw, Eye, EyeOff, Tag, FileText, Settings2, Timer, SkipForward, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
+import { useNavigate } from 'react-router-dom';
 import type { INodeProperty, ICredential } from '@sibercron/shared';
 import { getNodeIcon } from '../../lib/iconRegistry';
 import { useWorkflowStore } from '../../store/workflowStore';
@@ -670,6 +671,14 @@ function PropertyField({ property, value, onChange }: FieldProps) {
           onBlur={() => {
             touchedRef.current = true;
             const str = (value as string) ?? '';
+            // Auto-format valid JSON on blur
+            if (str.trim()) {
+              try {
+                const parsed = JSON.parse(str);
+                const formatted = JSON.stringify(parsed, null, 2);
+                if (formatted !== str) onChange(name, formatted);
+              } catch { /* invalid JSON, leave as-is */ }
+            }
             const jsonErr = validateJson(str);
             if (jsonErr) { setFieldError(jsonErr); return; }
             const reqErr = validateRequired(str);
@@ -873,6 +882,7 @@ function WorkflowMetaPanel() {
 }
 
 export default function NodeConfigPanel() {
+  const navigate = useNavigate();
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const nodes = useWorkflowStore((s) => s.nodes);
   const updateNodeParameters = useWorkflowStore((s) => s.updateNodeParameters);
@@ -994,6 +1004,15 @@ export default function NodeConfigPanel() {
               <KeyRound size={11} />
               Kimlik Bilgileri
             </div>
+            {availableCredentials.length === 0 && (
+              <button
+                onClick={() => navigate('/credentials')}
+                className="flex items-center gap-1.5 text-[10px] text-aurora-cyan/70 hover:text-aurora-cyan transition-colors font-body"
+              >
+                <ExternalLink size={10} />
+                Kimlik bilgisi eklemek için tıklayın
+              </button>
+            )}
             {definition.credentials!.map((cred) => {
               // Exact type match first; fall back to fuzzy; finally show all.
               const exactMatch = availableCredentials.filter((c) => c.type === cred.name);

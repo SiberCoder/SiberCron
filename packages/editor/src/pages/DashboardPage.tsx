@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
   Activity,
   RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { io } from 'socket.io-client';
@@ -89,6 +90,81 @@ interface DashboardStats {
   activeWorkflows: number;
   totalExecutions: number;
   successRate: string;
+}
+
+interface NodeErrorStat {
+  nodeName: string;
+  errorCount: number;
+  total: number;
+  errorRate: number;
+}
+
+function TopFailingNodesPanel({ items }: { items: NodeErrorStat[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04]">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={14} className="text-aurora-rose" />
+          <h2 className="text-base font-display font-semibold text-white tracking-tight">
+            En Çok Hata Veren Node'lar
+          </h2>
+        </div>
+        <span className="text-[10px] text-obsidian-500 font-body">Hata sayısına göre sıralı</span>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-white/[0.03]">
+            <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">Node</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Hata</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Toplam</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">Hata Oranı</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr
+              key={item.nodeName}
+              className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors"
+            >
+              <td className="px-5 py-3">
+                <span className="text-sm text-white font-medium font-body truncate block max-w-[220px]">
+                  {item.nodeName}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <span className="text-xs text-aurora-rose font-mono font-semibold">{item.errorCount}</span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <span className="text-xs text-obsidian-300 font-mono">{item.total}</span>
+              </td>
+              <td className="px-5 py-3 text-right">
+                <div className="inline-flex items-center gap-2">
+                  <div className="w-16 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div
+                      className={clsx(
+                        'h-full rounded-full transition-all',
+                        item.errorRate >= 50 ? 'bg-aurora-rose' :
+                        item.errorRate >= 20 ? 'bg-aurora-amber' : 'bg-aurora-yellow',
+                      )}
+                      style={{ width: `${Math.min(item.errorRate, 100)}%` }}
+                    />
+                  </div>
+                  <span className={clsx(
+                    'text-[10px] font-mono w-10 text-right',
+                    item.errorRate >= 50 ? 'text-aurora-rose' :
+                    item.errorRate >= 20 ? 'text-aurora-amber' : 'text-obsidian-300',
+                  )}>
+                    {item.errorRate.toFixed(0)}%
+                  </span>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 interface WorkflowSummary {
@@ -228,16 +304,18 @@ export default function DashboardPage() {
   const [recentExecutions, setRecentExecutions] = useState<IExecution[]>([]);
   const [trendData, setTrendData] = useState<TrendBucket[]>([]);
   const [topWorkflows, setTopWorkflows] = useState<WorkflowSummary[]>([]);
+  const [topFailingNodes, setTopFailingNodes] = useState<NodeErrorStat[]>([]);
 
   const fetchDashboardData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [workflowsRes, executionsRes, trendRes, summaryRes] = await Promise.all([
+      const [workflowsRes, executionsRes, trendRes, summaryRes, nodeErrorsRes] = await Promise.all([
         apiGet<PaginatedResponse<IWorkflow>>('/workflows?limit=100'),
         apiGet<PaginatedResponse<IExecution>>('/executions?limit=100'),
         apiGet<{ days: number; data: TrendBucket[] }>('/executions/trend?days=7').catch(() => null),
         apiGet<Record<string, { lastStatus: string; lastAt: string; total: number; success: number; error: number }>>('/executions/summary').catch(() => null),
+        apiGet<{ nodes: NodeErrorStat[] }>('/executions/node-errors?limit=8').catch(() => null),
       ]);
 
       const workflows = workflowsRes?.data ?? [];

@@ -104,6 +104,34 @@ export async function executionRoutes(
     return { days, data: buckets };
   });
 
+  // GET /node-errors — Top N nodes ranked by error count across recent executions
+  fastify.get('/node-errors', async (request: FastifyRequest, _reply: FastifyReply) => {
+    const query = request.query as { limit?: string };
+    const limit = Math.min(Math.max(Number(query.limit ?? 10), 1), 50);
+
+    const all = db.listExecutions({ limit: 5000 });
+    const nodeMap = new Map<string, { nodeName: string; errorCount: number; total: number }>();
+
+    for (const exec of all.data) {
+      if (!exec.nodeResults) continue;
+      for (const result of Object.values(exec.nodeResults)) {
+        const key = result.nodeName ?? result.nodeId;
+        const entry = nodeMap.get(key) ?? { nodeName: key, errorCount: 0, total: 0 };
+        entry.total++;
+        if (result.status === 'error') entry.errorCount++;
+        nodeMap.set(key, entry);
+      }
+    }
+
+    const nodes = Array.from(nodeMap.values())
+      .filter((n) => n.errorCount > 0)
+      .sort((a, b) => b.errorCount - a.errorCount || b.total - a.total)
+      .slice(0, limit)
+      .map((n) => ({ ...n, errorRate: n.total > 0 ? (n.errorCount / n.total) * 100 : 0 }));
+
+    return { nodes };
+  });
+
   // GET /:id - Get execution details
   fastify.get('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };

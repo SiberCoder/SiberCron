@@ -312,6 +312,89 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
 // Expose the map so workflow route can register mappings
 (globalThis as any).__executionIdMap = executionIdMap;
 
+// ── JSON Schema subset validator (for webhook payload validation) ────────
+type JsonSchemaNode = {
+  type?: string;
+  required?: string[];
+  properties?: Record<string, JsonSchemaNode>;
+  minLength?: number;
+  maxLength?: number;
+  minimum?: number;
+  maximum?: number;
+  enum?: unknown[];
+  pattern?: string;
+};
+
+function validatePayloadSchema(body: Record<string, unknown>, schema: Record<string, unknown>, path = 'body'): string[] {
+  const errors: string[] = [];
+  const s = schema as JsonSchemaNode;
+
+  // Required fields
+  if (Array.isArray(s.required)) {
+    for (const field of s.required) {
+      if (!(field in body)) {
+        errors.push(`Missing required field: ${path}.${field}`);
+      }
+    }
+  }
+
+  // Property type checks
+  if (s.properties && typeof s.properties === 'object') {
+    for (const [key, propSchema] of Object.entries(s.properties)) {
+      const value = body[key];
+      if (value === undefined) continue; // already caught by required check
+
+      const expectedType = propSchema.type;
+      if (expectedType) {
+        const actualType = Array.isArray(value) ? 'array' : value === null ? 'null' : typeof value;
+        if (actualType !== expectedType) {
+          errors.push(`Field ${path}.${key}: expected ${expectedType}, got ${actualType}`);
+        }
+      }
+
+      // String constraints
+      if (typeof value === 'string') {
+        if (propSchema.minLength !== undefined && value.length < propSchema.minLength) {
+          errors.push(`Field ${path}.${key}: minLength is ${propSchema.minLength}`);
+        }
+        if (propSchema.maxLength !== undefined && value.length > propSchema.maxLength) {
+          errors.push(`Field ${path}.${key}: maxLength is ${propSchema.maxLength}`);
+        }
+        if (propSchema.pattern !== undefined) {
+          try {
+            if (!new RegExp(propSchema.pattern).test(value)) {
+              errors.push(`Field ${path}.${key}: does not match pattern ${propSchema.pattern}`);
+            }
+          } catch { /* invalid regex, skip */ }
+        }
+      }
+
+      // Number constraints
+      if (typeof value === 'number') {
+        if (propSchema.minimum !== undefined && value < propSchema.minimum) {
+          errors.push(`Field ${path}.${key}: minimum is ${propSchema.minimum}`);
+        }
+        if (propSchema.maximum !== undefined && value > propSchema.maximum) {
+          errors.push(`Field ${path}.${key}: maximum is ${propSchema.maximum}`);
+        }
+      }
+
+      // Enum check
+      if (Array.isArray(propSchema.enum) && !propSchema.enum.includes(value)) {
+        errors.push(`Field ${path}.${key}: must be one of [${propSchema.enum.join(', ')}]`);
+      }
+
+      // Nested object
+      if (propSchema.type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const nested = validatePayloadSchema(value as Record<string, unknown>, propSchema as Record<string, unknown>, `${path}.${key}`);
+        errors.push(...nested);
+      }
+    }
+  }
+
+  return errors;
+}
+
 // ── Webhook trigger endpoint ────────────────────────────────────────────
 // Handles: POST|GET /api/v1/webhook/*
 // Supports both single-segment (/my-hook) and multi-segment (/category/hook) paths.
@@ -367,6 +450,28 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
     }
   }
 
+  // ── Payload schema validation (optional) ───────────────────────────
+  // Read payloadSchema from the webhook trigger node's parameters.
+  const webhookNode = target.nodes.find(
+    (n) => n.type === 'sibercron.webhookTrigger',
+  );
+  const payloadSchemaRaw = webhookNode?.parameters?.payloadSchema as string | undefined;
+  const respondWithCode = Number(webhookNode?.parameters?.respondWith ?? '202') || 202;
+
+  if (payloadSchemaRaw?.trim()) {
+    try {
+      const schema = JSON.parse(payloadSchemaRaw) as Record<string, unknown>;
+      const body = (request.body ?? {}) as Record<string, unknown>;
+      const validationErrors: string[] = validatePayloadSchema(body, schema);
+      if (validationErrors.length > 0) {
+        reply.code(400);
+        return { error: 'Payload validation failed', details: validationErrors };
+      }
+    } catch {
+      // Malformed schema → skip validation, don't block
+    }
+  }
+
   const triggerData: Record<string, unknown> = {
     triggeredBy: 'webhook',
     webhookPath: normalizedPath,
@@ -384,7 +489,7 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
     webhookPath: normalizedPath,
   });
 
-  reply.code(202);
+  reply.code(respondWithCode);
   return { message: 'Webhook received', workflowId: target.id, workflowName: target.name, jobId };
 }
 

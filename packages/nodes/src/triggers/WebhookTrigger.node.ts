@@ -35,6 +35,29 @@ export const WebhookTriggerNode: INodeType = {
         description: 'The webhook URL path to listen on',
         placeholder: '/webhook',
       },
+      {
+        name: 'payloadSchema',
+        displayName: 'Payload Schema (JSON)',
+        type: 'string',
+        default: '',
+        required: false,
+        description:
+          'Optional JSON Schema to validate the incoming request body. Requests that fail validation receive a 400 response. Example: {"required":["name","email"],"properties":{"name":{"type":"string"},"email":{"type":"string"}}}',
+        placeholder: '{"required":["field1"],"properties":{"field1":{"type":"string"}}}',
+      },
+      {
+        name: 'respondWith',
+        displayName: 'Respond With',
+        type: 'select',
+        default: '202',
+        required: false,
+        description: 'HTTP status code to return when the webhook is accepted',
+        options: [
+          { name: '200 OK', value: '200' },
+          { name: '202 Accepted (default)', value: '202' },
+          { name: '204 No Content', value: '204' },
+        ],
+      },
     ],
   },
 

@@ -44,6 +44,50 @@ function isQuestion(response: string): boolean {
   return QUESTION_PATTERNS.some((p) => p.test(lastParagraph));
 }
 
+/**
+ * Format a tool call into a clean, human-readable line for live display.
+ * Instead of raw JSON like `[Tool: Bash({"command":"pnpm build 2>&1","timeout":120000})]`
+ * shows: `🔧 Bash: pnpm build 2>&1`
+ */
+function formatToolCall(name: string, input: Record<string, unknown>): string {
+  const icons: Record<string, string> = {
+    Bash: '⚡', Read: '📄', Write: '✏️', Edit: '✏️', Grep: '🔍', Glob: '📂',
+    Agent: '🤖', TodoWrite: '📋', WebFetch: '🌐', WebSearch: '🌐',
+  };
+  const icon = icons[name] ?? '🔧';
+
+  switch (name) {
+    case 'Bash': {
+      const cmd = String(input.command ?? '').split('\n')[0].slice(0, 120);
+      const desc = input.description ? ` — ${input.description}` : '';
+      return `${icon} ${cmd}${desc}\n`;
+    }
+    case 'Read':
+      return `${icon} Okuyor: ${formatPath(String(input.file_path ?? ''))}\n`;
+    case 'Write':
+      return `${icon} Yazıyor: ${formatPath(String(input.file_path ?? ''))}\n`;
+    case 'Edit':
+      return `${icon} Düzenliyor: ${formatPath(String(input.file_path ?? ''))}\n`;
+    case 'Grep':
+      return `${icon} Arıyor: "${input.pattern}" ${input.path ? 'in ' + formatPath(String(input.path)) : ''}\n`;
+    case 'Glob':
+      return `${icon} Dosya arıyor: ${input.pattern}\n`;
+    case 'Agent':
+      return `${icon} Alt görev: ${input.description ?? input.prompt?.toString().slice(0, 80) ?? name}\n`;
+    case 'TodoWrite':
+      return `${icon} Görev listesi güncelleniyor\n`;
+    default: {
+      const summary = Object.entries(input).map(([k, v]) => `${k}=${String(v).slice(0, 50)}`).join(', ');
+      return `${icon} ${name}: ${summary.slice(0, 120)}\n`;
+    }
+  }
+}
+
+function formatPath(fullPath: string): string {
+  // e:/SiberCron/packages/editor/src/pages/Foo.tsx → editor/src/pages/Foo.tsx
+  return fullPath.replace(/.*?packages\//, '').replace(/\\/g, '/');
+}
+
 /* ------------------------------------------------------------------ */
 /*  Claude CLI call — session-aware with live streaming                 */
 /* ------------------------------------------------------------------ */
@@ -122,7 +166,7 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
             detectedSessionId = event.sessionId;
           }
 
-          // Partial assistant message — stream to UI
+          // Partial assistant message — stream to UI in human-readable format
           if (event.type === 'assistant' && event.message?.content) {
             const content = event.message.content;
             if (typeof content === 'string') {
@@ -132,9 +176,10 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
                 if (block.type === 'text' && block.text) {
                   onChunk?.(block.text);
                 } else if (block.type === 'tool_use') {
-                  onChunk?.(`[Tool: ${block.name}(${JSON.stringify(block.input).slice(0, 100)}...)]\n`);
+                  onChunk?.(formatToolCall(block.name, block.input));
                 } else if (block.type === 'tool_result') {
-                  onChunk?.(`[Tool Result: ${String(block.content).slice(0, 200)}]\n`);
+                  const text = typeof block.content === 'string' ? block.content : JSON.stringify(block.content);
+                  onChunk?.(`  ↳ ${text.slice(0, 300)}\n`);
                 }
               }
             }
@@ -449,6 +494,13 @@ export const AutonomousDevNode: INodeType = {
         });
 
         const askedQuestion = isQuestion(result.response);
+        const taskDone = !askedQuestion && isDone(result.response);
+
+        if (taskDone) {
+          emitLog('system', 'AI gorevi tamamladi, dongu durduruluyor');
+          exitReason = 'completed';
+          break;
+        }
 
         if (askedQuestion) {
           emitLog('system', `AI soru sordu, strateji: ${autoAnswerStrategy}`);
@@ -499,13 +551,9 @@ export const AutonomousDevNode: INodeType = {
       }
     }
 
-    // exitReason stays 'maxIterations' if the loop ran out of budget without
-    // a stop/error signal — this lets downstream nodes branch on that outcome.
-    // Only promote to 'completed' when the loop ended naturally (no question asked,
-    // no error, no explicit stop) AND we haven't exhausted all iterations.
-    if (exitReason === 'maxIterations' && iterationCount < maxLoopIterations) {
-      exitReason = 'completed';
-    }
+    // exitReason is 'maxIterations' only when the budget was fully exhausted
+    // without an explicit done/stop/error signal. 'completed' fires when isDone()
+    // detects the AI finished the task early.
 
     emitLog('system', `Sonuc: ${exitReason}, toplam ${iterationCount} iterasyon, session: ${currentSessionId?.slice(0, 8) ?? 'yok'}`);
 
