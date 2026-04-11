@@ -407,12 +407,13 @@ export default function DashboardPage() {
   }, [fetchDashboardData]);
 
   // Socket.io: refresh stats when any execution completes (shared singleton)
+  // Note: 'execution:completed' is room-scoped; use the global 'workflow:execution:completed' broadcast instead
   useEffect(() => {
     const socket = getSocket();
     const onCompleted = () => fetchDashboardData(true);
-    socket.on('execution:completed', onCompleted);
+    socket.on('workflow:execution:completed', onCompleted);
     return () => {
-      socket.off('execution:completed', onCompleted);
+      socket.off('workflow:execution:completed', onCompleted);
       releaseSocket();
     };
   }, [fetchDashboardData]);
