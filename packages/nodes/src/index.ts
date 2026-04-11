@@ -37,6 +37,9 @@ import { DateTimeNode } from './core/DateTime.node.js';
 import { GitHubNode } from './core/GitHub.node.js';
 import { AirtableNode } from './core/Airtable.node.js';
 import { JiraNode } from './core/Jira.node.js';
+import { FilterNode } from './core/Filter.node.js';
+import { AggregateNode } from './core/Aggregate.node.js';
+import { SortNode } from './core/Sort.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -76,6 +79,9 @@ export const builtinNodes: INodeType[] = [
   GitHubNode,
   AirtableNode,
   JiraNode,
+  FilterNode,
+  AggregateNode,
+  SortNode,
 ];
 
 export {
@@ -116,4 +122,7 @@ export {
   GitHubNode,
   AirtableNode,
   JiraNode,
+  FilterNode,
+  AggregateNode,
+  SortNode,
 };

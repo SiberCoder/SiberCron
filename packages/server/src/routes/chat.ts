@@ -66,12 +66,14 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
     return { state };
   });
 
-  // GET /stream - Server-Sent Events stream of chat response
-  fastify.get('/stream', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { message, conversationId } = request.query as {
-      message?: string;
-      conversationId?: string;
+  // POST /stream - Server-Sent Events stream of chat response with live events
+  fastify.post('/stream', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as ChatRequest & {
+      maxIterations?: number;
+      temperature?: number;
+      outputFormat?: string;
     };
+    const { message, conversationId, maxIterations, temperature, outputFormat } = body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       reply.code(400);
@@ -85,38 +87,30 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
       'Access-Control-Allow-Origin': '*',
     });
 
+    const sendEvent = (data: Record<string, unknown>) => {
+      reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
     try {
-      // Send a "thinking" event
-      reply.raw.write(`data: ${JSON.stringify({ type: 'thinking' })}\n\n`);
+      const response = await aiBrainService.chat(
+        message.trim(),
+        conversationId,
+        undefined,
+        { maxIterations, temperature, outputFormat },
+        (event) => sendEvent(event),
+      );
 
-      // Get the full response (non-streaming for now, but delivered as SSE)
-      const response = await aiBrainService.chat(message.trim(), conversationId);
-
-      // Send tool calls if any
-      if (response.metadata?.toolCalls) {
-        for (const tc of response.metadata.toolCalls) {
-          reply.raw.write(
-            `data: ${JSON.stringify({ type: 'tool_call', name: tc.name, status: tc.status, result: tc.result })}\n\n`,
-          );
-        }
-      }
-
-      // Send the final message in chunks to simulate streaming
+      // Stream content in chunks for a typing effect
       const content = response.content;
-      const chunkSize = 20;
+      const chunkSize = 12;
       for (let i = 0; i < content.length; i += chunkSize) {
-        const chunk = content.slice(i, i + chunkSize);
-        reply.raw.write(`data: ${JSON.stringify({ type: 'content', text: chunk })}\n\n`);
+        sendEvent({ type: 'content', text: content.slice(i, i + chunkSize) });
       }
 
-      // Send done event
-      reply.raw.write(
-        `data: ${JSON.stringify({ type: 'done', message: response })}\n\n`,
-      );
+      // Send the complete message at the end
+      sendEvent({ type: 'done', message: response });
     } catch (err) {
-      reply.raw.write(
-        `data: ${JSON.stringify({ type: 'error', error: (err as Error).message })}\n\n`,
-      );
+      sendEvent({ type: 'error', error: (err as Error).message });
     }
 
     reply.raw.end();

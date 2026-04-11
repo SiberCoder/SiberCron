@@ -51,6 +51,9 @@ import {
   FolderOpen,
   Github,
   Table2,
+  Filter,
+  BarChart2,
+  ArrowUpDown,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -98,6 +101,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   FolderOpen,
   Github,
   Table2,
+  Filter,
+  BarChart2,
+  ArrowUpDown,
 };
 
 /**

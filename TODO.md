@@ -173,6 +173,15 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] Templates: Jira Bug Triage ve RSS→Notion yeni sablon olarak eklendi
 - [x] CommandPalette: save/execute silent console.error → toast bildirimi ile degistirildi
 
+#### Oncelik 4g: Security & Performance
+- [x] Login brute-force koruması: 5 basarisiz deneme → 15 dakika lockout (username bazli)
+- [x] ExecutionHistoryPage: filtreler sonucsuz kaldığında aktif filter badge'leri + temizle butonu
+- [x] DashboardPage: AbortController ile unmount sonrası setState race condition duzeltildi
+- [x] executions/summary, trend, node-errors: 5000-10000 limit → 1000-2000 + date filter ile optimize edildi
+- [x] Filter node: 'collection'/'options' tip hataları düzeltildi (→ json/select), execute logic güncellendi
+- [x] Sort node: aynı tip hataları düzeltildi, JSON array formatına geçildi
+- [x] Filter, Aggregate, Sort: yeni core nodes, index.ts ve iconRegistry'ye eklendi
+
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
 - [ ] Community node marketplace sayfasi

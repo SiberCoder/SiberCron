@@ -305,7 +305,7 @@ export default function DashboardPage() {
   const [topWorkflows, setTopWorkflows] = useState<WorkflowSummary[]>([]);
   const [topFailingNodes, setTopFailingNodes] = useState<NodeErrorStat[]>([]);
 
-  const fetchDashboardData = useCallback(async (silent = false) => {
+  const fetchDashboardData = useCallback(async (silent = false, signal?: AbortSignal) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
@@ -316,6 +316,9 @@ export default function DashboardPage() {
         apiGet<Record<string, { lastStatus: string; lastAt: string; total: number; success: number; error: number }>>('/executions/summary').catch(() => null),
         apiGet<{ nodes: NodeErrorStat[] }>('/executions/node-errors?limit=8').catch(() => null),
       ]);
+
+      // Don't update state if the component unmounted while we were fetching
+      if (signal?.aborted) return;
 
       const workflowsRes = workflowsSettled;
       const executionsRes = executionsSettled;
@@ -358,17 +361,22 @@ export default function DashboardPage() {
         setTopFailingNodes(nodeErrorsRes.nodes);
       }
     } catch (err) {
+      if (signal?.aborted) return;
       console.error('Failed to load dashboard data:', err);
       setError((err as Error).message ?? 'Dashboard verisi yüklenemedi');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
-  // Initial load
+  // Initial load — cancel fetch if component unmounts before it finishes
   useEffect(() => {
-    fetchDashboardData();
+    const controller = new AbortController();
+    fetchDashboardData(false, controller.signal);
+    return () => controller.abort();
   }, [fetchDashboardData]);
 
   // Socket.io: refresh stats when any execution completes (shared singleton)

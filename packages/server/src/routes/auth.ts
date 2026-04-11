@@ -6,6 +6,27 @@ import { config } from '../config/env.js';
 const SALT_ROUNDS = 10;
 const REFRESH_TOKEN_TTL = '30d';
 
+// ── Login brute-force protection ──────────────────────────────────────────────
+// Tracks failed attempts per username. Lockout: 5 failures → 15 min window.
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+interface LoginAttemptRecord {
+  count: number;
+  lockedUntil?: number;
+}
+const loginAttempts = new Map<string, LoginAttemptRecord>();
+
+// Cleanup stale entries every 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of loginAttempts) {
+    if (!record.lockedUntil || now > record.lockedUntil) {
+      loginAttempts.delete(key);
+    }
+  }
+}, 30 * 60 * 1000).unref();
+
 /** Read access token TTL from persisted setup config, fall back to env/default. */
 function getAccessTokenTtl(): string {
   const cfg = db.getSetupConfig() as Record<string, unknown> | undefined;
@@ -30,15 +51,38 @@ export async function authRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { username, password } = request.body;
 
+    // Check lockout before doing any DB work
+    const attemptKey = username.toLowerCase();
+    const record = loginAttempts.get(attemptKey);
+    if (record?.lockedUntil && Date.now() < record.lockedUntil) {
+      const retryAfterSec = Math.ceil((record.lockedUntil - Date.now()) / 1000);
+      return reply.status(429).send({
+        error: 'Too many failed login attempts. Try again later.',
+        retryAfter: retryAfterSec,
+      });
+    }
+
     const user = db.findUserByUsername(username);
     if (!user) {
+      // Record failure (use same path as wrong password to avoid username enumeration timing)
+      const cur = loginAttempts.get(attemptKey) ?? { count: 0 };
+      cur.count++;
+      if (cur.count >= LOGIN_MAX_ATTEMPTS) cur.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+      loginAttempts.set(attemptKey, cur);
       return reply.status(401).send({ error: 'Invalid credentials' });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      const cur = loginAttempts.get(attemptKey) ?? { count: 0 };
+      cur.count++;
+      if (cur.count >= LOGIN_MAX_ATTEMPTS) cur.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+      loginAttempts.set(attemptKey, cur);
       return reply.status(401).send({ error: 'Invalid credentials' });
     }
+
+    // Successful login → reset attempt counter
+    loginAttempts.delete(attemptKey);
 
     const payload = { sub: user.id, username: user.username, role: user.role };
     const accessToken = app.jwt.sign(payload, { expiresIn: getAccessTokenTtl() });

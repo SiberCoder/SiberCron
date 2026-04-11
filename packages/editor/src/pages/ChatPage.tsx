@@ -200,18 +200,80 @@ function ChatBubble({ message, settings }: { message: ChatMessage; settings?: Ch
   );
 }
 
-// ── Typing indicator ────────────────────────────────────────────────────
+// ── Streaming indicator ─────────────────────────────────────────────────
 
-function TypingIndicator() {
+function StreamingIndicator({ verbose }: { verbose?: boolean }) {
+  const { streamPhase, streamingContent, streamingToolCalls } = useChatStore();
+
+  const phaseLabel = () => {
+    switch (streamPhase) {
+      case 'thinking': return 'Dusunuyor...';
+      case 'tool_running': return 'Arac calisiyor...';
+      case 'generating': return 'Yanit olusturuyor...';
+      case 'content': return null; // content is shown directly
+      default: return 'Bekliyor...';
+    }
+  };
+
+  const label = phaseLabel();
+  const showContent = streamPhase === 'content' && streamingContent;
+  const hasToolCalls = streamingToolCalls.length > 0;
+
   return (
     <div className="flex gap-3 justify-start">
-      <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
+      <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0 mt-1">
         <Brain size={16} className="text-purple-400" />
       </div>
-      <div className="bg-slate-800 border border-white/[0.06] rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1.5">
-        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+      <div className="max-w-[75%] min-w-0">
+        <div className="bg-slate-800 border border-white/[0.06] rounded-2xl rounded-bl-md px-4 py-3">
+          {/* Phase label with dots animation */}
+          {label && (
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <Loader2 size={12} className="animate-spin text-purple-400" />
+              <span>{label}</span>
+            </div>
+          )}
+
+          {/* Live tool calls - shown in verbose mode */}
+          {verbose && hasToolCalls && (
+            <div className="mt-2 space-y-1">
+              {streamingToolCalls.map((tc, i) => (
+                <div key={`${tc.name}-${i}`} className="rounded-lg bg-white/[0.04] border border-white/[0.06] px-3 py-2 flex items-center gap-2">
+                  <Wrench size={12} className="text-purple-400 shrink-0" />
+                  <span className="text-xs text-slate-300 flex-1">{tc.name}</span>
+                  {tc.status === 'pending' && <Loader2 size={12} className="animate-spin text-amber-400" />}
+                  {tc.status === 'success' && <CheckCircle2 size={12} className="text-emerald-400" />}
+                  {tc.status === 'error' && <XCircle size={12} className="text-red-400" />}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Non-verbose: compact tool count */}
+          {!verbose && hasToolCalls && (
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1">
+              <Wrench size={10} />
+              <span>{streamingToolCalls.length} arac kullaniliyor...</span>
+            </div>
+          )}
+
+          {/* Streaming content */}
+          {showContent && (
+            <div className="text-sm text-slate-100 leading-relaxed whitespace-pre-wrap break-words mt-1">
+              {streamingContent}
+              <span className="inline-block w-1.5 h-4 bg-purple-400 animate-pulse ml-0.5 align-text-bottom rounded-sm" />
+            </div>
+          )}
+
+          {/* Simple dots when no content yet and no label */}
+          {!label && !showContent && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -679,10 +741,15 @@ export default function ChatPage() {
     return () => { cancelled = true; };
   }, [loadHistory, loadSystemContext]);
 
-  // Auto-scroll to bottom on new messages
+  const streamingContent = useChatStore((s) => s.streamingContent);
+  const streamPhase = useChatStore((s) => s.streamPhase);
+
+  // Auto-scroll to bottom on new messages or streaming updates
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+    if (chatSettings.autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading, streamingContent, streamPhase, chatSettings.autoScroll]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -854,7 +921,7 @@ export default function ChatPage() {
               .map((msg) => (
                 <ChatBubble key={msg.id} message={msg} settings={chatSettings} />
               ))}
-            {isLoading && <TypingIndicator />}
+            {isLoading && <StreamingIndicator verbose={chatSettings.verbose} />}
             {error && (
               <div className="flex justify-center">
                 <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">

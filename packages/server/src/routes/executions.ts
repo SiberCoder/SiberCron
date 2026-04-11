@@ -31,7 +31,9 @@ export async function executionRoutes(
 
   // GET /summary - Per-workflow execution stats (last status, count, last run time)
   fastify.get('/summary', async (_request: FastifyRequest, _reply: FastifyReply) => {
-    const all = db.listExecutions({ limit: 5000 });
+    // Limit to last 30 days to avoid loading the entire history on large datasets
+    const startDate = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const all = db.listExecutions({ limit: 1000, startDate });
     const map = new Map<string, { lastStatus: string; lastAt: string; total: number; success: number; error: number }>();
 
     for (const exec of all.data) {
@@ -87,7 +89,7 @@ export async function executionRoutes(
     const cutoff = new Date(now - (days - 1) * msPerDay);
     cutoff.setUTCHours(0, 0, 0, 0);
 
-    const all = db.listExecutions({ limit: 10000 });
+    const all = db.listExecutions({ limit: 2000, startDate: cutoff.toISOString() });
     for (const exec of all.data) {
       const ts = exec.startedAt ?? exec.createdAt;
       if (!ts) continue;
@@ -109,7 +111,9 @@ export async function executionRoutes(
     const query = request.query as { limit?: string };
     const limit = Math.min(Math.max(Number(query.limit ?? 10), 1), 50);
 
-    const all = db.listExecutions({ limit: 5000 });
+    // Last 30 days is sufficient for node error stats
+    const nodeErrorsStartDate = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const all = db.listExecutions({ limit: 1000, startDate: nodeErrorsStartDate });
     const nodeMap = new Map<string, { nodeName: string; errorCount: number; total: number }>();
 
     for (const exec of all.data) {

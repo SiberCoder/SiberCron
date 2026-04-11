@@ -22,6 +22,7 @@ import {
   Download,
   FileText,
   FileJson,
+  Filter,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { Socket } from 'socket.io-client';
@@ -898,6 +899,27 @@ export default function ExecutionHistoryPage() {
           <p className="text-sm text-obsidian-500 max-w-sm font-body">
             Bir workflow calistirin, sonuclari burada gorun
           </p>
+        </div>
+      ) : filteredExecutions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-16 h-16 rounded-2xl glass-card flex items-center justify-center mb-5">
+            <Filter size={28} className="text-obsidian-500" />
+          </div>
+          <h3 className="text-lg font-display font-semibold text-white mb-2">
+            Filtrelerle eşleşen kayıt yok
+          </h3>
+          <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-sm">
+            {filterStatus && <span className="text-xs bg-aurora-cyan/10 text-aurora-cyan border border-aurora-cyan/20 rounded-full px-3 py-1">Durum: {filterStatus}</span>}
+            {filterWorkflow && <span className="text-xs bg-aurora-violet/10 text-aurora-violet border border-aurora-violet/20 rounded-full px-3 py-1">Workflow: {filterWorkflow}</span>}
+            {filterTriggeredBy && <span className="text-xs bg-aurora-amber/10 text-aurora-amber border border-aurora-amber/20 rounded-full px-3 py-1">Tetikleyen: {filterTriggeredBy}</span>}
+            {(filterStartDate || filterEndDate) && <span className="text-xs bg-aurora-emerald/10 text-aurora-emerald border border-aurora-emerald/20 rounded-full px-3 py-1">Tarih aralığı</span>}
+          </div>
+          <button
+            onClick={() => { setFilterStatus(''); setFilterWorkflow(''); setFilterStartDate(''); setFilterEndDate(''); setFilterTriggeredBy(''); setPage(1); }}
+            className="btn-ghost text-sm"
+          >
+            <X size={14} /> Filtreleri temizle
+          </button>
         </div>
       ) : (
         <>

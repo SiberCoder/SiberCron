@@ -246,6 +246,7 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
     conversationId?: string,
     providerConfigOverride?: AIProviderConfig,
     settings?: { maxIterations?: number; temperature?: number; outputFormat?: string },
+    onEvent?: (event: { type: string; [key: string]: unknown }) => void,
   ): Promise<ChatMessage> {
     const convId = conversationId || this.defaultConversationId;
 
@@ -299,6 +300,9 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
     }
 
     try {
+      // Emit thinking event
+      onEvent?.({ type: 'thinking' });
+
       // Call AI provider
       const response = await this.callAI(systemPrompt, messages, providerConfig, settings);
 
@@ -307,6 +311,7 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
       if (hasUnexecutedTools && response.metadata?.toolCalls) {
         for (const tool of response.metadata.toolCalls) {
           if (tool.status === 'success' || tool.status === 'error') continue; // Already executed
+          onEvent?.({ type: 'tool_start', name: tool.name, args: tool.args });
           try {
             tool.result = await this.executeTool(tool.name, tool.args);
             tool.status = 'success';
@@ -314,6 +319,7 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
             tool.result = { error: (err as Error).message };
             tool.status = 'error';
           }
+          onEvent?.({ type: 'tool_done', name: tool.name, status: tool.status, result: tool.result });
         }
 
         // Call AI again with tool results for a final natural response
@@ -328,6 +334,8 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
           timestamp: new Date().toISOString(),
         };
         messages.push(toolResultMsg);
+
+        onEvent?.({ type: 'generating' });
 
         // Get the final response incorporating tool results
         try {
