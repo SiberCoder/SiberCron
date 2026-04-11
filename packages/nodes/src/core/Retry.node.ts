@@ -138,15 +138,26 @@ export const RetryNode: INodeType = {
             }
           }
 
-          const response = await context.helpers.httpRequest(options);
+          const response = await context.helpers.httpRequest({
+            ...options,
+            returnFullResponse: true,
+          }) as { statusCode: number; body: unknown; ok: boolean };
 
-          // Check if status code should trigger a retry
-          const status = (response as Record<string, unknown>).__status as number | undefined;
-          if (status && retryStatusCodes.includes(status) && attempt < maxAttempts) {
+          // Check if status code should trigger a retry (e.g. 429, 500, 502, 503, 504)
+          const status = response.statusCode;
+          if (retryStatusCodes.includes(status) && attempt < maxAttempts) {
             throw new Error(`HTTP ${status} — retrying (attempt ${attempt}/${maxAttempts})`);
           }
 
-          successItems.push({ json: { ...item.json, _retry: { attempts: attempt, status } } });
+          if (!response.ok) {
+            const bodyStr = typeof response.body === 'string'
+              ? response.body
+              : JSON.stringify(response.body);
+            throw new Error(`HTTP ${status}: ${bodyStr}`);
+          }
+
+          const responseData = response.body as Record<string, unknown>;
+          successItems.push({ json: { ...item.json, ...responseData, _retry: { attempts: attempt, status } } });
           succeeded = true;
           context.helpers.log(`Retry: success on attempt ${attempt}/${maxAttempts} → ${url}`);
           break;
@@ -183,12 +194,11 @@ export const RetryNode: INodeType = {
       }
     }
 
-    // Return [successOutput, failedOutput] for dual-port routing
-    // WorkflowEngine picks the right output based on sourceHandle
+    // Return items with branch markers for dual-port routing.
+    // Engine filters per-item by branch, so every item must be stamped.
     if (failedItems.length > 0) {
-      // Encode branch information so downstream conditional routing works
-      if (successItems.length > 0) successItems[0].json.branch = 'main';
-      if (failedItems.length > 0) failedItems[0].json.branch = 'failed';
+      for (const item of successItems) item.json.branch = 'main';
+      for (const item of failedItems) item.json.branch = 'failed';
       return [...successItems, ...failedItems];
     }
     return successItems;

@@ -375,6 +375,26 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
   }
 });
 
+// ── AutonomousDev session persistence ─────────────────────────────────────────
+// When AutonomousDev discovers/updates its Claude CLI session ID, persist it
+// in the execution record so resume can pick it up after a server restart.
+process.on('autonomousDev:sessionUpdate' as any, (data: { executionId: string; sessionId: string; iteration: number }) => {
+  if (!data.executionId || !data.sessionId) return;
+  // Find the execution by API ID and store session info in nodeResults metadata
+  const targetId = executionIdMap.get(data.executionId) ?? data.executionId;
+  const exec = db.getExecution(targetId);
+  if (exec) {
+    // Store session ID in a special metadata field on the execution
+    db.updateExecution(targetId, {
+      metadata: {
+        ...(exec as any).metadata,
+        autonomousDevSessionId: data.sessionId,
+        autonomousDevIteration: data.iteration,
+      },
+    } as any);
+  }
+});
+
 // ── Scheduler auto-deactivation broadcast ─────────────────────────────────────
 // When the scheduler auto-deactivates a workflow after repeated failures,
 // broadcast to all connected clients so the UI updates without a page refresh.
@@ -622,6 +642,122 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
     signatureVerified: !!webhookSecret,
   };
 
+  // ── Sync mode: execute the workflow and wait for the result ────────────
+  const responseMode = webhookNode?.parameters?.responseMode as string | undefined;
+  if (responseMode === 'sync') {
+    const syncTimeoutSec = Math.min(120, Math.max(1, Number(webhookNode?.parameters?.syncTimeout ?? 30) || 30));
+    const syncStatusCode = Number(webhookNode?.parameters?.syncStatusCode ?? '200') || 200;
+    const crypto = await import('node:crypto');
+    const executionId = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    db.createExecution({
+      id: executionId,
+      workflowId: target.id,
+      workflowName: target.name,
+      status: 'running',
+      triggerType: 'webhook',
+      triggeredBy: { method: 'webhook', webhookPath: normalizedPath },
+      nodeResults: {},
+      startedAt: now,
+      createdAt: now,
+    });
+
+    triggerData._apiExecutionId = executionId;
+
+    try {
+      const engineResult = await Promise.race([
+        engine.execute(
+          target,
+          triggerData,
+          () => { /* no live streaming in sync mode */ },
+          async (credentialId: string) => {
+            const cred = db.getCredential(credentialId);
+            if (!cred) throw new Error(`Credential "${credentialId}" not found`);
+            if (!cred.data || typeof cred.data !== 'object') {
+              throw new Error(`Credential "${credentialId}" has no data — it may be corrupted`);
+            }
+            return cred.data;
+          },
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Workflow timed out after ${syncTimeoutSec}s`)), syncTimeoutSec * 1000),
+        ),
+      ]);
+
+      db.updateExecution(executionId, {
+        status: engineResult.status,
+        nodeResults: engineResult.nodeResults,
+        errorMessage: engineResult.errorMessage,
+        finishedAt: engineResult.finishedAt,
+        durationMs: engineResult.durationMs,
+      });
+
+      if (engineResult.status === 'error') {
+        reply.code(500);
+        return {
+          error: engineResult.errorMessage ?? 'Workflow execution failed',
+          executionId,
+          status: engineResult.status,
+          durationMs: engineResult.durationMs,
+        };
+      }
+
+      // Return the output of the last successfully executed node.
+      // If the last node is an HttpResponse node, honour its status code and headers.
+      const nodeResults = Object.values(engineResult.nodeResults ?? {});
+      const lastSuccess = [...nodeResults].reverse().find((nr) => nr.status === 'success');
+      const responseData = lastSuccess?.output ?? [{ json: { success: true } }];
+
+      // Check for HttpResponse node metadata in the last output item
+      const lastItem = responseData[responseData.length - 1]?.json as Record<string, unknown> | undefined;
+      const httpMeta = lastItem?._httpResponse as { statusCode?: number; headers?: Record<string, string>; bodyMode?: string } | undefined;
+
+      if (httpMeta) {
+        const finalStatusCode = httpMeta.statusCode ?? syncStatusCode;
+        // Set custom response headers
+        if (httpMeta.headers && typeof httpMeta.headers === 'object') {
+          for (const [k, v] of Object.entries(httpMeta.headers)) {
+            reply.header(k, String(v));
+          }
+        }
+        // Strip _httpResponse metadata before sending
+        if (httpMeta.bodyMode === 'empty') {
+          reply.code(finalStatusCode);
+          return reply.send();
+        }
+        const cleanData = responseData.map((r) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { _httpResponse: _removed, ...rest } = r.json as Record<string, unknown>;
+          return rest;
+        });
+        reply.code(finalStatusCode);
+        return cleanData.length === 1 ? cleanData[0] : cleanData;
+      }
+
+      reply.code(syncStatusCode);
+      return {
+        data: responseData.length === 1 ? responseData[0].json : responseData.map((r) => r.json),
+        executionId,
+        status: engineResult.status,
+        durationMs: engineResult.durationMs,
+      };
+    } catch (err) {
+      db.updateExecution(executionId, {
+        status: 'error',
+        errorMessage: (err as Error).message,
+        finishedAt: new Date().toISOString(),
+      });
+      reply.code(504);
+      return {
+        error: (err as Error).message,
+        executionId,
+        status: 'error',
+      };
+    }
+  }
+
+  // ── Async mode (default): queue the job and respond immediately ────────
   const jobId = await queueService.addWorkflowJob(target.id, target.name, triggerData, {
     method: 'webhook',
     webhookPath: normalizedPath,

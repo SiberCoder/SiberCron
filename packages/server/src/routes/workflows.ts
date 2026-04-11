@@ -176,7 +176,7 @@ export async function workflowRoutes(
 
       body.webhookPath = body.webhookPath.toLowerCase();
       const conflict = db.listWorkflows({ webhookPath: body.webhookPath, limit: 1 });
-      if (conflict.total > 0) {
+      if (conflict.total > 0 && conflict.data[0]) {
         reply.code(409);
         return { error: `Webhook path "${body.webhookPath}" is already used by workflow "${conflict.data[0].name}"` };
       }
@@ -231,7 +231,7 @@ export async function workflowRoutes(
 
       body.webhookPath = body.webhookPath.toLowerCase();
       const conflict = db.listWorkflows({ webhookPath: body.webhookPath, limit: 1 });
-      if (conflict.total > 0 && conflict.data[0].id !== id) {
+      if (conflict.total > 0 && conflict.data[0] && conflict.data[0].id !== id) {
         reply.code(409);
         return { error: `Webhook path "${body.webhookPath}" is already used by workflow "${conflict.data[0].name}"` };
       }
@@ -359,58 +359,66 @@ export async function workflowRoutes(
       workflow,
       triggerData,
       (event, data) => {
-        const room = `execution:${executionId}`;
-        // Always replace the engine's internal executionId with our API executionId
-        const payload = { ...data as Record<string, unknown>, executionId };
+        try {
+          const room = `execution:${executionId}`;
+          // Always replace the engine's internal executionId with our API executionId
+          const payload = { ...data as Record<string, unknown>, executionId };
 
-        // Map engine's executionId to our API executionId for live logs (first event)
-        if (event === 'execution:started') {
-          const engineId = (data as { executionId?: string })?.executionId;
-          if (engineId) {
-            const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
-            idMap?.set(engineId, executionId);
-          }
-        }
-
-        // Update running execution in DB on node completion
-        if (event === WS_EVENTS.EXECUTION_NODE_DONE) {
-          const nodeData = data as {
-            nodeId?: string;
-            nodeName?: string;
-            status?: string;
-            output?: Record<string, unknown>[];
-            error?: string;
-            durationMs?: number;
-            startedAt?: string;
-            finishedAt?: string;
-          };
-          if (nodeData.nodeId) {
-            const existing = db.getExecution(executionId);
-            if (existing) {
-              const now = new Date().toISOString();
-              const durationMs = nodeData.durationMs ?? 0;
-              existing.nodeResults[nodeData.nodeId] = {
-                nodeId: nodeData.nodeId,
-                nodeName: nodeData.nodeName ?? nodeData.nodeId,
-                status: (nodeData.status ?? 'error') as INodeExecutionResult['status'],
-                output: nodeData.output,
-                error: nodeData.error,
-                durationMs,
-                // Use engine-provided timestamps when available, fall back to approximation
-                startedAt: nodeData.startedAt ?? new Date(Date.now() - durationMs).toISOString(),
-                finishedAt: nodeData.finishedAt ?? now,
-              };
-              db.updateExecution(executionId, { nodeResults: existing.nodeResults });
+          // Map engine's executionId to our API executionId for live logs (first event)
+          if (event === 'execution:started') {
+            const engineId = (data as { executionId?: string })?.executionId;
+            if (engineId) {
+              const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
+              idMap?.set(engineId, executionId);
             }
           }
-        }
 
-        // Emit only to the execution room — avoids duplicate events on subscribed clients
-        io.to(room).emit(event, payload);
+          // Update running execution in DB on node completion
+          if (event === WS_EVENTS.EXECUTION_NODE_DONE) {
+            const nodeData = data as {
+              nodeId?: string;
+              nodeName?: string;
+              status?: string;
+              output?: Record<string, unknown>[];
+              error?: string;
+              durationMs?: number;
+              startedAt?: string;
+              finishedAt?: string;
+            };
+            if (nodeData.nodeId) {
+              const existing = db.getExecution(executionId);
+              if (existing) {
+                const now = new Date().toISOString();
+                const durationMs = nodeData.durationMs ?? 0;
+                existing.nodeResults[nodeData.nodeId] = {
+                  nodeId: nodeData.nodeId,
+                  nodeName: nodeData.nodeName ?? nodeData.nodeId,
+                  status: (nodeData.status ?? 'error') as INodeExecutionResult['status'],
+                  output: nodeData.output,
+                  error: nodeData.error,
+                  durationMs,
+                  // Use engine-provided timestamps when available, fall back to approximation
+                  startedAt: nodeData.startedAt ?? new Date(Date.now() - durationMs).toISOString(),
+                  finishedAt: nodeData.finishedAt ?? now,
+                };
+                db.updateExecution(executionId, { nodeResults: existing.nodeResults });
+              }
+            }
+          }
+
+          // Emit only to the execution room — avoids duplicate events on subscribed clients
+          io.to(room).emit(event, payload);
+        } catch (callbackErr) {
+          // Prevent callback errors from bubbling into the engine and aborting execution
+          fastify.log.error({ err: callbackErr, executionId, event }, '[Execute] onEvent callback error');
+        }
       },
       async (credentialId: string) => {
         const cred = db.getCredential(credentialId);
         if (!cred) throw new Error(`Credential "${credentialId}" not found`);
+        if (!cred.data || typeof cred.data !== 'object') {
+          throw new Error(`Credential "${credentialId}" has no data — it may be corrupted`);
+        }
         return cred.data;
       },
     ).then((result) => {
@@ -542,7 +550,7 @@ export async function workflowRoutes(
       else wfData.webhookPath = normalizedPath;
 
       const conflict = db.listWorkflows({ webhookPath: wfData.webhookPath, limit: 1 });
-      if (conflict.total > 0) {
+      if (conflict.total > 0 && conflict.data[0]) {
         reply.code(409);
         return { error: `Webhook path "${wfData.webhookPath}" is already used by workflow "${conflict.data[0].name}"` };
       }

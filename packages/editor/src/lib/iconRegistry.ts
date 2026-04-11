@@ -60,6 +60,7 @@ import {
   Braces,
   FileSpreadsheet,
   Type,
+  SendHorizonal,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -116,6 +117,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Braces,
   FileSpreadsheet,
   Type,
+  SendHorizonal,
 };
 
 /**

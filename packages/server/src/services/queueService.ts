@@ -284,6 +284,9 @@ class QueueService {
         async (credentialId: string) => {
           const cred = db.getCredential(credentialId);
           if (!cred) throw new Error(`Credential "${credentialId}" not found`);
+          if (!cred.data || typeof cred.data !== 'object') {
+            throw new Error(`Credential "${credentialId}" has no data — it may be corrupted`);
+          }
           return cred.data;
         },
         resolvedResumeFrom,
@@ -311,12 +314,59 @@ class QueueService {
           errorMessage: engineResult.errorMessage,
         });
       }
+
+      // Fire error webhook notification if configured and execution failed
+      if (engineResult.status === 'error') {
+        const errorWebhookUrl = (workflow.settings as Record<string, unknown> | undefined)?.errorWebhookUrl as string | undefined;
+        if (errorWebhookUrl?.startsWith('http')) {
+          const exec = db.getExecution(executionId);
+          fetch(errorWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workflowId,
+              workflowName,
+              executionId,
+              errorMessage: engineResult.errorMessage,
+              startedAt: exec?.startedAt,
+              finishedAt: engineResult.finishedAt,
+              durationMs: engineResult.durationMs,
+            }),
+            signal: AbortSignal.timeout(10_000),
+          }).catch((notifErr) => {
+            console.warn(`[${logPrefix}] Error webhook notification failed for "${workflowName}":`, (notifErr as Error).message);
+          });
+        }
+      }
     } catch (err) {
+      const finishedAt = new Date().toISOString();
       db.updateExecution(executionId, {
         status: 'error',
         errorMessage: (err as Error).message,
-        finishedAt: new Date().toISOString(),
+        finishedAt,
       });
+
+      // Fire error webhook notification on caught errors too
+      const errorWebhookUrl = (workflow.settings as Record<string, unknown> | undefined)?.errorWebhookUrl as string | undefined;
+      if (errorWebhookUrl?.startsWith('http')) {
+        const exec = db.getExecution(executionId);
+        fetch(errorWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workflowId,
+            workflowName,
+            executionId,
+            errorMessage: (err as Error).message,
+            startedAt: exec?.startedAt,
+            finishedAt,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        }).catch((notifErr) => {
+          console.warn(`[${logPrefix}] Error webhook notification failed for "${workflowName}":`, (notifErr as Error).message);
+        });
+      }
+
       throw err; // Re-throw so BullMQ can retry and direct mode can log
     } finally {
       // Clean up ALL executionIdMap entries that point to this executionId

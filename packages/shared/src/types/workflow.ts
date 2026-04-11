@@ -34,6 +34,12 @@ export interface IWorkflowSettings {
   allowConcurrent?: boolean;
   /** Optional HMAC secret for validating incoming webhook signatures */
   webhookSecret?: string;
+  /**
+   * If set, a POST request is sent to this URL whenever the workflow execution
+   * ends with status 'error'. The body is a JSON object with:
+   * { workflowId, workflowName, executionId, errorMessage, startedAt, finishedAt }
+   */
+  errorWebhookUrl?: string;
 }
 
 export interface IWorkflow {

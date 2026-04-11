@@ -7,28 +7,56 @@ const SALT_ROUNDS = 10;
 const REFRESH_TOKEN_TTL = '30d';
 
 // ── Refresh token revocation blacklist ────────────────────────────────────────
-// In-memory set of revoked token signatures (last segment of JWT).
-// Cleared on server restart (acceptable for MVP; use Redis for persistence).
-const revokedTokens = new Set<string>();
+// Map<signature, expiresAtMs> — stores each revoked token's real expiry so that
+// the pruning interval only removes tokens that have actually expired, instead
+// of blindly clearing all entries every hour (which could allow a recently
+// revoked token to be reused after the interval fires).
+const revokedTokens = new Map<string, number>();
 
-// Prune blacklist every hour to prevent unbounded growth
+// Prune only expired entries every hour to prevent unbounded growth
 setInterval(() => {
-  // Simple approach: clear all since we can't check expiry without decoding.
-  // 30-day tokens expire anyway, so worst case is we allow a revoked token
-  // after a server restart (mitigated by short access token TTL).
-  revokedTokens.clear();
+  const now = Date.now();
+  for (const [sig, expiresAt] of revokedTokens) {
+    if (now > expiresAt) revokedTokens.delete(sig);
+  }
 }, 60 * 60 * 1000).unref();
 
 function revokeToken(token: string): void {
-  // Use the signature (last JWT segment) as the unique key
-  const sig = token.split('.').pop();
-  if (sig) revokedTokens.add(sig);
+  const parts = token.split('.');
+  const sig = parts[2]; // header.payload.SIGNATURE
+  if (!sig) return;
+  // Decode the JWT payload to get the real expiry — no verification needed here
+  // since we only need the exp claim for pruning purposes.
+  let expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // fallback: 30 days
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString()) as { exp?: number };
+    if (typeof payload.exp === 'number') expiresAt = payload.exp * 1000;
+  } catch { /* ignore malformed payload — fallback expiry is used */ }
+  revokedTokens.set(sig, expiresAt);
 }
 
 function isTokenRevoked(token: string): boolean {
-  const sig = token.split('.').pop();
-  return sig ? revokedTokens.has(sig) : false;
+  const sig = token.split('.')[2];
+  if (!sig) return false;
+  const expiresAt = revokedTokens.get(sig);
+  if (expiresAt === undefined) return false;
+  // If the token has already expired it can't be used anyway — clean up and return false
+  if (Date.now() > expiresAt) { revokedTokens.delete(sig); return false; }
+  return true;
 }
+
+// ── Emergency-reset rate limiting ────────────────────────────────────────────
+// Unauthenticated endpoint — stricter per-IP cap than the global auth bucket.
+// Lockout: 3 attempts → 15 min window per IP.
+const EMERGENCY_MAX_ATTEMPTS = 3;
+const EMERGENCY_LOCKOUT_MS = 15 * 60 * 1000;
+const emergencyResetAttempts = new Map<string, { count: number; resetAt: number }>();
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, r] of emergencyResetAttempts) {
+    if (now > r.resetAt) emergencyResetAttempts.delete(ip);
+  }
+}, 30 * 60 * 1000).unref();
 
 // ── Login brute-force protection ──────────────────────────────────────────────
 // Tracks failed attempts per username. Lockout: 5 failures → 15 min window.
@@ -298,9 +326,25 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: 'Emergency reset is not enabled on this server. Set ADMIN_RESET_SECRET env var.' });
     }
 
+    // Per-IP rate limiting — stricter than the global auth bucket
+    const ip = request.ip ?? 'unknown';
+    const now = Date.now();
+    let rl = emergencyResetAttempts.get(ip);
+    if (!rl || now > rl.resetAt) {
+      rl = { count: 0, resetAt: now + EMERGENCY_LOCKOUT_MS };
+      emergencyResetAttempts.set(ip, rl);
+    }
+    if (rl.count >= EMERGENCY_MAX_ATTEMPTS) {
+      const retryAfter = Math.ceil((rl.resetAt - now) / 1000);
+      return reply.status(429).send({ error: 'Too many emergency reset attempts. Try again later.', retryAfter });
+    }
+    rl.count++;
+
     if (secret !== config.adminResetSecret) {
       return reply.status(401).send({ error: 'Invalid reset secret' });
     }
+    // Successful attempt — clear the counter
+    emergencyResetAttempts.delete(ip);
 
     if (newPassword.length < 6) {
       return reply.status(400).send({ error: 'New password must be at least 6 characters' });

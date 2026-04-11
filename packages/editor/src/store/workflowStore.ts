@@ -31,6 +31,8 @@ export interface WorkflowMeta {
   timeout: number;
   continueOnFail: boolean;
   allowConcurrent: boolean;
+  /** URL to POST to when this workflow's execution ends with an error */
+  errorWebhookUrl: string;
 }
 
 interface HistoryEntry {
@@ -95,6 +97,7 @@ const defaultMeta: WorkflowMeta = {
   timeout: 300000,
   continueOnFail: false,
   allowConcurrent: false,
+  errorWebhookUrl: '',
 };
 
 let nodeCounter = 0;
@@ -342,6 +345,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         timeout: (workflow.settings?.timeout as number) ?? 300000,
         continueOnFail: (workflow.settings?.continueOnFail as boolean) ?? false,
         allowConcurrent: (workflow.settings?.allowConcurrent as boolean) ?? false,
+        errorWebhookUrl: (workflow.settings?.errorWebhookUrl as string) ?? '',
       },
     });
   },
@@ -399,6 +403,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         timeout: workflowMeta.timeout,
         continueOnFail: workflowMeta.continueOnFail,
         allowConcurrent: workflowMeta.allowConcurrent,
+        ...(workflowMeta.errorWebhookUrl ? { errorWebhookUrl: workflowMeta.errorWebhookUrl } : {}),
       },
     };
 
@@ -476,6 +481,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         timeout: (res.workflow.settings?.timeout as number) ?? 300000,
         continueOnFail: (res.workflow.settings?.continueOnFail as boolean) ?? false,
         allowConcurrent: (res.workflow.settings?.allowConcurrent as boolean) ?? false,
+        errorWebhookUrl: (res.workflow.settings?.errorWebhookUrl as string) ?? '',
       },
     });
   },
@@ -563,6 +569,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         timeout: (workflow.settings?.timeout as number) ?? 300000,
         continueOnFail: (workflow.settings?.continueOnFail as boolean) ?? false,
         allowConcurrent: (workflow.settings?.allowConcurrent as boolean) ?? false,
+        errorWebhookUrl: (workflow.settings?.errorWebhookUrl as string) ?? '',
       },
     });
   },

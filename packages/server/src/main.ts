@@ -13,58 +13,21 @@ async function start(): Promise<void> {
     // Initialize cron scheduler (loads active cron workflows)
     await schedulerService.init();
 
-    // Resume stale executions from a previous server run (stuck in "running" or "pending" state).
-    // 5-minute grace window avoids touching in-flight queue jobs still dispatching at startup.
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // Fix stale executions from a previous server run (stuck in "running" or "pending" state).
+    // All such executions are immediately marked as error since the server process that was
+    // running them no longer exists. Users can manually retry/resume via the UI.
     const staleExecs = db.listExecutions({ limit: 1000 }).data.filter(
-      (e) =>
-        (e.status === 'running' || e.status === 'pending') &&
-        (!e.startedAt || e.startedAt < fiveMinAgo),
+      (e) => e.status === 'running' || e.status === 'pending',
     );
     if (staleExecs.length > 0) {
-      let resumed = 0;
-      let failed = 0;
       for (const exec of staleExecs) {
-        const workflow = db.getWorkflow(exec.workflowId);
-        if (workflow) {
-          // Mark old execution as interrupted
-          db.updateExecution(exec.id, {
-            status: 'error',
-            errorMessage: 'Execution interrupted — server was restarted. Auto-retrying...',
-            finishedAt: new Date().toISOString(),
-          });
-          // Re-queue the workflow execution, passing completed node results for resume
-          const completedResults: Record<string, unknown> = {};
-          for (const [nodeId, nr] of Object.entries(exec.nodeResults || {})) {
-            if (nr.status === 'success' || nr.status === 'skipped') {
-              completedResults[nodeId] = nr;
-            }
-          }
-          const hasProgress = Object.keys(completedResults).length > 0;
-          queueService.addWorkflowJob(
-            workflow.id,
-            workflow.name,
-            {
-              retriedFrom: exec.id,
-              autoResume: true,
-              ...(hasProgress ? { _resumeNodeResults: completedResults } : {}),
-            },
-            { method: 'retry', retriedFrom: exec.id },
-          ).catch((err) => {
-            console.error(`[Startup] Failed to re-queue "${workflow.name}":`, (err as Error).message);
-          });
-          resumed++;
-        } else {
-          // Workflow no longer exists — just mark as error
-          db.updateExecution(exec.id, {
-            status: 'error',
-            errorMessage: 'Execution interrupted — server was restarted (workflow deleted)',
-            finishedAt: new Date().toISOString(),
-          });
-          failed++;
-        }
+        db.updateExecution(exec.id, {
+          status: 'error',
+          errorMessage: 'Execution interrupted — server was restarted',
+          finishedAt: new Date().toISOString(),
+        });
       }
-      console.log(`[Startup] ${resumed} execution(s) auto-resumed, ${failed} marked as error (workflow missing).`);
+      console.log(`[Startup] Fixed ${staleExecs.length} stale execution(s) from previous session.`);
     }
 
     const queueStatus = queueService.connected ? 'Redis connected' : 'Direct mode (no Redis)';

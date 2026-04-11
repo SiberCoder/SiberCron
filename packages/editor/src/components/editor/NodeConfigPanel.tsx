@@ -246,7 +246,7 @@ function CronPreview({ expression }: { expression: string }) {
 
 // ── Webhook URL Banner ────────────────────────────────────────────────
 
-function WebhookUrlBanner({ path }: { path: string }) {
+function WebhookUrlBanner({ path, responseMode }: { path: string; responseMode?: string }) {
   const [copied, setCopied] = useState(false);
   const [curlCopied, setCurlCopied] = useState(false);
   const webhookPath = path?.startsWith('/') ? path : `/${path || 'webhook'}`;
@@ -271,9 +271,14 @@ function WebhookUrlBanner({ path }: { path: string }) {
 
   return (
     <div className="rounded-xl border border-aurora-blue/20 bg-aurora-blue/5 p-3 space-y-2">
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-aurora-blue uppercase tracking-wider">
+      <div className="flex items-center gap-2 text-[10px] font-semibold text-aurora-blue uppercase tracking-wider">
         <Globe size={11} />
         Webhook URL
+        {responseMode === 'sync' && (
+          <span className="px-1.5 py-0.5 rounded-full bg-aurora-emerald/20 text-aurora-emerald text-[9px] normal-case tracking-normal border border-aurora-emerald/30">
+            Sync Mode
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <code className="flex-1 text-[10px] text-aurora-cyan font-mono break-all leading-relaxed">
@@ -1026,6 +1031,23 @@ function WorkflowMetaPanel() {
             </p>
           )}
         </div>
+
+        {/* Error Webhook URL */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] text-white/50 uppercase tracking-wider font-body">
+            Hata Bildirimi (Webhook URL)
+          </label>
+          <input
+            type="url"
+            value={workflowMeta.errorWebhookUrl}
+            onChange={(e) => updateMeta({ errorWebhookUrl: e.target.value })}
+            placeholder="https://hooks.example.com/error-alert"
+            className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white/80 font-mono placeholder:text-white/25 focus:outline-none focus:border-aurora-blue/50"
+          />
+          <p className="text-[10px] text-white/30 font-body">
+            Execution hata ile bittiğinde bu URL&apos;e POST isteği gönderilir.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -1176,7 +1198,10 @@ export default function NodeConfigPanel() {
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {/* Webhook URL banner for webhook trigger */}
         {nodeType === 'sibercron.webhookTrigger' && (
-          <WebhookUrlBanner path={(parameters['path'] as string) ?? 'webhook'} />
+          <WebhookUrlBanner
+            path={(parameters['path'] as string) ?? 'webhook'}
+            responseMode={(parameters['responseMode'] as string) ?? 'async'}
+          />
         )}
         {/* Webhook signing secret */}
         {nodeType === 'sibercron.webhookTrigger' && (

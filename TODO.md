@@ -260,6 +260,23 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] workflows.ts: POST execute sonrası WORKFLOW_EXECUTION_COMPLETED global broadcast eklendi
 - [x] cronstrue: Türkçe locale (WorkflowListPage + NodeConfigPanel)
 
+#### Oncelik 4k: Bug Fixes & New Features (2026-04-12)
+- [x] auth.ts: refresh token revocation blacklist Map<sig,expiresAt> ile iyileştirildi (önceden Set ile her saat temizleniyordu)
+- [x] auth.ts: emergency-reset endpoint'ine per-IP rate limiting eklendi (3 deneme → 15 dk)
+- [x] queueService.ts: credential data validasyonu eklendi (corrupted credential kontrolü)
+- [x] main.ts: stale execution cleanup sadece error ile işaretler (auto-resume kaldırıldı — daha güvenli)
+- [x] Retry node: kritik bug düzeltildi — `__status` yerine `returnFullResponse:true` + `statusCode` kontrolü
+- [x] workflows.ts: onEvent callback'e try-catch eklendi (socket.io emit hataları execution'ı durdurmuyordu)
+- [x] workflows.ts: credential data validasyonu eklendi (queueService ile tutarlı)
+- [x] WebhookTrigger: Sync Mode eklendi — workflow tamamlanana kadar bekler, son node çıktısını HTTP response olarak döndürür
+- [x] WebhookTrigger: `syncTimeout` (1-120s) + `syncStatusCode` parametreleri
+- [x] NodeConfigPanel: Sync Mode badge webhook URL banner'ına eklendi
+- [x] IWorkflowSettings: `errorWebhookUrl` alanı eklendi — execution hata bitişinde POST gönderir
+- [x] queueService: execution error durumunda errorWebhookUrl'e POST bildirimi gönderilir
+- [x] workflowStore + NodeConfigPanel: errorWebhookUrl UI alanı eklendi
+- [x] HttpResponse node: sync webhook akışlarında özel HTTP yanıtı döndürme (statusCode, headers, body)
+- [x] iconRegistry: SendHorizonal ikonu eklendi (HttpResponse node)
+
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
 - [ ] Community node marketplace sayfasi

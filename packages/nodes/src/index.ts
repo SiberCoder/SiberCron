@@ -49,6 +49,7 @@ import { FileOperationNode } from './core/FileOperation.node.js';
 import { TextNode } from './core/Text.node.js';
 import { GraphQLNode } from './core/GraphQL.node.js';
 import { RetryNode } from './core/Retry.node.js';
+import { HttpResponseNode } from './core/HttpResponse.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -100,6 +101,7 @@ export const builtinNodes: INodeType[] = [
   TextNode,
   GraphQLNode,
   RetryNode,
+  HttpResponseNode,
 ];
 
 export {
@@ -152,4 +154,5 @@ export {
   TextNode,
   GraphQLNode,
   RetryNode,
+  HttpResponseNode,
 };
