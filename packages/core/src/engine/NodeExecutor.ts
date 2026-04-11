@@ -21,6 +21,8 @@ export class NodeExecutor {
     parameters: Record<string, unknown>,
     credentials?: Record<string, string>,
     credentialResolver?: (name: string) => Promise<Record<string, unknown>>,
+    executionId?: string,
+    streamEmitter?: (token: string) => void,
   ): Promise<INodeExecutionResult> {
     const node = this.registry.get(nodeType);
 
@@ -53,7 +55,7 @@ export class NodeExecutor {
       executionId: inputData[0]?.json?.executionId as string | undefined,
     });
 
-    const context = new ExecutionContext(inputData, resolvedParameters, resolveCredential);
+    const context = new ExecutionContext(inputData, resolvedParameters, resolveCredential, executionId, streamEmitter);
 
     const startedAt = new Date();
     try {

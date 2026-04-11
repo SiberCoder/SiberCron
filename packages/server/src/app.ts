@@ -309,6 +309,29 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
   }
 });
 
+// ── AI streaming token capture ──────────────────────────────────────────────
+// Forwards per-token streaming events from AIAgent nodes to the execution room.
+process.on('ai:stream' as any, (data: { executionId: string; nodeId: string; nodeName: string; token: string }) => {
+  if (!data.executionId) return;
+  const targetId = executionIdMap.get(data.executionId) ?? data.executionId;
+
+  // Accumulate streaming tokens in the log store as ai_streaming entries
+  executionLogStore.add(targetId, {
+    level: 'ai_streaming' as any,
+    message: data.token,
+    data: { nodeId: data.nodeId, nodeName: data.nodeName },
+  });
+
+  io.to(`execution:${targetId}`).emit('execution:log', {
+    executionId: data.executionId,
+    apiExecutionId: targetId,
+    level: 'ai_streaming',
+    message: data.token,
+    data: { nodeId: data.nodeId, nodeName: data.nodeName },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Expose the map so workflow route can register mappings
 (globalThis as any).__executionIdMap = executionIdMap;
 

@@ -134,7 +134,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Minimap toggle butonu ve konum duzeltme (minor)
 - [x] Execution history export (CSV/JSON)
 - [x] Workflow bulk operations (coklu aktifle/pasifle, toplu sil)
-- [ ] AIAgent node: streaming output destegi (SSE)
+- [x] AIAgent node: streaming output destegi (SSE)
 - [x] Node config paneli: JSON field icin syntax highlighting editor
 
 #### Oncelik 5: Ekosistem

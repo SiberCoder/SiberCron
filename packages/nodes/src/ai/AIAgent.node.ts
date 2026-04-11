@@ -2,6 +2,133 @@ import type { INodeType, IExecutionContext, INodeExecutionData, AIProviderName, 
 import { AI_PROVIDERS } from '@sibercron/shared';
 
 /* ------------------------------------------------------------------ */
+/*  SSE streaming helpers                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Calls an OpenAI-compatible streaming endpoint and yields text delta tokens.
+ * Uses native fetch + ReadableStream to avoid blocking.
+ */
+async function streamOpenAICompatible(
+  url: string,
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+  onToken: (token: string) => void,
+): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, stream: true }),
+  });
+
+  if (!response.ok || !response.body) {
+    const errText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errText}`);
+  }
+
+  let content = '';
+  let inputTokens = 0;
+  let outputTokens = 0;
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (raw === '[DONE]') continue;
+      try {
+        const obj = JSON.parse(raw) as Record<string, unknown>;
+        // Token delta
+        const choices = obj['choices'] as Array<Record<string, unknown>> | undefined;
+        const delta = choices?.[0]?.['delta'] as Record<string, unknown> | undefined;
+        const token = delta?.['content'] as string | undefined;
+        if (token) { content += token; onToken(token); }
+        // Usage (some providers send this in the last chunk)
+        const usage = obj['usage'] as Record<string, unknown> | undefined;
+        if (usage) {
+          inputTokens = (usage['prompt_tokens'] as number) ?? inputTokens;
+          outputTokens = (usage['completion_tokens'] as number) ?? outputTokens;
+        }
+      } catch { /* skip non-JSON lines */ }
+    }
+  }
+
+  return { content, inputTokens, outputTokens };
+}
+
+/**
+ * Calls Anthropic's streaming messages endpoint.
+ */
+async function streamAnthropic(
+  url: string,
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+  onToken: (token: string) => void,
+): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, stream: true }),
+  });
+
+  if (!response.ok || !response.body) {
+    const errText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errText}`);
+  }
+
+  let content = '';
+  let inputTokens = 0;
+  let outputTokens = 0;
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      try {
+        const obj = JSON.parse(raw) as Record<string, unknown>;
+        if (obj['type'] === 'content_block_delta') {
+          const delta = obj['delta'] as Record<string, unknown> | undefined;
+          if (delta?.['type'] === 'text_delta') {
+            const token = (delta['text'] as string) ?? '';
+            if (token) { content += token; onToken(token); }
+          }
+        } else if (obj['type'] === 'message_delta') {
+          const usage = obj['usage'] as Record<string, unknown> | undefined;
+          outputTokens = (usage?.['output_tokens'] as number) ?? outputTokens;
+        } else if (obj['type'] === 'message_start') {
+          const message = obj['message'] as Record<string, unknown> | undefined;
+          const usage = message?.['usage'] as Record<string, unknown> | undefined;
+          inputTokens = (usage?.['input_tokens'] as number) ?? inputTokens;
+        }
+      } catch { /* skip */ }
+    }
+  }
+
+  return { content, inputTokens, outputTokens };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Provider-specific request builders                                 */
 /* ------------------------------------------------------------------ */
 
@@ -188,16 +315,31 @@ export const AIAgentNode: INodeType = {
 
     const providerMeta = AI_PROVIDERS[provider];
     const resolvedBaseUrl = baseUrlParam || providerMeta?.defaultBaseUrl || '';
+    const onToken = context.helpers.emitStreamToken ?? (() => { /* noop when no streaming */ });
 
     /* ---- OpenAI ---- */
     if (provider === 'openai') {
       const token = authMethod === 'oauth_session' ? sessionToken : apiKey;
       if (!token) throw new Error('OpenAI icin API anahtari veya oturum tokeni gerekli.');
 
-      const req = buildOpenAICompatibleRequest(
-        resolvedBaseUrl || 'https://api.openai.com/v1',
-        token, model, systemPrompt, userPrompt, temperature, maxTokens, jsonMode,
-      );
+      const messages: Array<{ role: string; content: string }> = [];
+      if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+      messages.push({ role: 'user', content: userPrompt });
+
+      const baseUrl = resolvedBaseUrl || 'https://api.openai.com/v1';
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const body: Record<string, unknown> = {
+        model, temperature, max_tokens: maxTokens, messages,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+      };
+
+      // Stream if emitStreamToken is available; fall back to non-streaming
+      if (context.helpers.emitStreamToken) {
+        const parsed = await streamOpenAICompatible(`${baseUrl}/chat/completions`, headers, body, onToken);
+        return [{ json: { provider, model, authMethod, content: parsed.content, tokens: { input: parsed.inputTokens, output: parsed.outputTokens } } }];
+      }
+
+      const req = buildOpenAICompatibleRequest(baseUrl, token, model, systemPrompt, userPrompt, temperature, maxTokens, jsonMode);
       const data = await context.helpers.httpRequest(req) as Record<string, unknown>;
       const parsed = parseOpenAICompatibleResponse(data);
 
@@ -225,6 +367,19 @@ export const AIAgentNode: INodeType = {
         // Anthropic doesn't have a native JSON mode; instruct via system prompt
         body['system'] = ((body['system'] as string) || '') +
           '\n\nIMPORTANT: Respond with valid JSON only. No markdown, no explanation.';
+      }
+
+      // Stream if emitStreamToken is available
+      if (context.helpers.emitStreamToken) {
+        const anthropicHeaders = {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        };
+        const parsed = await streamAnthropic(
+          `${resolvedBaseUrl || 'https://api.anthropic.com/v1'}/messages`,
+          anthropicHeaders, body, onToken,
+        );
+        return [{ json: { provider, model, authMethod, content: parsed.content, tokens: { input: parsed.inputTokens, output: parsed.outputTokens } } }];
       }
 
       const data = await context.helpers.httpRequest({

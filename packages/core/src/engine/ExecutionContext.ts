@@ -15,21 +15,28 @@ export class ExecutionContext implements IExecutionContext {
   private readonly credentialResolver?: (
     name: string,
   ) => Promise<Record<string, unknown>>;
+  private readonly streamEmitter?: (token: string) => void;
 
+  public readonly executionId?: string;
   public readonly helpers: IExecutionContext['helpers'];
 
   constructor(
     inputData: INodeExecutionData[],
     parameters: Record<string, unknown>,
     credentialResolver?: (name: string) => Promise<Record<string, unknown>>,
+    executionId?: string,
+    streamEmitter?: (token: string) => void,
   ) {
     this.inputData = inputData;
     this.parameters = parameters;
     this.credentialResolver = credentialResolver;
+    this.executionId = executionId;
+    this.streamEmitter = streamEmitter;
 
     this.helpers = {
       httpRequest: this.httpRequest.bind(this),
       log: this.log.bind(this),
+      emitStreamToken: streamEmitter,
     };
   }
 

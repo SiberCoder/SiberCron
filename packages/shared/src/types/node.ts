@@ -88,9 +88,13 @@ export interface IExecutionContext {
   getInputData(): INodeExecutionData[];
   getParameter<T = unknown>(name: string): T;
   getCredential(name: string): Promise<Record<string, unknown>>;
+  /** Current execution ID, used for streaming events. */
+  executionId?: string;
   helpers: {
     httpRequest(options: HttpRequestOptions): Promise<unknown>;
     log(message: string): void;
+    /** Emit a streaming token to the UI (for AI nodes). */
+    emitStreamToken?(token: string): void;
   };
 }
 
