@@ -309,6 +309,7 @@ export default function DashboardPage() {
   });
   const [recentExecutions, setRecentExecutions] = useState<IExecution[]>([]);
   const [trendData, setTrendData] = useState<TrendBucket[]>([]);
+  const [workflows, setWorkflows] = useState<IWorkflow[]>([]);
   const [topWorkflows, setTopWorkflows] = useState<WorkflowSummary[]>([]);
   const [topFailingNodes, setTopFailingNodes] = useState<NodeErrorStat[]>([]);
   const [healthAlerts, setHealthAlerts] = useState<WorkflowHealthAlert[]>([]);
@@ -343,6 +344,7 @@ export default function DashboardPage() {
           : '0%';
 
       setStats({ totalWorkflows, activeWorkflows, totalExecutions, successRate });
+      setWorkflows(workflows);
       setRecentExecutions(executions.slice(0, 5));
       if (trendRes?.data) setTrendData(trendRes.data);
 
@@ -617,6 +619,59 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
+      {/* Recent workflows */}
+      {workflows.length > 0 && (
+        <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-display font-semibold text-white tracking-tight">
+              Son Düzenlenen Workflow'lar
+            </h2>
+            <button
+              onClick={() => navigate('/workflows')}
+              className="flex items-center gap-1 text-xs font-medium text-obsidian-500 hover:text-aurora-cyan transition-colors"
+            >
+              Tümünü Gör <ArrowUpRight size={12} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {[...workflows]
+              .sort((a, b) => (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? ''))
+              .slice(0, 6)
+              .map((wf) => (
+                <div
+                  key={wf.id}
+                  onClick={() => navigate(`/workflows/${wf.id}`)}
+                  className="glass-card rounded-xl p-4 cursor-pointer hover:border-aurora-cyan/20 transition-all group"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-sm font-semibold text-white font-body truncate group-hover:text-aurora-cyan transition-colors">
+                      {wf.name}
+                    </span>
+                    <span className={clsx(
+                      'shrink-0 w-1.5 h-1.5 rounded-full mt-1.5',
+                      wf.isActive ? 'bg-aurora-emerald' : 'bg-obsidian-600',
+                    )} title={wf.isActive ? 'Aktif' : 'Pasif'} />
+                  </div>
+                  {wf.description && (
+                    <p className="text-[11px] text-obsidian-500 font-body truncate mb-2">{wf.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 text-[10px] text-obsidian-600 font-body">
+                    <span className="capitalize">{wf.triggerType ?? 'manual'}</span>
+                    <span>•</span>
+                    <span>{formatTimeAgo(wf.updatedAt ?? wf.createdAt)}</span>
+                    {wf.tags && wf.tags.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="text-aurora-cyan/70">{wf.tags[0]}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       {/* Recent executions */}
       <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>
         <div className="flex items-center justify-between mb-5">
@@ -665,7 +720,7 @@ export default function DashboardPage() {
                   return (
                     <tr
                       key={exec.id}
-                      onClick={() => navigate('/executions')}
+                      onClick={() => navigate(`/executions?id=${exec.id}`)}
                       className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer group"
                     >
                       <td className="px-5 py-3.5">

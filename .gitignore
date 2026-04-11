@@ -35,3 +35,4 @@ packages/server/data/
 *.sqlite3
 test_live_logs.py
 *.png
+data/

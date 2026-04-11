@@ -384,14 +384,14 @@ process.on('autonomousDev:sessionUpdate' as any, (data: { executionId: string; s
   const targetId = executionIdMap.get(data.executionId) ?? data.executionId;
   const exec = db.getExecution(targetId);
   if (exec) {
-    // Store session ID in a special metadata field on the execution
+    // Store session ID in the metadata field (added to IExecution in shared types)
     db.updateExecution(targetId, {
       metadata: {
-        ...(exec as any).metadata,
+        ...exec.metadata,
         autonomousDevSessionId: data.sessionId,
         autonomousDevIteration: data.iteration,
       },
-    } as any);
+    });
   }
 });
 

@@ -16,6 +16,13 @@ import {
   ListOrdered,
   Copy,
   Link,
+  Settings2,
+  X,
+  Tag,
+  Clock,
+  SkipForward,
+  Layers,
+  Webhook,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
@@ -29,12 +36,158 @@ interface EditorToolbarProps {
   onVersionHistory?: () => void;
 }
 
+// ── Workflow Settings Modal ───────────────────────────────────────────────────
+
+function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
+  const meta = useWorkflowStore((s) => s.workflowMeta);
+  const updateMeta = useWorkflowStore((s) => s.updateMeta);
+  const [tagInput, setTagInput] = useState('');
+
+  const addTag = () => {
+    const tag = tagInput.trim();
+    if (!tag || meta.tags.includes(tag)) { setTagInput(''); return; }
+    updateMeta({ tags: [...meta.tags, tag] });
+    setTagInput('');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div
+        className="w-[520px] glass-card rounded-2xl overflow-hidden shadow-2xl animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06]">
+          <Settings2 size={15} className="text-aurora-cyan" />
+          <span className="flex-1 text-sm font-semibold text-white font-display">Workflow Ayarları</span>
+          <button onClick={onClose} className="text-obsidian-500 hover:text-white transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
+          {/* Description */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold text-obsidian-400 uppercase tracking-wider font-body flex items-center gap-1.5">
+              <Layers size={11} /> Açıklama
+            </label>
+            <textarea
+              value={meta.description}
+              onChange={(e) => updateMeta({ description: e.target.value })}
+              placeholder="Workflow'un ne yaptığını açıklayın..."
+              rows={3}
+              className="glass-input text-sm resize-none w-full"
+            />
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold text-obsidian-400 uppercase tracking-wider font-body flex items-center gap-1.5">
+              <Tag size={11} /> Etiketler
+            </label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {meta.tags.map((tag) => (
+                <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-aurora-cyan/10 border border-aurora-cyan/20 text-aurora-cyan">
+                  {tag}
+                  <button onClick={() => updateMeta({ tags: meta.tags.filter((t) => t !== tag) })} className="hover:text-white transition-colors">
+                    <X size={9} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+                placeholder="Etiket ekle, Enter'a bas"
+                className="glass-input text-xs flex-1"
+              />
+              <button onClick={addTag} className="px-3 py-2 rounded-lg text-xs font-semibold bg-aurora-cyan/10 border border-aurora-cyan/20 text-aurora-cyan hover:bg-aurora-cyan/20 transition-colors">
+                Ekle
+              </button>
+            </div>
+          </div>
+
+          <div className="w-full h-px bg-white/[0.06]" />
+
+          {/* Timeout */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold text-obsidian-400 uppercase tracking-wider font-body flex items-center gap-1.5">
+              <Clock size={11} /> Maksimum Süre (ms)
+            </label>
+            <input
+              type="number"
+              value={meta.timeout}
+              onChange={(e) => updateMeta({ timeout: Math.max(1000, Number(e.target.value) || 300000) })}
+              min={1000}
+              max={86400000}
+              className="glass-input text-sm"
+            />
+            <p className="text-[10px] text-obsidian-600 font-body">Varsayılan: 300000ms (5 dk). AutonomousDev gibi uzun süren node'lar bu değeri otomatik genişletir.</p>
+          </div>
+
+          {/* Toggles */}
+          <div className="space-y-3">
+            {([
+              { key: 'continueOnFail', label: 'Hata olsa da devam et', icon: SkipForward, desc: 'Bir node hata verirse workflow durmadan sonraki node\'a geçer' },
+              { key: 'allowConcurrent', label: 'Eş zamanlı çalışmaya izin ver', icon: Layers, desc: 'Çalışırken tekrar tetiklenebilir; devre dışıysa aynı anda yalnızca bir çalışma olur' },
+            ] as const).map(({ key, label, icon: Icon, desc }) => (
+              <div key={key} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Icon size={11} className="text-obsidian-400 shrink-0" />
+                    <span className="text-xs font-semibold text-white font-body">{label}</span>
+                  </div>
+                  <p className="text-[10px] text-obsidian-500 font-body">{desc}</p>
+                </div>
+                <button
+                  onClick={() => updateMeta({ [key]: !meta[key] })}
+                  className={`relative w-9 h-5 rounded-full transition-all duration-300 shrink-0 mt-0.5 ${meta[key] ? 'bg-aurora-emerald' : 'bg-white/[0.08]'}`}
+                >
+                  <span className={`absolute top-[3px] w-3.5 h-3.5 rounded-full bg-white transition-all duration-300 shadow-sm ${meta[key] ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Error Webhook */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold text-obsidian-400 uppercase tracking-wider font-body flex items-center gap-1.5">
+              <Webhook size={11} /> Hata Bildirim URL (opsiyonel)
+            </label>
+            <input
+              type="url"
+              value={meta.errorWebhookUrl}
+              onChange={(e) => updateMeta({ errorWebhookUrl: e.target.value })}
+              placeholder="https://hooks.example.com/on-error"
+              className="glass-input text-sm"
+            />
+            <p className="text-[10px] text-obsidian-600 font-body">Workflow hata aldığında bu URL'e POST isteği gönderilir.</p>
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-t border-white/[0.04] flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-aurora-cyan/10 border border-aurora-cyan/20 text-aurora-cyan hover:bg-aurora-cyan/20 transition-all font-body"
+          >
+            Kapat
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps = {}) {
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const meta = useWorkflowStore((s) => s.workflowMeta);
   const isDirty = useWorkflowStore((s) => s.isDirty);
@@ -377,6 +530,15 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         </button>
       )}
 
+      {/* Workflow settings */}
+      <button
+        onClick={() => setShowSettings(true)}
+        className="btn-ghost text-xs text-obsidian-500 hover:text-aurora-cyan"
+        title="Workflow Ayarları"
+      >
+        <Settings2 size={14} />
+      </button>
+
       {/* Delete button — admin only */}
       {meta.id && isAdmin && (
         <>
@@ -420,6 +582,9 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         )}
         Çalıştır
       </button>
+
+      {/* Workflow settings modal */}
+      {showSettings && <WorkflowSettingsModal onClose={() => setShowSettings(false)} />}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
