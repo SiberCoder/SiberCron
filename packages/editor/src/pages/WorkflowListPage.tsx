@@ -57,6 +57,7 @@ export default function WorkflowListPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const pageSize = 10;
@@ -69,12 +70,15 @@ export default function WorkflowListPage() {
   }, [toast]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return workflows;
+    let list = workflows;
+    if (statusFilter === 'active') list = list.filter((w) => w.isActive);
+    else if (statusFilter === 'inactive') list = list.filter((w) => !w.isActive);
+    if (!search.trim()) return list;
     const q = search.toLowerCase();
-    return workflows.filter(
+    return list.filter(
       (w) => w.name.toLowerCase().includes(q) || w.description?.toLowerCase().includes(q),
     );
-  }, [workflows, search]);
+  }, [workflows, search, statusFilter]);
 
   const loadWorkflows = useCallback(async () => {
     try {
@@ -220,21 +224,50 @@ export default function WorkflowListPage() {
         </div>
       </div>
 
-      {/* Search bar */}
-      <div className="relative max-w-sm">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-obsidian-500 pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Workflow ara..."
-          className="w-full pl-9 pr-8 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-obsidian-600 focus:outline-none focus:border-aurora-cyan/40 focus:bg-white/[0.06] transition-all font-body"
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-obsidian-500 hover:text-white transition-colors">
-            <X size={12} />
-          </button>
-        )}
+      {/* Search + Filter bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-obsidian-500 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Workflow ara..."
+            className="w-60 pl-9 pr-8 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-obsidian-600 focus:outline-none focus:border-aurora-cyan/40 focus:bg-white/[0.06] transition-all font-body"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-obsidian-500 hover:text-white transition-colors">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+
+        {/* Status filter pills */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+          {(['all', 'active', 'inactive'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => { setStatusFilter(f); setPage(1); }}
+              className={clsx(
+                'px-3 py-1 rounded-lg text-[11px] font-semibold transition-all font-body capitalize',
+                statusFilter === f
+                  ? f === 'active'
+                    ? 'bg-aurora-emerald/20 text-aurora-emerald'
+                    : f === 'inactive'
+                      ? 'bg-obsidian-700 text-obsidian-300'
+                      : 'bg-white/[0.08] text-white'
+                  : 'text-obsidian-500 hover:text-white',
+              )}
+            >
+              {f === 'all' ? 'Tümü' : f === 'active' ? 'Aktif' : 'Pasif'}
+              {f !== 'all' && (
+                <span className="ml-1 opacity-60">
+                  ({f === 'active' ? workflows.filter((w) => w.isActive).length : workflows.filter((w) => !w.isActive).length})
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}

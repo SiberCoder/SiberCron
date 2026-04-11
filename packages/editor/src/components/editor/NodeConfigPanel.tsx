@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, KeyRound, Copy, Check, Globe } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
-import type { INodeProperty } from '@sibercron/shared';
+import type { INodeProperty, ICredential } from '@sibercron/shared';
 import { getNodeIcon } from '../../lib/iconRegistry';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
+import { apiGet } from '../../api/client';
 
 // ── Visual Cron Builder ──────────────────────────────────────────────
 
@@ -235,6 +236,42 @@ function CronPreview({ expression }: { expression: string }) {
   );
 }
 
+// ── Webhook URL Banner ────────────────────────────────────────────────
+
+function WebhookUrlBanner({ path }: { path: string }) {
+  const [copied, setCopied] = useState(false);
+  const webhookPath = path?.startsWith('/') ? path : `/${path || 'webhook'}`;
+  const url = `${window.location.protocol}//${window.location.hostname}:3001/api/v1/webhook${webhookPath}`;
+
+  const copy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-aurora-blue/20 bg-aurora-blue/5 p-3 space-y-2">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-aurora-blue uppercase tracking-wider">
+        <Globe size={11} />
+        Webhook URL
+      </div>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 text-[10px] text-aurora-cyan font-mono break-all leading-relaxed">
+          {url}
+        </code>
+        <button
+          onClick={copy}
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.06] text-obsidian-500 hover:text-white transition-all"
+          title="Copy URL"
+        >
+          {copied ? <Check size={12} className="text-aurora-emerald" /> : <Copy size={12} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface FieldProps {
   property: INodeProperty;
   value: unknown;
@@ -456,22 +493,37 @@ export default function NodeConfigPanel() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const nodes = useWorkflowStore((s) => s.nodes);
   const updateNodeParameters = useWorkflowStore((s) => s.updateNodeParameters);
+  const updateNodeCredentials = useWorkflowStore((s) => s.updateNodeCredentials);
   const removeNode = useWorkflowStore((s) => s.removeNode);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
   const getByName = useNodeRegistryStore((s) => s.getByName);
+  const [availableCredentials, setAvailableCredentials] = useState<ICredential[]>([]);
 
   const node = nodes.find((n) => n.id === selectedNodeId);
-  if (!node || !selectedNodeId) return null;
+  const nodeType = node ? (node.data.nodeType as string) : '';
+  const definition = nodeType ? getByName(nodeType) : null;
+  const hasCredentials = !!(definition?.credentials && definition.credentials.length > 0);
 
-  const nodeType = node.data.nodeType as string;
-  const definition = getByName(nodeType);
-  if (!definition) return null;
+  // Hooks must all be called before any early returns (Rules of Hooks).
+  useEffect(() => {
+    if (!hasCredentials) return;
+    apiGet<{ data: ICredential[] }>('/credentials')
+      .then((res) => setAvailableCredentials(res.data ?? []))
+      .catch(() => setAvailableCredentials([]));
+  }, [hasCredentials]);
+
+  if (!node || !selectedNodeId || !definition) return null;
 
   const Icon = getNodeIcon(definition.icon);
   const parameters = (node.data.parameters as Record<string, unknown>) ?? {};
+  const nodeCredentials = (node.data.credentials as Record<string, string>) ?? {};
 
   const handleChange = (name: string, value: unknown) => {
     updateNodeParameters(selectedNodeId, { [name]: value });
+  };
+
+  const handleCredentialChange = (credName: string, credId: string) => {
+    updateNodeCredentials(selectedNodeId, { [credName]: credId });
   };
 
   const handleDelete = () => {
@@ -507,7 +559,53 @@ export default function NodeConfigPanel() {
 
       {/* Properties */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {definition.properties.length === 0 ? (
+        {/* Webhook URL banner for webhook trigger */}
+        {nodeType === 'sibercron.webhookTrigger' && (
+          <WebhookUrlBanner path={(parameters['path'] as string) ?? 'webhook'} />
+        )}
+
+        {/* Credential selectors */}
+        {hasCredentials && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-obsidian-400 font-body uppercase tracking-wide">
+              <KeyRound size={11} />
+              Kimlik Bilgileri
+            </div>
+            {definition.credentials!.map((cred) => {
+              // Try to filter by matching credential type to the credential definition name.
+              // Fall back to showing all credentials if no type match is found.
+              const typeFiltered = availableCredentials.filter(
+                (c) =>
+                  c.type.toLowerCase().includes(cred.name.toLowerCase()) ||
+                  cred.name.toLowerCase().includes(c.type.toLowerCase()),
+              );
+              const credOptions = typeFiltered.length > 0 ? typeFiltered : availableCredentials;
+              return (
+                <div key={cred.name} className="space-y-2">
+                  <label className="flex items-center gap-1 text-xs font-semibold text-obsidian-300 font-body">
+                    {cred.displayName ?? cred.name}
+                    {cred.required && <span className="text-aurora-rose">*</span>}
+                  </label>
+                  <select
+                    value={nodeCredentials[cred.name] ?? ''}
+                    onChange={(e) => handleCredentialChange(cred.name, e.target.value)}
+                    className="glass-input text-xs"
+                  >
+                    <option value="">Secin...</option>
+                    {credOptions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+            <div className="border-t border-white/[0.04]" />
+          </div>
+        )}
+
+        {definition.properties.length === 0 && !hasCredentials ? (
           <p className="text-xs text-obsidian-600 text-center py-10 font-body">
             No configurable properties
           </p>

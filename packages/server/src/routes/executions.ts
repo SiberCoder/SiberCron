@@ -55,6 +55,46 @@ export async function executionRoutes(
     return result;
   });
 
+  // GET /trend - Last N days daily execution counts
+  fastify.get('/trend', async (request: FastifyRequest, _reply: FastifyReply) => {
+    const query = request.query as { days?: string };
+    const days = Math.min(Math.max(Number(query.days ?? 7), 1), 90);
+
+    const now = Date.now();
+    const msPerDay = 86_400_000;
+
+    // Build day buckets (UTC midnight)
+    const buckets: { date: string; success: number; error: number; total: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now - i * msPerDay);
+      buckets.push({
+        date: d.toISOString().slice(0, 10),
+        success: 0,
+        error: 0,
+        total: 0,
+      });
+    }
+
+    const cutoff = new Date(now - (days - 1) * msPerDay);
+    cutoff.setUTCHours(0, 0, 0, 0);
+
+    const all = db.listExecutions({ limit: 10000 });
+    for (const exec of all.data) {
+      const ts = exec.startedAt ?? exec.createdAt;
+      if (!ts) continue;
+      const d = new Date(ts);
+      if (d < cutoff) continue;
+      const dateStr = d.toISOString().slice(0, 10);
+      const bucket = buckets.find((b) => b.date === dateStr);
+      if (!bucket) continue;
+      bucket.total++;
+      if (exec.status === 'success') bucket.success++;
+      else if (exec.status === 'error') bucket.error++;
+    }
+
+    return { days, data: buckets };
+  });
+
   // GET /:id - Get execution details
   fastify.get('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };

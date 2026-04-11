@@ -264,6 +264,13 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
     };
     messages.push(userMsg);
 
+    // Keep conversation bounded: retain only the last 100 messages to avoid
+    // unbounded memory growth and AI provider token limit errors on long sessions.
+    const MAX_MESSAGES = 100;
+    if (messages.length > MAX_MESSAGES) {
+      messages.splice(0, messages.length - MAX_MESSAGES);
+    }
+
     // Resolve provider config
     const providerConfig = providerConfigOverride || this.resolveProviderConfig();
 

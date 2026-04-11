@@ -95,7 +95,7 @@ export const AutonomousDevNode: INodeType = {
     description: 'AI ile otonom gelistirme dongusu - talimat ver, AI calissin, soru sorarsa cevapla, bitirirse tekrar baslat',
     inputs: ['main'],
     outputs: ['completed', 'maxIterations', 'stopped', 'error'],
-    timeout: 1800000, // 30 minutes
+    timeout: 14400000, // 4 hours
     properties: [
       {
         name: 'instruction',

@@ -18,6 +18,70 @@ import { io } from 'socket.io-client';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
 import { apiGet } from '../api/client';
 
+// ── Execution Trend Chart ─────────────────────────────────────────────
+
+interface TrendBucket {
+  date: string;
+  success: number;
+  error: number;
+  total: number;
+}
+
+function TrendChart({ data }: { data: TrendBucket[] }) {
+  const maxVal = Math.max(...data.map((d) => d.total), 1);
+
+  return (
+    <div className="glass-card rounded-2xl p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-display font-semibold text-white tracking-tight">
+          Son 7 Günlük Çalışma
+        </h2>
+        <div className="flex items-center gap-3 text-[10px] text-obsidian-500 font-body">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-sm bg-aurora-emerald" />
+            Başarılı
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-sm bg-aurora-rose" />
+            Hata
+          </span>
+        </div>
+      </div>
+
+      {data.every((d) => d.total === 0) ? (
+        <div className="flex items-center justify-center h-24 text-xs text-obsidian-600 font-body">
+          Henüz execution yok
+        </div>
+      ) : (
+        <div className="flex items-end gap-1.5 h-24">
+          {data.map((bucket) => {
+            const successH = maxVal > 0 ? (bucket.success / maxVal) * 100 : 0;
+            const errorH = maxVal > 0 ? (bucket.error / maxVal) * 100 : 0;
+            const label = bucket.date.slice(5); // MM-DD
+            return (
+              <div key={bucket.date} className="flex-1 flex flex-col items-center gap-1 group">
+                <div className="relative w-full flex flex-col justify-end h-20" title={`${bucket.date}: ${bucket.success} başarılı, ${bucket.error} hata`}>
+                  <div
+                    className="w-full bg-aurora-rose/60 rounded-t transition-all duration-500"
+                    style={{ height: `${errorH}%`, minHeight: bucket.error > 0 ? 2 : 0 }}
+                  />
+                  <div
+                    className="w-full bg-aurora-emerald/70 transition-all duration-500"
+                    style={{ height: `${successH}%`, minHeight: bucket.success > 0 ? 2 : 0 }}
+                  />
+                </div>
+                <span className="text-[9px] text-obsidian-600 font-mono group-hover:text-obsidian-400 transition-colors">
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface DashboardStats {
   totalWorkflows: number;
   activeWorkflows: number;
@@ -78,14 +142,16 @@ export default function DashboardPage() {
     successRate: '0%',
   });
   const [recentExecutions, setRecentExecutions] = useState<IExecution[]>([]);
+  const [trendData, setTrendData] = useState<TrendBucket[]>([]);
 
   const fetchDashboardData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [workflowsRes, executionsRes] = await Promise.all([
+      const [workflowsRes, executionsRes, trendRes] = await Promise.all([
         apiGet<PaginatedResponse<IWorkflow>>('/workflows?limit=100'),
         apiGet<PaginatedResponse<IExecution>>('/executions?limit=100'),
+        apiGet<{ days: number; data: TrendBucket[] }>('/executions/trend?days=7').catch(() => null),
       ]);
 
       const workflows = workflowsRes?.data ?? [];
@@ -102,6 +168,7 @@ export default function DashboardPage() {
 
       setStats({ totalWorkflows, activeWorkflows, totalExecutions, successRate });
       setRecentExecutions(executions.slice(0, 5));
+      if (trendRes?.data) setTrendData(trendRes.data);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -260,6 +327,13 @@ export default function DashboardPage() {
           Browse Templates
         </button>
       </div>
+
+      {/* Trend chart */}
+      {trendData.length > 0 && (
+        <div className="animate-slide-up stagger-4" style={{ animationFillMode: 'both' }}>
+          <TrendChart data={trendData} />
+        </div>
+      )}
 
       {/* Recent executions */}
       <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>

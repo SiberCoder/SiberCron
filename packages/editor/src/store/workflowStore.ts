@@ -52,6 +52,7 @@ interface WorkflowState {
   addNode: (nodeType: string, displayName: string, position: { x: number; y: number }) => void;
   removeNode: (nodeId: string) => void;
   updateNodeParameters: (nodeId: string, params: Record<string, unknown>) => void;
+  updateNodeCredentials: (nodeId: string, credentials: Record<string, string>) => void;
   setSelectedNode: (nodeId: string | null) => void;
   updateMeta: (meta: Partial<WorkflowMeta>) => void;
   loadWorkflow: (id: string) => Promise<void>;
@@ -232,6 +233,17 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                 parameters: { ...(n.data.parameters as Record<string, unknown>), ...params },
               },
             }
+          : n,
+      ),
+      isDirty: true,
+    }));
+  },
+
+  updateNodeCredentials: (nodeId, credentials) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === nodeId
+          ? { ...n, data: { ...n.data, credentials: { ...(n.data.credentials as Record<string, string> ?? {}), ...credentials } } }
           : n,
       ),
       isDirty: true,

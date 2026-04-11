@@ -133,7 +133,12 @@ export const EmailSMTPNode: INodeType = {
     if (bcc) mailOptions.bcc = bcc;
     if (replyTo) mailOptions.replyTo = replyTo;
 
-    const info = await transporter.sendMail(mailOptions);
+    let info: { messageId: string };
+    try {
+      info = await transporter.sendMail(mailOptions);
+    } finally {
+      transporter.close();
+    }
 
     context.helpers.log(`Email sent to ${to}: ${info.messageId}`);
 

@@ -1,24 +1,19 @@
 import { useState, useEffect, type DragEvent } from 'react';
 import { Search, ChevronDown, ChevronRight } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import clsx from 'clsx';
 import type { NodeGroup, INodeTypeDefinition } from '@sibercron/shared';
 import { NODE_GROUPS } from '@sibercron/shared';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
+import { getNodeIcon } from '../../lib/iconRegistry';
 
 const GROUP_ORDER: NodeGroup[] = ['trigger', 'ai', 'messaging', 'core', 'data', 'transform'];
-
-function getIcon(iconName: string) {
-  const icons = LucideIcons as unknown as Record<string, React.ComponentType<Record<string, unknown>>>;
-  return icons[iconName] ?? LucideIcons.Box;
-}
 
 interface NodeItemProps {
   definition: INodeTypeDefinition;
 }
 
 function NodeItem({ definition }: NodeItemProps) {
-  const Icon = getIcon(definition.icon);
+  const Icon = getNodeIcon(definition.icon);
 
   const onDragStart = (event: DragEvent) => {
     event.dataTransfer.setData(
@@ -117,7 +112,7 @@ export default function NodePalette() {
           if (!items || items.length === 0) return null;
           const groupInfo = NODE_GROUPS[group];
           const isOpen = openGroups.has(group);
-          const GroupIcon = getIcon(groupInfo.icon);
+          const GroupIcon = getNodeIcon(groupInfo.icon);
 
           return (
             <div key={group}>

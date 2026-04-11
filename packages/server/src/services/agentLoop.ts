@@ -123,8 +123,9 @@ function maskSensitiveArgs(args: Record<string, unknown>): Record<string, unknow
   return masked;
 }
 
-// Whitelist of allowed base commands for shell_run
-const ALLOWED_COMMANDS = ['ls', 'cat', 'head', 'tail', 'echo', 'pwd', 'date', 'wc', 'sort', 'grep', 'find', 'node', 'npm', 'pnpm', 'git'];
+// Whitelist of allowed base commands for shell_run.
+// NOTE: 'find' is intentionally excluded — it supports -exec which allows arbitrary command execution.
+const ALLOWED_COMMANDS = ['ls', 'cat', 'head', 'tail', 'echo', 'pwd', 'date', 'wc', 'sort', 'grep', 'node', 'npm', 'pnpm', 'git'];
 
 // Validate and sanitize a shell command
 function sanitizeCommand(command: string): { valid: boolean; error?: string } {
@@ -147,6 +148,8 @@ function sanitizeCommand(command: string): { valid: boolean; error?: string } {
   if (/\|\|/.test(trimmed)) return { valid: false, error: '|| operator is not allowed' };
   if (/`/.test(trimmed)) return { valid: false, error: 'Backticks are not allowed' };
   if (/\$\(/.test(trimmed)) return { valid: false, error: '$() substitution is not allowed' };
+  // Reject output redirection to prevent overwriting files
+  if (/>>?/.test(trimmed)) return { valid: false, error: 'Output redirection is not allowed' };
 
   return { valid: true };
 }
