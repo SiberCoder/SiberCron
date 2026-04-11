@@ -27,6 +27,9 @@ export interface WorkflowMeta {
   cronExpression: string;
   webhookPath: string;
   webhookSecret: string;
+  // Workflow-level execution settings
+  timeout: number;
+  continueOnFail: boolean;
 }
 
 interface HistoryEntry {
@@ -53,6 +56,8 @@ interface WorkflowState {
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
   addNode: (nodeType: string, displayName: string, position: { x: number; y: number }) => void;
+  duplicateNodes: (nodeIds: string[]) => void;
+  renameNode: (nodeId: string, label: string) => void;
   removeNode: (nodeId: string) => void;
   updateNodeParameters: (nodeId: string, params: Record<string, unknown>) => void;
   updateNodeCredentials: (nodeId: string, credentials: Record<string, string>) => void;
@@ -81,6 +86,8 @@ const defaultMeta: WorkflowMeta = {
   cronExpression: '',
   webhookPath: '',
   webhookSecret: '',
+  timeout: 300000,
+  continueOnFail: false,
 };
 
 let nodeCounter = 0;
@@ -171,18 +178,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   canRedo: () => get().historyIndex < get().history.length - 1,
 
   onNodesChange: (changes) => {
+    // Only push to undo history for meaningful changes:
+    // - Drag end (position change where dragging becomes false)
+    // - Node removal
+    // Selection changes and intermediate drag events are NOT saved to history.
+    const shouldPushHistory = changes.some(
+      (c) =>
+        c.type === 'remove' ||
+        (c.type === 'position' && c.dragging === false),
+    );
     set((state) => ({
-      ...pushHistory(state),
+      ...(shouldPushHistory ? pushHistory(state) : {}),
       nodes: applyNodeChanges(changes, state.nodes),
-      isDirty: true,
+      isDirty: changes.some((c) => c.type !== 'select' && c.type !== 'dimensions'),
     }));
   },
 
   onEdgesChange: (changes) => {
+    // Only push history for edge removal (add goes through onConnect)
+    const shouldPushHistory = changes.some((c) => c.type === 'remove');
     set((state) => ({
-      ...pushHistory(state),
+      ...(shouldPushHistory ? pushHistory(state) : {}),
       edges: applyEdgeChanges(changes, state.edges),
-      isDirty: true,
+      isDirty: changes.some((c) => c.type !== 'select'),
     }));
   },
 
@@ -211,6 +229,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     };
     set((state) => ({
       nodes: [...state.nodes, newNode],
+      isDirty: true,
+    }));
+  },
+
+  duplicateNodes: (nodeIds) => {
+    set((state) => {
+      const toDuplicate = state.nodes.filter((n) => nodeIds.includes(n.id));
+      const newNodes: Node[] = toDuplicate.map((n) => ({
+        ...n,
+        id: `node_${Date.now()}_${nodeCounter++}`,
+        position: { x: n.position.x + 40, y: n.position.y + 40 },
+        data: JSON.parse(JSON.stringify(n.data)),
+        selected: false,
+      }));
+      return { nodes: [...state.nodes, ...newNodes], isDirty: true };
+    });
+  },
+
+  renameNode: (nodeId, label) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, label } } : n,
+      ),
       isDirty: true,
     }));
   },
@@ -284,6 +325,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         cronExpression: workflow.cronExpression ?? '',
         webhookPath: workflow.webhookPath ?? '',
         webhookSecret: (workflow.settings?.webhookSecret as string) ?? '',
+        timeout: (workflow.settings?.timeout as number) ?? 300000,
+        continueOnFail: (workflow.settings?.continueOnFail as boolean) ?? false,
       },
     });
   },
@@ -333,6 +376,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       webhookPath: detectedWebhookPath || undefined,
       settings: {
         ...(workflowMeta.webhookSecret ? { webhookSecret: workflowMeta.webhookSecret } : {}),
+        timeout: workflowMeta.timeout,
+        continueOnFail: workflowMeta.continueOnFail,
       },
     };
 
@@ -461,6 +506,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         cronExpression: workflow.cronExpression ?? '',
         webhookPath: workflow.webhookPath ?? '',
         webhookSecret: (workflow.settings?.webhookSecret as string) ?? '',
+        timeout: (workflow.settings?.timeout as number) ?? 300000,
+        continueOnFail: (workflow.settings?.continueOnFail as boolean) ?? false,
       },
     });
   },

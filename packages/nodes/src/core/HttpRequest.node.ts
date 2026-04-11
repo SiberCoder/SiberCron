@@ -111,6 +111,29 @@ export const HttpRequestNode: INodeType = {
           { name: 'Full Response', value: 'full' },
         ],
       },
+      {
+        name: 'retryOnFail',
+        displayName: 'Retry On Fail',
+        type: 'boolean',
+        default: false,
+        description: 'Automatically retry the request on failure',
+      },
+      {
+        name: 'retryCount',
+        displayName: 'Max Retries',
+        type: 'number',
+        default: 3,
+        description: 'Maximum number of retry attempts',
+        displayOptions: { show: { retryOnFail: [true] } },
+      },
+      {
+        name: 'retryDelay',
+        displayName: 'Retry Delay (ms)',
+        type: 'number',
+        default: 1000,
+        description: 'Delay between retries in milliseconds (doubles each attempt)',
+        displayOptions: { show: { retryOnFail: [true] } },
+      },
     ],
   },
 
@@ -125,6 +148,9 @@ export const HttpRequestNode: INodeType = {
     const bodyRaw = context.getParameter<string>('body') ?? '';
     const timeout = context.getParameter<number>('timeout') ?? 30000;
     const responseType = context.getParameter<string>('responseType') ?? 'auto';
+    const retryOnFail = context.getParameter<boolean>('retryOnFail') ?? false;
+    const retryCount = context.getParameter<number>('retryCount') ?? 3;
+    const retryDelay = context.getParameter<number>('retryDelay') ?? 1000;
 
     // Parse headers
     let headers: Record<string, string> = {};
@@ -172,24 +198,44 @@ export const HttpRequestNode: INodeType = {
 
     context.helpers.log(`HTTP ${method} ${url}`);
 
-    const response = await context.helpers.httpRequest({
-      url,
-      method,
-      headers,
-      body,
-      timeout,
-      returnFullResponse: responseType === 'full',
-    });
+    const maxAttempts = retryOnFail ? Math.max(1, retryCount) + 1 : 1;
+    let lastError: Error | null = null;
 
-    // Build output based on responseType
-    if (responseType === 'full') {
-      return [{ json: response as Record<string, unknown> }];
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await context.helpers.httpRequest({
+          url,
+          method,
+          headers,
+          body,
+          timeout,
+          returnFullResponse: responseType === 'full',
+        });
+
+        if (attempt > 1) {
+          context.helpers.log(`HTTP request succeeded on attempt ${attempt}`);
+        }
+
+        // Build output based on responseType
+        if (responseType === 'full') {
+          return [{ json: response as Record<string, unknown> }];
+        }
+
+        const responseData = typeof response === 'object' && response !== null
+          ? (response as Record<string, unknown>)
+          : { data: response };
+
+        return [{ json: responseData }];
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (attempt < maxAttempts) {
+          const delay = retryDelay * Math.pow(2, attempt - 1); // exponential backoff
+          context.helpers.log(`HTTP request failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms: ${lastError.message}`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
     }
 
-    const responseData = typeof response === 'object' && response !== null
-      ? (response as Record<string, unknown>)
-      : { data: response };
-
-    return [{ json: responseData }];
+    throw lastError ?? new Error('HTTP request failed');
   },
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Play,
   CheckCircle2,
@@ -431,6 +432,7 @@ function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning:
 /* ------------------------------------------------------------------ */
 
 export default function ExecutionHistoryPage() {
+  const location = useLocation();
   const [executions, setExecutions] = useState<IExecution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -439,20 +441,33 @@ export default function ExecutionHistoryPage() {
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  // Filter state
+  // Filter state — workflowId from URL params pre-fills the workflow name filter
   const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterWorkflow, setFilterWorkflow] = useState('');
+  const [filterWorkflow, setFilterWorkflow] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('workflowId') ?? '';
+  });
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const socketRef = useRef<Socket | null>(null);
   const subscribedIds = useRef<Set<string>>(new Set());
   const pageSize = 10;
 
+  // When navigating from the editor toolbar with ?workflowId=..., the ID is
+  // used for exact match. For manual text entry we fall back to name search.
+  const urlWorkflowId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('workflowId') ?? '';
+  }, [location.search]);
+
   // Client-side filtering (applied on top of server data for instant feedback)
   const filteredExecutions = useMemo(() => {
     return executions.filter((e) => {
       if (filterStatus && e.status !== filterStatus) return false;
-      if (filterWorkflow) {
+      // If we arrived with ?workflowId=..., match by ID; otherwise match by name
+      if (urlWorkflowId) {
+        if (e.workflowId !== urlWorkflowId) return false;
+      } else if (filterWorkflow) {
         const q = filterWorkflow.toLowerCase();
         if (!(e.workflowName ?? '').toLowerCase().includes(q)) return false;
       }

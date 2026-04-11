@@ -45,6 +45,7 @@ export default function WorkflowCanvas() {
   const onEdgesChange = useWorkflowStore((s) => s.onEdgesChange);
   const onConnect = useWorkflowStore((s) => s.onConnect);
   const addNode = useWorkflowStore((s) => s.addNode);
+  const duplicateNodes = useWorkflowStore((s) => s.duplicateNodes);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
   const getByName = useNodeRegistryStore((s) => s.getByName);
   const nodeStatuses = useExecutionStore((s) => s.currentExecution?.nodeStatuses ?? EMPTY_NODE_STATUSES);
@@ -156,17 +157,10 @@ export default function WorkflowCanvas() {
     setSelectedNodeIds([]);
   }, [selectedNodeIds, removeNode]);
 
-  // Duplicate selected nodes (offset by 40px)
+  // Duplicate selected nodes — preserves parameters/credentials
   const handleBulkDuplicate = useCallback(() => {
-    const selectedNodes = nodes.filter((n) => selectedNodeIds.includes(n.id));
-    for (const node of selectedNodes) {
-      addNode(
-        node.data.nodeType as string,
-        node.data.label as string,
-        { x: (node.position?.x ?? 0) + 40, y: (node.position?.y ?? 0) + 40 },
-      );
-    }
-  }, [selectedNodeIds, nodes, addNode]);
+    duplicateNodes(selectedNodeIds);
+  }, [selectedNodeIds, duplicateNodes]);
 
   return (
     <div ref={reactFlowWrapper} className="w-full h-full relative">

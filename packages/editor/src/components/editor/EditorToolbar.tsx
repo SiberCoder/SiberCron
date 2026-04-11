@@ -13,6 +13,7 @@ import {
   Undo2,
   Redo2,
   History,
+  ListOrdered,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
@@ -293,6 +294,17 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       </div>
 
       <div className="w-px h-6 bg-white/[0.06]" />
+
+      {/* Execution history link */}
+      {meta.id && (
+        <button
+          onClick={() => navigate(`/executions?workflowId=${meta.id}`)}
+          className="btn-ghost text-xs text-obsidian-500 hover:text-aurora-indigo"
+          title="Bu workflow'un çalışma geçmişi"
+        >
+          <ListOrdered size={14} />
+        </button>
+      )}
 
       {/* Version history */}
       {meta.id && onVersionHistory && (

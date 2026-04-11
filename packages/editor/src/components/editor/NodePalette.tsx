@@ -1,5 +1,5 @@
-import { useState, useEffect, type DragEvent } from 'react';
-import { Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, type DragEvent } from 'react';
+import { Search, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 import clsx from 'clsx';
 import type { NodeGroup, INodeTypeDefinition } from '@sibercron/shared';
 import { NODE_GROUPS } from '@sibercron/shared';
@@ -7,12 +7,29 @@ import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
 import { getNodeIcon } from '../../lib/iconRegistry';
 
 const GROUP_ORDER: NodeGroup[] = ['trigger', 'ai', 'messaging', 'core', 'data', 'transform'];
+const RECENT_KEY = 'sibercron_recent_nodes';
+const MAX_RECENT = 6;
+
+function getRecentNodes(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') as string[];
+  } catch {
+    return [];
+  }
+}
+
+function trackRecentNode(name: string) {
+  const recent = getRecentNodes().filter((n) => n !== name);
+  recent.unshift(name);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+}
 
 interface NodeItemProps {
   definition: INodeTypeDefinition;
+  onUsed?: (name: string) => void;
 }
 
-function NodeItem({ definition }: NodeItemProps) {
+function NodeItem({ definition, onUsed }: NodeItemProps) {
   const Icon = getNodeIcon(definition.icon);
 
   const onDragStart = (event: DragEvent) => {
@@ -21,6 +38,8 @@ function NodeItem({ definition }: NodeItemProps) {
       definition.name,
     );
     event.dataTransfer.effectAllowed = 'move';
+    trackRecentNode(definition.name);
+    onUsed?.(definition.name);
   };
 
   return (
@@ -52,6 +71,7 @@ export default function NodePalette() {
   const [openGroups, setOpenGroups] = useState<Set<string>>(
     new Set(GROUP_ORDER),
   );
+  const [recentNames, setRecentNames] = useState<string[]>(() => getRecentNodes());
   const { nodeTypes, fetchNodeTypes } = useNodeRegistryStore();
 
   useEffect(() => {
@@ -59,6 +79,13 @@ export default function NodePalette() {
       fetchNodeTypes();
     }
   }, [nodeTypes.length, fetchNodeTypes]);
+
+  const handleNodeUsed = useCallback((name: string) => {
+    setRecentNames(getRecentNodes().filter((n) => n !== name));
+    setRecentNames([name, ...getRecentNodes().filter((n) => n !== name)].slice(0, MAX_RECENT));
+    // Re-read from storage after slight delay to ensure trackRecentNode has written
+    setTimeout(() => setRecentNames(getRecentNodes()), 50);
+  }, []);
 
   const toggleGroup = (group: string) => {
     setOpenGroups((prev) => {
@@ -88,6 +115,11 @@ export default function NodePalette() {
 
   // When searching, auto-expand all groups that have results
   const isSearching = search.trim().length > 0;
+
+  // Recently used nodes (resolved to definitions)
+  const recentDefs = recentNames
+    .map((name) => nodeTypes.find((nt) => nt.name === name))
+    .filter((d): d is INodeTypeDefinition => !!d);
 
   return (
     <div className="w-64 glass-panel border-r border-white/[0.04] h-full flex flex-col">
@@ -121,6 +153,22 @@ export default function NodePalette() {
 
       {/* Groups */}
       <div className="flex-1 overflow-y-auto py-2">
+        {/* Recently used — only show when not searching */}
+        {!isSearching && recentDefs.length > 0 && (
+          <div className="mb-1">
+            <div className="flex items-center gap-2 px-4 py-2 text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider font-body">
+              <Clock size={11} className="text-obsidian-600" />
+              <span>Son Kullanılanlar</span>
+            </div>
+            <div className="pb-1 px-1.5">
+              {recentDefs.map((nt) => (
+                <NodeItem key={`recent-${nt.name}`} definition={nt} onUsed={handleNodeUsed} />
+              ))}
+            </div>
+            <div className="mx-4 h-px bg-white/[0.04] mt-1 mb-2" />
+          </div>
+        )}
+
         {GROUP_ORDER.map((group) => {
           const items = grouped[group];
           if (!items || items.length === 0) return null;
@@ -149,7 +197,7 @@ export default function NodePalette() {
               {isOpen && (
                 <div className="pb-1 px-1.5 animate-slide-down">
                   {items.map((nt) => (
-                    <NodeItem key={nt.name} definition={nt} />
+                    <NodeItem key={nt.name} definition={nt} onUsed={handleNodeUsed} />
                   ))}
                 </div>
               )}

@@ -53,6 +53,17 @@ export class WorkflowEngine {
       createdAt: startedAt.toISOString(),
     };
 
+    // ── Workflow-level timeout ────────────────────────────────────────
+    const workflowTimeoutMs = workflow.settings?.timeout ?? 300_000; // default 5 min
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(
+        () => reject(new Error(`Workflow timed out after ${workflowTimeoutMs / 1000}s`)),
+        workflowTimeoutMs,
+      );
+    });
+
+    const runExecution = async () => {
     try {
       // ── Build graph structures ──────────────────────────────────────
       const nodeMap = new Map<string, INodeInstance>();
@@ -172,6 +183,21 @@ export class WorkflowEngine {
         err instanceof Error ? err.message : String(err);
       execution.finishedAt = finishedAt.toISOString();
       execution.durationMs = finishedAt.getTime() - startedAt.getTime();
+    }
+
+    return execution;
+    }; // end runExecution
+
+    try {
+      await Promise.race([runExecution(), timeoutPromise]);
+    } catch (err: unknown) {
+      const finishedAt = new Date();
+      execution.status = 'error';
+      execution.errorMessage = err instanceof Error ? err.message : String(err);
+      execution.finishedAt = finishedAt.toISOString();
+      execution.durationMs = finishedAt.getTime() - startedAt.getTime();
+    } finally {
+      if (timeoutHandle !== null) clearTimeout(timeoutHandle);
     }
 
     emit('execution:completed', {

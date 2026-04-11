@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw, Eye, EyeOff, Tag, FileText, Settings2 } from 'lucide-react';
+import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw, Eye, EyeOff, Tag, FileText, Settings2, Timer, SkipForward } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import type { INodeProperty, ICredential } from '@sibercron/shared';
@@ -241,15 +241,24 @@ function CronPreview({ expression }: { expression: string }) {
 
 function WebhookUrlBanner({ path }: { path: string }) {
   const [copied, setCopied] = useState(false);
+  const [curlCopied, setCurlCopied] = useState(false);
   const webhookPath = path?.startsWith('/') ? path : `/${path || 'webhook'}`;
   // Use configured API base URL; fall back to same-host when running behind a proxy
   const apiBase = API_BASE_URL || `${window.location.protocol}//${window.location.host}`;
   const url = `${apiBase}/api/v1/webhook${webhookPath}`;
+  const curlCmd = `curl -X POST "${url}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"key": "value"}'`;
 
   const copy = () => {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const copyCurl = () => {
+    navigator.clipboard.writeText(curlCmd).then(() => {
+      setCurlCopied(true);
+      setTimeout(() => setCurlCopied(false), 2000);
     });
   };
 
@@ -266,11 +275,19 @@ function WebhookUrlBanner({ path }: { path: string }) {
         <button
           onClick={copy}
           className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.06] text-obsidian-500 hover:text-white transition-all"
-          title="Copy URL"
+          title="URL'yi kopyala"
         >
           {copied ? <Check size={12} className="text-aurora-emerald" /> : <Copy size={12} />}
         </button>
       </div>
+      <button
+        onClick={copyCurl}
+        className="flex items-center gap-1.5 text-[9px] text-obsidian-500 hover:text-aurora-cyan transition-colors font-mono"
+        title="curl komutunu kopyala"
+      >
+        {curlCopied ? <Check size={9} className="text-aurora-emerald" /> : <Copy size={9} />}
+        {curlCopied ? 'Kopyalandı!' : 'curl komutunu kopyala'}
+      </button>
     </div>
   );
 }
@@ -792,6 +809,64 @@ function WorkflowMetaPanel() {
             Enter tuşu ile ekle. Etiketler workflow listesinde filtreleme için kullanılır.
           </p>
         </div>
+
+        {/* Execution Settings */}
+        <div className="space-y-3 pt-2 border-t border-white/[0.04]">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-obsidian-400 uppercase tracking-wide font-body">
+            <Settings2 size={11} />
+            Çalıştırma Ayarları
+          </label>
+
+          {/* Timeout */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-obsidian-400 font-body">
+              <Timer size={10} />
+              <span>Zaman Aşımı</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={Math.round(workflowMeta.timeout / 1000)}
+                onChange={(e) => {
+                  const secs = Math.max(10, Number(e.target.value) || 300);
+                  updateMeta({ timeout: secs * 1000 });
+                }}
+                className="glass-input flex-1 text-xs font-mono"
+                min={10}
+                max={3600}
+              />
+              <span className="text-[10px] text-obsidian-500 font-body shrink-0">saniye</span>
+            </div>
+            <p className="text-[10px] text-obsidian-600 font-body">Varsayılan: 300s (5 dakika)</p>
+          </div>
+
+          {/* Continue On Fail */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[11px] text-obsidian-400 font-body">
+              <SkipForward size={10} />
+              <span>Hata sonrası devam et</span>
+            </div>
+            <button
+              onClick={() => updateMeta({ continueOnFail: !workflowMeta.continueOnFail })}
+              className={clsx(
+                'relative w-8 h-[18px] rounded-full transition-all duration-300',
+                workflowMeta.continueOnFail ? 'bg-aurora-amber' : 'bg-white/[0.08]',
+              )}
+            >
+              <span
+                className={clsx(
+                  'absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all duration-300 shadow-sm',
+                  workflowMeta.continueOnFail ? 'translate-x-[18px]' : 'translate-x-[2px]',
+                )}
+              />
+            </button>
+          </div>
+          {workflowMeta.continueOnFail && (
+            <p className="text-[10px] text-aurora-amber/70 font-body">
+              Bir node hata verdiğinde workflow çalışmaya devam eder.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -802,12 +877,15 @@ export default function NodeConfigPanel() {
   const nodes = useWorkflowStore((s) => s.nodes);
   const updateNodeParameters = useWorkflowStore((s) => s.updateNodeParameters);
   const updateNodeCredentials = useWorkflowStore((s) => s.updateNodeCredentials);
+  const renameNode = useWorkflowStore((s) => s.renameNode);
   const removeNode = useWorkflowStore((s) => s.removeNode);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
   const workflowMeta = useWorkflowStore((s) => s.workflowMeta);
   const updateMeta = useWorkflowStore((s) => s.updateMeta);
   const getByName = useNodeRegistryStore((s) => s.getByName);
   const [availableCredentials, setAvailableCredentials] = useState<ICredential[]>([]);
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState('');
 
   const node = nodes.find((n) => n.id === selectedNodeId);
   const nodeType = node ? (node.data.nodeType as string) : '';
@@ -841,6 +919,16 @@ export default function NodeConfigPanel() {
     setSelectedNode(null);
   };
 
+  const currentLabel = (node.data.label as string) || definition.displayName;
+
+  const commitLabel = () => {
+    const trimmed = labelDraft.trim();
+    if (trimmed && trimmed !== currentLabel) {
+      renameNode(selectedNodeId, trimmed);
+    }
+    setEditingLabel(false);
+  };
+
   return (
     <div className="w-80 glass-panel border-l border-white/[0.04] h-full flex flex-col animate-slide-in-right">
       {/* Header */}
@@ -852,10 +940,28 @@ export default function NodeConfigPanel() {
           <Icon size={16} style={{ color: definition.color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-display font-semibold text-white truncate">
-            {definition.displayName}
-          </div>
-          <div className="text-[10px] text-obsidian-500 truncate font-body">
+          {editingLabel ? (
+            <input
+              autoFocus
+              className="w-full bg-white/[0.06] border border-aurora-cyan/40 rounded-lg px-2 py-0.5 text-sm text-white font-display font-semibold outline-none"
+              value={labelDraft}
+              onChange={(e) => setLabelDraft(e.target.value)}
+              onBlur={commitLabel}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitLabel();
+                if (e.key === 'Escape') setEditingLabel(false);
+              }}
+            />
+          ) : (
+            <button
+              title="İsmi düzenlemek için tıkla"
+              onClick={() => { setLabelDraft(currentLabel); setEditingLabel(true); }}
+              className="text-sm font-display font-semibold text-white truncate hover:text-aurora-cyan transition-colors text-left w-full"
+            >
+              {currentLabel}
+            </button>
+          )}
+          <div className="text-[10px] text-obsidian-500 truncate font-body mt-0.5">
             {definition.description}
           </div>
         </div>

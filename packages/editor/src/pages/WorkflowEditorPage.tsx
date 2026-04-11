@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate, useBlocker } from 'react-router-dom';
 import { PanelLeft, CheckCircle2, XCircle, Loader2, X, ArrowRight, Clock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
 import { ReactFlowProvider } from '@xyflow/react';
@@ -424,7 +424,7 @@ export default function WorkflowEditorPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId]);
 
-  // Unsaved changes warning
+  // Unsaved changes warning (browser close/refresh)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
@@ -438,6 +438,19 @@ export default function WorkflowEditorPage() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [isDirty]);
+
+  // Block React Router navigations when there are unsaved changes
+  const blocker = useBlocker(isDirty);
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      const ok = window.confirm('Kaydedilmemiş değişiklikler var. Sayfadan çıkmak istediğinize emin misiniz?');
+      if (ok) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker]);
 
   if (isLoading) {
     return (

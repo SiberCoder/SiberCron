@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   XCircle,
   Activity,
+  Loader2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
@@ -66,6 +67,7 @@ export default function WorkflowListPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [executingId, setExecutingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [triggerFilter, setTriggerFilter] = useState<'all' | TriggerType>('all');
@@ -506,9 +508,23 @@ export default function WorkflowListPage() {
 
                   {/* Webhook path */}
                   {wf.triggerType === 'webhook' && wf.webhookPath && (
-                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-aurora-blue/70 font-body" title={`/api/v1/webhook/${wf.webhookPath}`}>
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-aurora-blue/70 font-body group/webhook">
                       <Globe size={10} />
-                      <span className="truncate font-mono">/webhook/{wf.webhookPath}</span>
+                      <span className="truncate font-mono" title={`${window.location.origin.replace('5173', '3001')}/api/v1/webhook${wf.webhookPath}`}>
+                        /webhook{wf.webhookPath}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const url = `${window.location.origin.replace('5173', '3001')}/api/v1/webhook${wf.webhookPath}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success('Webhook URL kopyalandı');
+                        }}
+                        className="opacity-0 group-hover/webhook:opacity-100 transition-opacity p-0.5 hover:text-white"
+                        title="URL'yi kopyala"
+                      >
+                        <Copy size={9} />
+                      </button>
                     </div>
                   )}
 
@@ -571,17 +587,23 @@ export default function WorkflowListPage() {
                     <button
                       onClick={async (e) => {
                         e.stopPropagation();
+                        setExecutingId(wf.id);
                         try {
                           await apiPost(`/workflows/${wf.id}/execute`, {});
                           toast.success(`"${wf.name}" başlatıldı`);
                         } catch {
                           toast.error('Çalıştırma başarısız');
+                        } finally {
+                          setExecutingId(null);
                         }
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-aurora-blue hover:bg-aurora-blue/5 rounded-lg transition-all font-body"
+                      disabled={executingId === wf.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-aurora-blue hover:bg-aurora-blue/5 rounded-lg transition-all font-body disabled:opacity-50"
                       title="Calistir"
                     >
-                      <Play size={12} />
+                      {executingId === wf.id
+                        ? <Loader2 size={12} className="animate-spin" />
+                        : <Play size={12} />}
                       Calistir
                     </button>
                     <div className="flex-1" />
