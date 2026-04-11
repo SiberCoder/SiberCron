@@ -15,6 +15,7 @@ import { z } from 'zod';
 
 import { db } from '../db/database.js';
 import { schedulerService } from '../services/schedulerService.js';
+import { queueService } from '../services/queueService.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -193,6 +194,15 @@ export async function workflowRoutes(
     if (!workflow) {
       reply.code(404);
       return { error: 'Workflow not found' };
+    }
+
+    // Prevent concurrent execution unless explicitly allowed via settings
+    if (!workflow.settings?.allowConcurrent) {
+      const runningExecs = db.listExecutions({ workflowId: id, status: 'running', limit: 1 });
+      if (runningExecs.total > 0) {
+        reply.code(409);
+        return { error: 'Workflow is already running. Wait for it to finish or enable concurrent execution in settings.' };
+      }
     }
 
     const triggerData = (request.body as Record<string, unknown>) ?? {};
@@ -407,8 +417,9 @@ export async function workflowRoutes(
       reply.code(404);
       return { error: 'Workflow not found' };
     }
-    // Remove cron job
+    // Remove cron job and flush pending queue jobs
     schedulerService.onWorkflowDeactivated(id);
+    await queueService.removeJobsByWorkflowId(id);
     io.emit('workflow:deactivated', { workflowId: id, workflow });
     return workflow;
   });

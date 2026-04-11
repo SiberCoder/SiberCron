@@ -24,10 +24,10 @@ import {
   FileJson,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { io, type Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
+import { getSocket, releaseSocket } from '../lib/socket';
 import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsExecutionCompleted } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
-import { SOCKET_URL } from '../lib/config';
 import { toast } from '../store/toastStore';
 
 const STATUS_CONFIG: Record<
@@ -169,9 +169,9 @@ function NodeOutputDetail({ output }: { output: Record<string, unknown>[] }) {
   // AutonomousDev node output
   const conversationHistory = data.conversationHistory as Array<{ role: string; content: string }> | undefined;
   const totalIterations = data.totalIterations as number | undefined;
-  const exitReason = data.output as string | undefined;
+  const exitReason = (data.branch ?? data.output) as string | undefined;
   const instruction = data.instruction as string | undefined;
-  const lastResponse = data.lastResponse as string | undefined;
+  const lastResponse = (data.lastResponse ?? data.output) as string | undefined;
 
   if (conversationHistory) {
     return (
@@ -292,17 +292,11 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
       .catch(() => { /* best-effort */ });
 
     // WebSocket: subscribe to real-time log events from the server
-    const socket = io(SOCKET_URL, { transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: 3, timeout: 10000 });
+    const socket = getSocket();
 
-    socket.on('connect', () => {
-      socket.emit('subscribe:execution', executionId);
-    });
-
-    socket.io.on('reconnect', () => {
-      socket.emit('subscribe:execution', executionId);
-    });
-
-    socket.on('execution:log', (data: { apiExecutionId?: string; level: string; message: string; timestamp?: string; data?: Record<string, unknown> }) => {
+    const onConnect = () => { socket.emit('subscribe:execution', executionId); };
+    const onReconnect = () => { socket.emit('subscribe:execution', executionId); };
+    const onLog = (data: { apiExecutionId?: string; level: string; message: string; timestamp?: string; data?: Record<string, unknown> }) => {
       if (cancelled) return;
       // Accept logs targeted at our execution (room-filtered) or explicitly matched
       if (data.apiExecutionId && data.apiExecutionId !== executionId) return;
@@ -315,11 +309,18 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
           data: data.data,
         },
       ]);
-    });
+    };
+
+    socket.on('connect', onConnect);
+    socket.io.on('reconnect', onReconnect);
+    socket.on('execution:log', onLog);
 
     return () => {
       cancelled = true;
-      socket.disconnect();
+      socket.off('connect', onConnect);
+      socket.io.off('reconnect', onReconnect);
+      socket.off('execution:log', onLog);
+      releaseSocket();
     };
   }, [executionId]);
 
@@ -520,10 +521,10 @@ export default function ExecutionHistoryPage() {
 
   // WebSocket: subscribe to running executions for live updates
   useEffect(() => {
-    const socket = io(SOCKET_URL, { transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: 3, timeout: 10000 });
+    const socket = getSocket();
     socketRef.current = socket;
 
-    socket.on('execution:node:done', (data: WsNodeDone & { executionId?: string }) => {
+    const onNodeDone = (data: WsNodeDone & { executionId?: string }) => {
       if (!data.executionId) return;
       setExecutions((prev) =>
         prev.map((exec) => {
@@ -545,9 +546,9 @@ export default function ExecutionHistoryPage() {
           return updated;
         }),
       );
-    });
+    };
 
-    socket.on('execution:completed', (data: WsExecutionCompleted & { executionId?: string }) => {
+    const onCompleted = (data: WsExecutionCompleted & { executionId?: string }) => {
       if (!data.executionId) return;
       setExecutions((prev) =>
         prev.map((exec) =>
@@ -561,10 +562,15 @@ export default function ExecutionHistoryPage() {
             : exec,
         ),
       );
-    });
+    };
+
+    socket.on('execution:node:done', onNodeDone);
+    socket.on('execution:completed', onCompleted);
 
     return () => {
-      socket.disconnect();
+      socket.off('execution:node:done', onNodeDone);
+      socket.off('execution:completed', onCompleted);
+      releaseSocket();
       socketRef.current = null;
       subscribedIds.current.clear();
     };

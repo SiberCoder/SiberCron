@@ -121,11 +121,11 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
   }
 
   // Build args: use stream-json + verbose for real-time output
-  const args: string[] = [];
+  // --resume SESSION_ID: continue in the same conversation (keeps full context)
+  // --verbose: required for stream-json to work with --print
+  const args: string[] = ['-p', '--verbose', '--output-format', 'stream-json', '--include-partial-messages'];
   if (sessionId) {
-    args.push('--continue', '--resume', sessionId, '-p', '--verbose', '--output-format', 'stream-json', '--include-partial-messages');
-  } else {
-    args.push('-p', '--verbose', '--output-format', 'stream-json', '--include-partial-messages');
+    args.push('--resume', sessionId);
   }
   if (model) args.push('--model', model);
 
@@ -161,9 +161,10 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
         try {
           const event = JSON.parse(line);
 
-          // Extract session ID from system message
-          if (event.type === 'system' && event.sessionId) {
-            detectedSessionId = event.sessionId;
+          // Extract session ID — CLI uses snake_case (session_id)
+          const eventSessionId = event.session_id ?? event.sessionId;
+          if (eventSessionId) {
+            detectedSessionId = eventSessionId;
           }
 
           // Partial assistant message — stream to UI in human-readable format
@@ -560,7 +561,7 @@ export const AutonomousDevNode: INodeType = {
     return [{
       json: {
         branch: exitReason,
-        output: exitReason,
+        output: lastResponse,
         instruction: dynamicInstruction,
         totalIterations: iterationCount,
         lastResponse,

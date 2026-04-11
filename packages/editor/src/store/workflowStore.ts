@@ -30,6 +30,7 @@ export interface WorkflowMeta {
   // Workflow-level execution settings
   timeout: number;
   continueOnFail: boolean;
+  allowConcurrent: boolean;
 }
 
 interface HistoryEntry {
@@ -69,6 +70,10 @@ interface WorkflowState {
   duplicateWorkflow: (id: string) => Promise<IWorkflow>;
   deleteWorkflow: (id: string) => Promise<void>;
 
+  // Version history
+  listVersions: (id: string) => Promise<{ version: number; savedAt: string; label?: string; nodeCount: number; name: string }[]>;
+  restoreVersion: (workflowId: string, version: number) => Promise<void>;
+
   // Import/Export
   exportWorkflow: () => string;
   importWorkflow: (json: string) => void;
@@ -88,6 +93,7 @@ const defaultMeta: WorkflowMeta = {
   webhookSecret: '',
   timeout: 300000,
   continueOnFail: false,
+  allowConcurrent: false,
 };
 
 let nodeCounter = 0;
@@ -327,6 +333,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         webhookSecret: (workflow.settings?.webhookSecret as string) ?? '',
         timeout: (workflow.settings?.timeout as number) ?? 300000,
         continueOnFail: (workflow.settings?.continueOnFail as boolean) ?? false,
+        allowConcurrent: (workflow.settings?.allowConcurrent as boolean) ?? false,
       },
     });
   },
@@ -378,6 +385,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         ...(workflowMeta.webhookSecret ? { webhookSecret: workflowMeta.webhookSecret } : {}),
         timeout: workflowMeta.timeout,
         continueOnFail: workflowMeta.continueOnFail,
+        allowConcurrent: workflowMeta.allowConcurrent,
       },
     };
 
@@ -424,6 +432,35 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   deleteWorkflow: async (id: string) => {
     await apiDelete(`/workflows/${id}`);
+  },
+
+  listVersions: async (id: string) => {
+    const res = await apiGet<{ versions: { version: number; savedAt: string; label?: string; nodeCount: number; name: string }[] }>(`/workflows/${id}/versions`);
+    return res.versions;
+  },
+
+  restoreVersion: async (workflowId: string, version: number) => {
+    const res = await apiPost<{ workflow: IWorkflow }>(`/workflows/${workflowId}/versions/${version}/restore`);
+    const { nodes, edges } = workflowToFlow(res.workflow);
+    set({
+      nodes,
+      edges,
+      isDirty: false,
+      workflowMeta: {
+        id: res.workflow.id,
+        name: res.workflow.name,
+        description: res.workflow.description ?? '',
+        tags: res.workflow.tags ?? [],
+        isActive: res.workflow.isActive,
+        triggerType: res.workflow.triggerType,
+        cronExpression: res.workflow.cronExpression ?? '',
+        webhookPath: res.workflow.webhookPath ?? '',
+        webhookSecret: (res.workflow.settings?.webhookSecret as string) ?? '',
+        timeout: (res.workflow.settings?.timeout as number) ?? 300000,
+        continueOnFail: (res.workflow.settings?.continueOnFail as boolean) ?? false,
+        allowConcurrent: (res.workflow.settings?.allowConcurrent as boolean) ?? false,
+      },
+    });
   },
 
   exportWorkflow: () => {
@@ -508,6 +545,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         webhookSecret: (workflow.settings?.webhookSecret as string) ?? '',
         timeout: (workflow.settings?.timeout as number) ?? 300000,
         continueOnFail: (workflow.settings?.continueOnFail as boolean) ?? false,
+        allowConcurrent: (workflow.settings?.allowConcurrent as boolean) ?? false,
       },
     });
   },

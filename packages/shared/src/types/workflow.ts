@@ -30,6 +30,8 @@ export interface IWorkflowSettings {
   maxRetries?: number;
   retryWaitMs?: number;
   continueOnFail?: boolean;
+  /** Allow multiple instances of this workflow to run concurrently */
+  allowConcurrent?: boolean;
   /** Optional HMAC secret for validating incoming webhook signatures */
   webhookSecret?: string;
 }

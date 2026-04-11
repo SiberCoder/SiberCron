@@ -391,6 +391,14 @@ export class Database {
 
   deleteWorkflow(id: string): boolean {
     const result = this.workflows.delete(id);
+    if (result) {
+      // Cascade: remove version history
+      this.workflowVersions.delete(id);
+      // Cascade: remove all executions for this workflow
+      for (const [execId, exec] of this.executions) {
+        if (exec.workflowId === id) this.executions.delete(execId);
+      }
+    }
     this.save();
     return result;
   }

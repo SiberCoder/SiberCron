@@ -962,6 +962,32 @@ function WorkflowMetaPanel() {
               Bir node hata verdiğinde workflow çalışmaya devam eder.
             </p>
           )}
+
+          {/* Allow concurrent execution toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[11px] text-obsidian-400 font-body">
+              <span>Eş zamanlı çalışmaya izin ver</span>
+            </div>
+            <button
+              onClick={() => updateMeta({ allowConcurrent: !workflowMeta.allowConcurrent })}
+              className={clsx(
+                'relative w-8 h-[18px] rounded-full transition-all duration-300',
+                workflowMeta.allowConcurrent ? 'bg-aurora-blue' : 'bg-white/[0.08]',
+              )}
+            >
+              <span
+                className={clsx(
+                  'absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all duration-300 shadow-sm',
+                  workflowMeta.allowConcurrent ? 'translate-x-[18px]' : 'translate-x-[2px]',
+                )}
+              />
+            </button>
+          </div>
+          {workflowMeta.allowConcurrent && (
+            <p className="text-[10px] text-aurora-blue/70 font-body">
+              Bu workflow aynı anda birden fazla çalışabilir.
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { io, type Socket } from 'socket.io-client';
 import { Terminal, Minimize2, Maximize2, Circle, RefreshCcw, Brain, MessageSquare, AlertTriangle, ChevronRight, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
-import { SOCKET_URL } from '../../lib/config';
+import { getSocket, releaseSocket } from '../../lib/socket';
 import { apiGet } from '../../api/client';
 import type { IExecution } from '@sibercron/shared';
 
@@ -30,7 +29,6 @@ export default function LiveExecutionPanel() {
   const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
   const [activeWorkflowName, setActiveWorkflowName] = useState<string>('');
   const [isConnected, setIsConnected] = useState(false);
-  const socketRef = useRef<Socket | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -60,36 +58,31 @@ export default function LiveExecutionPanel() {
   useEffect(() => {
     if (!activeExecutionId) return;
 
-    const socket = io(SOCKET_URL, { transports: ['polling', 'websocket'], reconnection: true, timeout: 10000 });
-    socketRef.current = socket;
+    const socket = getSocket();
 
-    socket.on('connect', () => {
-      setIsConnected(true);
-      socket.emit('subscribe:execution', activeExecutionId);
-    });
+    socket.emit('subscribe:execution', activeExecutionId);
+    setIsConnected(socket.connected);
 
-    socket.on('disconnect', () => setIsConnected(false));
-
-    socket.on('execution:log', (data: LiveLogEntry & { executionId?: string }) => {
+    const onLog = (data: LiveLogEntry & { executionId?: string }) => {
       setLogs((prev) => {
         const next = [...prev, { timestamp: data.timestamp || new Date().toISOString(), level: data.level, message: data.message, data: data.data }];
         // Keep max 500 entries
         return next.length > 500 ? next.slice(-500) : next;
       });
-    });
+    };
 
-    socket.on('execution:node:start', (data: { nodeName: string }) => {
+    const onNodeStart = (data: { nodeName: string }) => {
       setLogs((prev) => [...prev, { timestamp: new Date().toISOString(), level: 'system', message: `▶ Node "${data.nodeName}" başladı` }]);
-    });
+    };
 
-    socket.on('execution:node:done', (data: { nodeName: string; status: string; durationMs: number; error?: string }) => {
+    const onNodeDone = (data: { nodeName: string; status: string; durationMs: number; error?: string }) => {
       const msg = data.error
         ? `✗ Node "${data.nodeName}" hata: ${data.error}`
         : `✓ Node "${data.nodeName}" tamamlandı (${data.durationMs}ms)`;
       setLogs((prev) => [...prev, { timestamp: new Date().toISOString(), level: data.error ? 'error' : 'system', message: msg }]);
-    });
+    };
 
-    socket.on('execution:completed', (data: { status: string; durationMs: number }) => {
+    const onCompleted = (data: { status: string; durationMs: number }) => {
       setLogs((prev) => [...prev, {
         timestamp: new Date().toISOString(),
         level: data.status === 'success' ? 'system' : 'error',
@@ -100,7 +93,12 @@ export default function LiveExecutionPanel() {
         setActiveExecutionId(null);
         setActiveWorkflowName('');
       }, 30000);
-    });
+    };
+
+    socket.on('execution:log', onLog);
+    socket.on('execution:node:start', onNodeStart);
+    socket.on('execution:node:done', onNodeDone);
+    socket.on('execution:completed', onCompleted);
 
     // Fetch existing logs via API (in case we connected late)
     // API returns { logs: [...], total: N } or plain array
@@ -124,8 +122,11 @@ export default function LiveExecutionPanel() {
 
     return () => {
       clearInterval(logPoll);
-      socket.disconnect();
-      socketRef.current = null;
+      socket.off('execution:log', onLog);
+      socket.off('execution:node:start', onNodeStart);
+      socket.off('execution:node:done', onNodeDone);
+      socket.off('execution:completed', onCompleted);
+      releaseSocket();
       setIsConnected(false);
     };
   }, [activeExecutionId]);
