@@ -91,6 +91,87 @@ interface DashboardStats {
   successRate: string;
 }
 
+interface WorkflowSummary {
+  workflowId: string;
+  workflowName: string;
+  total: number;
+  success: number;
+  error: number;
+  lastAt: string;
+  successRate: number;
+}
+
+function TopWorkflowsPanel({ items }: { items: WorkflowSummary[] }) {
+  const navigate = useNavigate();
+  if (items.length === 0) return null;
+  return (
+    <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04]">
+        <h2 className="text-base font-display font-semibold text-white tracking-tight">
+          En Aktif Workflow'lar
+        </h2>
+        <span className="text-[10px] text-obsidian-500 font-body">Son çalışmaya göre sıralı</span>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-white/[0.03]">
+            <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">Workflow</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Toplam</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Başarı</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Hata</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">Oran</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr
+              key={item.workflowId}
+              onClick={() => navigate(`/workflows/${item.workflowId}`)}
+              className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer group"
+            >
+              <td className="px-5 py-3">
+                <span className="text-sm text-white font-medium group-hover:text-aurora-cyan transition-colors font-body truncate block max-w-[200px]">
+                  {item.workflowName}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <span className="text-xs text-obsidian-300 font-mono">{item.total}</span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <span className="text-xs text-aurora-emerald font-mono">{item.success}</span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <span className="text-xs text-aurora-rose font-mono">{item.error}</span>
+              </td>
+              <td className="px-5 py-3 text-right">
+                <div className="inline-flex items-center gap-2">
+                  <div className="w-16 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div
+                      className={clsx(
+                        'h-full rounded-full transition-all',
+                        item.successRate >= 90 ? 'bg-aurora-emerald' :
+                        item.successRate >= 70 ? 'bg-aurora-amber' : 'bg-aurora-rose',
+                      )}
+                      style={{ width: `${item.successRate}%` }}
+                    />
+                  </div>
+                  <span className={clsx(
+                    'text-[10px] font-mono w-10 text-right',
+                    item.successRate >= 90 ? 'text-aurora-emerald' :
+                    item.successRate >= 70 ? 'text-aurora-amber' : 'text-aurora-rose',
+                  )}>
+                    {item.successRate.toFixed(0)}%
+                  </span>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const STATUS_CONFIG = {
   success: {
     icon: CheckCircle2,
@@ -145,15 +226,17 @@ export default function DashboardPage() {
   });
   const [recentExecutions, setRecentExecutions] = useState<IExecution[]>([]);
   const [trendData, setTrendData] = useState<TrendBucket[]>([]);
+  const [topWorkflows, setTopWorkflows] = useState<WorkflowSummary[]>([]);
 
   const fetchDashboardData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [workflowsRes, executionsRes, trendRes] = await Promise.all([
+      const [workflowsRes, executionsRes, trendRes, summaryRes] = await Promise.all([
         apiGet<PaginatedResponse<IWorkflow>>('/workflows?limit=100'),
         apiGet<PaginatedResponse<IExecution>>('/executions?limit=100'),
         apiGet<{ days: number; data: TrendBucket[] }>('/executions/trend?days=7').catch(() => null),
+        apiGet<Record<string, { lastStatus: string; lastAt: string; total: number; success: number; error: number }>>('/executions/summary').catch(() => null),
       ]);
 
       const workflows = workflowsRes?.data ?? [];
@@ -171,6 +254,25 @@ export default function DashboardPage() {
       setStats({ totalWorkflows, activeWorkflows, totalExecutions, successRate });
       setRecentExecutions(executions.slice(0, 5));
       if (trendRes?.data) setTrendData(trendRes.data);
+
+      // Build top workflows list from summary + workflow names
+      if (summaryRes) {
+        const wfMap = new Map(workflows.map((w) => [w.id, w.name]));
+        const top: WorkflowSummary[] = Object.entries(summaryRes)
+          .map(([id, s]) => ({
+            workflowId: id,
+            workflowName: wfMap.get(id) ?? id,
+            total: s.total,
+            success: s.success,
+            error: s.error,
+            lastAt: s.lastAt,
+            successRate: s.total > 0 ? (s.success / s.total) * 100 : 0,
+          }))
+          .filter((w) => w.total > 0)
+          .sort((a, b) => b.lastAt.localeCompare(a.lastAt))
+          .slice(0, 8);
+        setTopWorkflows(top);
+      }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -337,6 +439,13 @@ export default function DashboardPage() {
       {trendData.length > 0 && (
         <div className="animate-slide-up stagger-4" style={{ animationFillMode: 'both' }}>
           <TrendChart data={trendData} />
+        </div>
+      )}
+
+      {/* Top workflows */}
+      {topWorkflows.length > 0 && (
+        <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>
+          <TopWorkflowsPanel items={topWorkflows} />
         </div>
       )}
 
