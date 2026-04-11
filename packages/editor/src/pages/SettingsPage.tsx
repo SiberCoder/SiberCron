@@ -13,11 +13,15 @@ import {
   EyeOff,
   Trash2,
   RotateCcw,
+  Server,
+  Shield,
+  Activity,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiGet, apiPost } from '../api/client';
 import type { AIProviderConfig } from '@sibercron/shared';
 import AIProviderSelector from '../components/editor/AIProviderSelector';
+import { API_BASE_URL, SOCKET_URL } from '../lib/config';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -161,12 +165,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 /*  Main settings page                                                 */
 /* ------------------------------------------------------------------ */
 
+interface HealthStatus {
+  status: string;
+  queue?: { connected: boolean; provider: string };
+  scheduler?: { activeJobs: number };
+  version?: string;
+  nodeCount?: number;
+  uptime?: number;
+}
+
 export default function SettingsPage() {
   const [config, setConfig] = useState<SetupConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [dirty, setDirty] = useState(false);
+  const [health, setHealth] = useState<HealthStatus | null>(null);
 
   // Load config from server
   const loadConfig = useCallback(async () => {
@@ -209,6 +223,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadConfig();
+    // Also load health status
+    apiGet<HealthStatus>('/health').then(setHealth).catch(() => setHealth(null));
   }, [loadConfig]);
 
   // Save config
@@ -504,6 +520,93 @@ export default function SettingsPage() {
                 className="glass-input text-sm"
               />
             </Field>
+          </div>
+        </Section>
+
+        {/* System Info Section */}
+        <Section
+          icon={Server}
+          title="Sistem Bilgisi"
+          description="API sunucusu durumu ve baglanti bilgileri"
+          defaultOpen={false}
+        >
+          <div className="space-y-3">
+            {/* API endpoint */}
+            <div className="glass-panel rounded-xl p-4 space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Activity size={14} className="text-aurora-cyan" />
+                <span className="text-xs font-semibold text-white">Baglanti</span>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 text-xs font-mono">
+                <div className="flex justify-between items-center">
+                  <span className="text-obsidian-500">API URL</span>
+                  <span className="text-obsidian-300">{API_BASE_URL || '(relative proxy)'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-obsidian-500">Socket URL</span>
+                  <span className="text-obsidian-300">{SOCKET_URL}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Health status */}
+            {health && (
+              <div className="glass-panel rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={clsx(
+                    'w-2 h-2 rounded-full',
+                    health.status === 'ok' ? 'bg-aurora-emerald' : 'bg-red-400',
+                  )} />
+                  <span className="text-xs font-semibold text-white">
+                    Sunucu {health.status === 'ok' ? 'Aktif' : 'Hata'}
+                  </span>
+                  {health.version && (
+                    <span className="text-[10px] text-obsidian-600 ml-auto">v{health.version}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  {health.queue && (
+                    <div className="flex justify-between">
+                      <span className="text-obsidian-500">Queue</span>
+                      <span className={health.queue.connected ? 'text-aurora-emerald' : 'text-obsidian-400'}>
+                        {health.queue.provider} {health.queue.connected ? '✓' : '(direct)'}
+                      </span>
+                    </div>
+                  )}
+                  {health.scheduler && (
+                    <div className="flex justify-between">
+                      <span className="text-obsidian-500">Zamanlanmis</span>
+                      <span className="text-obsidian-300">{health.scheduler.activeJobs} is</span>
+                    </div>
+                  )}
+                  {health.nodeCount !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-obsidian-500">Node Tipi</span>
+                      <span className="text-obsidian-300">{health.nodeCount}</span>
+                    </div>
+                  )}
+                  {health.uptime !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-obsidian-500">Uptime</span>
+                      <span className="text-obsidian-300">{Math.floor(health.uptime / 60)}d</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* API Key info */}
+            <div className="glass-panel rounded-xl p-4 flex items-center gap-3">
+              <Shield size={14} className="text-aurora-amber shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white">API Anahtar Koruması</p>
+                <p className="text-[10px] text-obsidian-500 mt-0.5">
+                  API_KEY ortam degiskenini ayarlayarak tum endpoint'leri koruyabilirsiniz.
+                  Aktifken <code className="font-mono bg-white/[0.04] px-1 rounded">Authorization: Bearer &lt;key&gt;</code> veya{' '}
+                  <code className="font-mono bg-white/[0.04] px-1 rounded">X-API-Key</code> header gerekir.
+                </p>
+              </div>
+            </div>
           </div>
         </Section>
 

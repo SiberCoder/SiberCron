@@ -13,6 +13,7 @@ import WorkflowCanvas from '../components/editor/WorkflowCanvas';
 import NodeConfigPanel from '../components/editor/NodeConfigPanel';
 import NodeOutputViewer from '../components/editor/NodeOutputViewer';
 import CommandPalette from '../components/editor/CommandPalette';
+import VersionHistoryPanel from '../components/editor/VersionHistoryPanel';
 
 interface LocationState {
   template?: {
@@ -203,6 +204,7 @@ export default function WorkflowEditorPage() {
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   const loadWorkflow = useWorkflowStore((s) => s.loadWorkflow);
   const reset = useWorkflowStore((s) => s.reset);
@@ -355,7 +357,7 @@ export default function WorkflowEditorPage() {
     <ReactFlowProvider>
       <div className="h-screen flex flex-col bg-obsidian-950">
         <CommandPalette />
-        <EditorToolbar />
+        <EditorToolbar onVersionHistory={id && id !== 'new' ? () => setShowVersionHistory(true) : undefined} />
         <div className="flex-1 flex overflow-hidden relative">
           {/* Palette toggle */}
           <button
@@ -384,6 +386,15 @@ export default function WorkflowEditorPage() {
           {/* Node output viewer */}
           <NodeOutputViewer />
         </div>
+
+        {/* Version history panel */}
+        {showVersionHistory && id && id !== 'new' && (
+          <VersionHistoryPanel
+            workflowId={id}
+            onRestored={() => { loadWorkflow(id).catch(console.error); }}
+            onClose={() => setShowVersionHistory(false)}
+          />
+        )}
       </div>
     </ReactFlowProvider>
   );

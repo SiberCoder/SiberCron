@@ -86,6 +86,9 @@ export default function NodePalette() {
     grouped[nt.group].push(nt);
   }
 
+  // When searching, auto-expand all groups that have results
+  const isSearching = search.trim().length > 0;
+
   return (
     <div className="w-64 glass-panel border-r border-white/[0.04] h-full flex flex-col">
       {/* Search */}
@@ -102,7 +105,18 @@ export default function NodePalette() {
             placeholder="Search nodes..."
             className="glass-input pl-9 py-2 text-xs"
           />
+          {isSearching && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-obsidian-500 hover:text-white text-[10px] font-mono"
+            >
+              ✕
+            </button>
+          )}
         </div>
+        {isSearching && filtered.length === 0 && (
+          <p className="text-[10px] text-obsidian-600 mt-2 text-center font-body">No nodes found</p>
+        )}
       </div>
 
       {/* Groups */}
@@ -111,13 +125,14 @@ export default function NodePalette() {
           const items = grouped[group];
           if (!items || items.length === 0) return null;
           const groupInfo = NODE_GROUPS[group];
-          const isOpen = openGroups.has(group);
+          // Expand all groups when searching, otherwise use user preference
+          const isOpen = isSearching || openGroups.has(group);
           const GroupIcon = getNodeIcon(groupInfo.icon);
 
           return (
             <div key={group}>
               <button
-                onClick={() => toggleGroup(group)}
+                onClick={() => !isSearching && toggleGroup(group)}
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider hover:text-white transition-colors font-body"
               >
                 {isOpen ? (

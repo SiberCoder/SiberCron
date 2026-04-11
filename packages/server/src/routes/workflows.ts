@@ -353,4 +353,45 @@ export async function workflowRoutes(
     io.emit('workflow:deactivated', { workflowId: id, workflow });
     return workflow;
   });
+
+  // ── Version History ────────────────────────────────────────────────────
+
+  // GET /:id/versions - list version snapshots (newest first, max 20)
+  fastify.get('/:id/versions', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const workflow = db.getWorkflow(id);
+    if (!workflow) {
+      reply.code(404);
+      return { error: 'Workflow not found' };
+    }
+    const versions = db.getWorkflowVersions(id).map((v) => ({
+      version: v.version,
+      workflowId: v.workflowId,
+      savedAt: v.savedAt,
+      label: v.label,
+      nodeCount: v.snapshot.nodes?.length ?? 0,
+      name: v.snapshot.name,
+    }));
+    return { versions };
+  });
+
+  // POST /:id/versions/:version/restore - restore a snapshot
+  fastify.post('/:id/versions/:version/restore', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id, version } = request.params as { id: string; version: string };
+    const versionNum = parseInt(version, 10);
+    if (isNaN(versionNum)) {
+      reply.code(400);
+      return { error: 'Invalid version number' };
+    }
+    const restored = db.restoreWorkflowVersion(id, versionNum);
+    if (!restored) {
+      reply.code(404);
+      return { error: 'Version not found' };
+    }
+    // Notify scheduler if it was active
+    if (restored.isActive && restored.triggerType === 'cron' && restored.cronExpression) {
+      schedulerService.onWorkflowUpdated(restored);
+    }
+    return { workflow: restored, message: `Restored to version ${versionNum}` };
+  });
 }

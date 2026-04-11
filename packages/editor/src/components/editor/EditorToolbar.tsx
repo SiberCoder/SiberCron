@@ -12,13 +12,18 @@ import {
   Upload,
   Undo2,
   Redo2,
+  History,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useExecutionStore } from '../../store/executionStore';
 import { apiPost, apiDelete } from '../../api/client';
 
-export default function EditorToolbar() {
+interface EditorToolbarProps {
+  onVersionHistory?: () => void;
+}
+
+export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps = {}) {
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -298,6 +303,17 @@ export default function EditorToolbar() {
       </div>
 
       <div className="w-px h-6 bg-white/[0.06]" />
+
+      {/* Version history */}
+      {meta.id && onVersionHistory && (
+        <button
+          onClick={onVersionHistory}
+          className="btn-ghost text-xs text-obsidian-500 hover:text-white"
+          title="Versiyon Geçmişi"
+        >
+          <History size={14} />
+        </button>
+      )}
 
       {/* Delete button */}
       {meta.id && (

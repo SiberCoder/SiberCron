@@ -103,6 +103,16 @@ export interface ICommandRegistration {
   updatedAt: string;
 }
 
+const MAX_VERSIONS_PER_WORKFLOW = 20;
+
+export interface IWorkflowVersion {
+  version: number;          // 1-based, increments on each save
+  workflowId: string;
+  snapshot: IWorkflow;      // full snapshot at time of save
+  savedAt: string;
+  label?: string;           // optional user label
+}
+
 export class Database {
   private workflows: Map<string, IWorkflow> = new Map();
   private executions: Map<string, IExecution> = new Map();
@@ -110,6 +120,8 @@ export class Database {
   private socialAccounts: Map<string, ISocialAccount> = new Map();
   private setupConfig: Record<string, unknown> = {};
   private commandRegistrations: Map<string, ICommandRegistration> = new Map();
+  /** workflow version history: workflowId → sorted array of versions (newest last) */
+  private workflowVersions: Map<string, IWorkflowVersion[]> = new Map();
 
   // ── Workflow CRUD ────────────────────────────────────────────────────
 
@@ -175,6 +187,9 @@ export class Database {
     const existing = this.workflows.get(id);
     if (!existing) return null;
 
+    // Auto-snapshot the current state before overwriting
+    this._snapshotWorkflow(existing);
+
     const updated: IWorkflow = {
       ...existing,
       ...data,
@@ -188,6 +203,48 @@ export class Database {
     this.workflows.set(id, updated);
     this.save();
     return updated;
+  }
+
+  private _snapshotWorkflow(workflow: IWorkflow): void {
+    const existing = this.workflowVersions.get(workflow.id) ?? [];
+    const nextVersion = (existing[existing.length - 1]?.version ?? 0) + 1;
+    const snapshot: IWorkflowVersion = {
+      version: nextVersion,
+      workflowId: workflow.id,
+      snapshot: JSON.parse(JSON.stringify(workflow)) as IWorkflow,
+      savedAt: new Date().toISOString(),
+    };
+    const updated = [...existing, snapshot];
+    // Keep only last MAX_VERSIONS_PER_WORKFLOW versions
+    if (updated.length > MAX_VERSIONS_PER_WORKFLOW) {
+      updated.splice(0, updated.length - MAX_VERSIONS_PER_WORKFLOW);
+    }
+    this.workflowVersions.set(workflow.id, updated);
+  }
+
+  /** Returns versions newest-first */
+  getWorkflowVersions(workflowId: string): IWorkflowVersion[] {
+    const versions = this.workflowVersions.get(workflowId) ?? [];
+    return [...versions].reverse();
+  }
+
+  restoreWorkflowVersion(workflowId: string, version: number): IWorkflow | null {
+    const versions = this.workflowVersions.get(workflowId) ?? [];
+    const target = versions.find((v) => v.version === version);
+    if (!target) return null;
+
+    // Snapshot current before restoring
+    const current = this.workflows.get(workflowId);
+    if (current) this._snapshotWorkflow(current);
+
+    // Restore, but update the updatedAt
+    const restored: IWorkflow = {
+      ...target.snapshot,
+      updatedAt: new Date().toISOString(),
+    };
+    this.workflows.set(workflowId, restored);
+    this.save();
+    return restored;
   }
 
   deleteWorkflow(id: string): boolean {
@@ -482,6 +539,7 @@ export class Database {
         socialAccounts: Object.fromEntries(this.socialAccounts),
         commandRegistrations: Object.fromEntries(this.commandRegistrations),
         setupConfig: this.setupConfig,
+        workflowVersions: Object.fromEntries(this.workflowVersions),
       };
       // Write to a temp file then rename for atomic replacement.
       // Prevents a corrupt data file if the process dies mid-write.
@@ -504,6 +562,11 @@ export class Database {
       if (data.socialAccounts) this.socialAccounts = new Map(Object.entries(data.socialAccounts));
       if (data.commandRegistrations) this.commandRegistrations = new Map(Object.entries(data.commandRegistrations));
       if (data.setupConfig) this.setupConfig = data.setupConfig;
+      if (data.workflowVersions) {
+        this.workflowVersions = new Map(
+          Object.entries(data.workflowVersions as Record<string, IWorkflowVersion[]>),
+        );
+      }
       console.log('[DB] Loaded from', DATA_FILE);
     } catch (err) {
       console.error('[DB] Load error:', (err as Error).message);
