@@ -153,14 +153,14 @@ function getPlatform(key: string) {
 function StatusBadge({ status }: { status: SocialAccount['status'] }) {
   const map = {
     connected: {
-      label: 'Bagli',
+      label: 'Bağlı',
       dot: 'bg-aurora-emerald',
       text: 'text-aurora-emerald',
       bg: 'bg-aurora-emerald/10',
       icon: <Wifi size={12} />,
     },
     disconnected: {
-      label: 'Baglanti Kesildi',
+      label: 'Bağlantı Kesildi',
       dot: 'bg-aurora-rose',
       text: 'text-aurora-rose',
       bg: 'bg-aurora-rose/10',
@@ -229,7 +229,7 @@ function AccountCard({
             <p className="text-lg font-display font-bold text-white">
               {account.stats.messagesSent}
             </p>
-            <p className="text-[10px] text-obsidian-500 font-body">Gonderilen</p>
+            <p className="text-[10px] text-obsidian-500 font-body">Gönderilen</p>
           </div>
           <div className="glass-card rounded-xl p-3 text-center">
             <p className="text-lg font-display font-bold text-white">
@@ -309,7 +309,7 @@ function SettingsModal({
           <div className="flex items-center gap-2.5">
             <span className={p.accent}>{p.icon}</span>
             <h2 className="text-[15px] font-display font-bold text-white">
-              {p.name} Ayarlari
+              {p.name} Ayarları
             </h2>
           </div>
           <button
@@ -422,7 +422,7 @@ function SettingsModal({
                 <MaskedInput value={cfg.signingSecret || ''} onChange={(v) => update('signingSecret', v)} />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Varsayilan Kanal</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">Varsayılan Kanal</label>
                 <input value={cfg.defaultChannel || ''} onChange={(e) => update('defaultChannel', e.target.value)} placeholder="#general" className="glass-input" />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
@@ -435,7 +435,7 @@ function SettingsModal({
 
         <div className="flex justify-end gap-3 px-6 py-5 border-t border-white/[0.04]">
           <button onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-obsidian-400 hover:text-white transition-colors font-body">
-            Iptal
+            İptal
           </button>
           <button onClick={() => onSave(cfg)} className="btn-aurora text-sm">
             Kaydet
@@ -568,10 +568,10 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
         {selected && (
           <div className="flex justify-end gap-3 px-6 py-5 border-t border-white/[0.04]">
             <button onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-obsidian-400 hover:text-white transition-colors font-body">
-              Iptal
+              İptal
             </button>
             <button onClick={handleConnect} disabled={saving} className="btn-aurora text-sm disabled:opacity-50">
-              {saving ? 'Baglaniyor...' : 'Baglan'}
+              {saving ? 'Bağlanıyor...' : 'Bağlan'}
             </button>
           </div>
         )}
@@ -634,7 +634,7 @@ export default function SocialAccountsPage() {
             </span>
           </div>
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-            Bagli Hesaplar
+            Bağlı Hesaplar
           </h1>
           <p className="text-sm text-obsidian-400 mt-1.5 font-body">
             Mesajlasma platformlarini yonetin

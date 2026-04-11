@@ -87,8 +87,15 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
       'Access-Control-Allow-Origin': '*',
     });
 
+    let aborted = false;
+    const onClose = () => { aborted = true; };
+    reply.raw.on('close', onClose);
+
     const sendEvent = (data: Record<string, unknown>) => {
-      reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (aborted) return;
+      try {
+        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch { /* client disconnected */ }
     };
 
     try {
@@ -100,19 +107,24 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
         (event) => sendEvent(event),
       );
 
-      // Stream content in chunks for a typing effect
-      const content = response.content;
-      const chunkSize = 12;
-      for (let i = 0; i < content.length; i += chunkSize) {
-        sendEvent({ type: 'content', text: content.slice(i, i + chunkSize) });
-      }
+      if (!aborted) {
+        // Stream content in chunks for a typing effect
+        const content = response.content;
+        const chunkSize = 12;
+        for (let i = 0; i < content.length; i += chunkSize) {
+          if (aborted) break;
+          sendEvent({ type: 'content', text: content.slice(i, i + chunkSize) });
+        }
 
-      // Send the complete message at the end
-      sendEvent({ type: 'done', message: response });
+        // Send the complete message at the end
+        sendEvent({ type: 'done', message: response });
+      }
     } catch (err) {
       sendEvent({ type: 'error', error: (err as Error).message });
+    } finally {
+      reply.raw.removeListener('close', onClose);
     }
 
-    reply.raw.end();
+    if (!aborted) reply.raw.end();
   });
 }

@@ -50,14 +50,14 @@ const STATUS_CONFIG: Record<
   },
   running: {
     icon: AlertCircle,
-    label: 'Calisiyor',
+    label: 'Çalışıyor',
     dot: 'bg-aurora-blue animate-pulse',
     text: 'text-aurora-blue',
     bg: 'bg-aurora-blue/10',
   },
   success: {
     icon: CheckCircle2,
-    label: 'Basarili',
+    label: 'Başarılı',
     dot: 'bg-aurora-emerald',
     text: 'text-aurora-emerald',
     bg: 'bg-aurora-emerald/10',
@@ -71,7 +71,7 @@ const STATUS_CONFIG: Record<
   },
   cancelled: {
     icon: Ban,
-    label: 'Iptal',
+    label: 'İptal',
     dot: 'bg-aurora-amber',
     text: 'text-aurora-amber',
     bg: 'bg-aurora-amber/10',
@@ -221,7 +221,7 @@ function NodeOutputDetail({ output }: { output: Record<string, unknown>[] }) {
           <div className="flex items-center gap-2 mb-3">
             <MessageSquare size={12} className="text-aurora-violet" />
             <span className="text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider">
-              Sohbet Gecmisi ({conversationHistory.length} mesaj)
+              Sohbet Geçmişi ({conversationHistory.length} mesaj)
             </span>
           </div>
           <ConversationHistory history={conversationHistory} />
@@ -407,7 +407,7 @@ function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning:
         )}
         <span className="text-sm text-white font-medium flex-1 font-body">{nr.nodeName}</span>
         <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-md', nrStatus.bg, nrStatus.text)}>
-          {isNodeRunning ? 'Calisiyor' : nr.status}
+          {isNodeRunning ? 'Çalışıyor' : nr.status}
         </span>
         {nr.durationMs != null && (
           <span className="text-[10px] text-obsidian-600 font-mono">{formatDuration(nr.durationMs)}</span>
@@ -594,6 +594,22 @@ export default function ExecutionHistoryPage() {
     load();
   }, []);
 
+  // Auto-expand a specific execution when ?id=<executionId> is in the URL
+  useEffect(() => {
+    if (executions.length === 0) return;
+    const params = new URLSearchParams(location.search);
+    const targetId = params.get('id');
+    if (targetId) {
+      setExpandedId(targetId);
+      // Jump to the page containing the target execution
+      const idx = filteredExecutions.findIndex((e) => e.id === targetId);
+      if (idx >= 0) {
+        setPage(Math.floor(idx / pageSize) + 1);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [executions.length]);
+
   const handleDeleteExecution = async (id: string) => {
     try {
       await apiDelete(`/executions/${id}`);
@@ -703,14 +719,14 @@ export default function ExecutionHistoryPage() {
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-aurora-blue animate-glow-pulse" />
             <span className="text-[11px] font-semibold text-aurora-blue tracking-widest uppercase font-body">
-              Gecmis
+              Geçmiş
             </span>
           </div>
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-            Calistirma Gecmisi
+            Çalıştırma Geçmişi
           </h1>
           <p className="text-sm text-obsidian-400 mt-1.5 font-body">
-            Workflow calistirma sonuclarini ve detaylarini goruntuleyin
+            Workflow çalıştırma sonuçlarını ve detaylarını görüntüleyin
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -759,27 +775,27 @@ export default function ExecutionHistoryPage() {
                   onClick={() => handleCleanup('completed')}
                   className="w-full text-left px-3 py-2 text-xs text-obsidian-300 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors font-body"
                 >
-                  Tamamlananlari Sil
-                  <span className="block text-[10px] text-obsidian-500">Basarili ve hatali olanlari siler</span>
+                  Tamamlananları Sil
+                  <span className="block text-[10px] text-obsidian-500">Başarılı ve hatalı olanları siler</span>
                 </button>
                 <button
                   onClick={() => handleCleanup('stale')}
                   className="w-full text-left px-3 py-2 text-xs text-obsidian-300 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors font-body"
                 >
-                  Takili Kalanlari Duzelt
-                  <span className="block text-[10px] text-obsidian-500">30dk+ running olanlari hata olarak isaretle</span>
+                  Takılı Kalanları Düzelt
+                  <span className="block text-[10px] text-obsidian-500">30dk+ running olanları hata olarak işaretle</span>
                 </button>
                 <div className="aurora-divider my-1" />
                 <button
                   onClick={() => {
-                    if (window.confirm('Calismayan tum kayitlar silinecek. Emin misiniz?')) {
+                    if (window.confirm('Çalışmayan tüm kayıtlar silinecek. Emin misiniz?')) {
                       handleCleanup('all');
                     }
                   }}
                   className="w-full text-left px-3 py-2 text-xs text-aurora-rose hover:bg-aurora-rose/5 rounded-lg transition-colors font-body"
                 >
-                  Tumunu Sil
-                  <span className="block text-[10px] text-aurora-rose/60">Calisanlar haric hepsini siler</span>
+                  Tümünü Sil
+                  <span className="block text-[10px] text-aurora-rose/60">Çalışanlar hariç hepsini siler</span>
                 </button>
               </div>
             </div>
@@ -997,7 +1013,7 @@ export default function ExecutionHistoryPage() {
                         setDeleteConfirmId(exec.id);
                       }}
                       className="ml-1 p-1.5 rounded-lg text-obsidian-600 hover:text-aurora-rose hover:bg-aurora-rose/5 transition-all"
-                      title="Calistirmayi sil"
+                      title="Çalıştırmayı sil"
                     >
                       <Trash2 size={12} />
                     </button>
@@ -1084,12 +1100,12 @@ export default function ExecutionHistoryPage() {
                 <AlertTriangle size={20} className="text-aurora-rose" />
               </div>
               <div>
-                <h3 className="text-sm font-display font-semibold text-white">Calistirmayi Sil</h3>
-                <p className="text-xs text-obsidian-400 font-body">Bu islem geri alinamaz</p>
+                <h3 className="text-sm font-display font-semibold text-white">Çalıştırmayı Sil</h3>
+                <p className="text-xs text-obsidian-400 font-body">Bu işlem geri alınamaz</p>
               </div>
             </div>
             <p className="text-xs text-obsidian-300 font-body">
-              Bu calistirma kaydini silmek istediginizden emin misiniz?
+              Bu çalıştırma kaydını silmek istediğinizden emin misiniz?
             </p>
             <div className="flex items-center gap-3 pt-2">
               <button

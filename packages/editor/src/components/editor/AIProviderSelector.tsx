@@ -128,7 +128,7 @@ function OAuthSessionFields({
 
       // Popup pencere ac
       window.open(res.authUrl, 'sibercron_oauth', 'width=700,height=700,left=200,top=100');
-      onTestResult({ ok: true, msg: 'Acilan pencerede giris yapin. Otomatik baglanacak...' });
+      onTestResult({ ok: true, msg: 'Açılan pencerede giriş yapın. Otomatik bağlanacak...' });
 
       // Polling baslat - server tamamlaninca yakalayacagiz
       // Server pollUrl'de /api/v1 prefix'i dondurur, apiGet zaten ekler — strip edelim
@@ -143,7 +143,7 @@ function OAuthSessionFields({
             pollIntervalRef.current = null;
             setStatus('success');
             setUserCode(null);
-            onTestResult({ ok: true, msg: data.message || 'Basariyla baglandi!' });
+            onTestResult({ ok: true, msg: data.message || 'Başarıyla bağlandı!' });
             onUpdate({ sessionToken: 'oauth-connected' });
             onEnable();
           } else if (data.status === 'failed') {
@@ -151,7 +151,7 @@ function OAuthSessionFields({
             pollIntervalRef.current = null;
             setStatus('idle');
             setUserCode(null);
-            onTestResult({ ok: false, msg: data.message || 'Baglanti basarisiz' });
+            onTestResult({ ok: false, msg: data.message || 'Bağlantı başarısız' });
           }
         } catch { /* continue polling */ }
       }, 2000);
@@ -164,7 +164,7 @@ function OAuthSessionFields({
         pollTimeoutRef.current = null;
         setStatus((prev) => {
           if (prev === 'connecting') {
-            onTestResult({ ok: false, msg: 'Baglanti suresi doldu. Tekrar deneyin.' });
+            onTestResult({ ok: false, msg: 'Bağlantı süresi doldu. Tekrar deneyin.' });
             return 'idle';
           }
           return prev;
@@ -172,7 +172,7 @@ function OAuthSessionFields({
       }, 300000);
     } catch (e: any) {
       setStatus('idle');
-      onTestResult({ ok: false, msg: e.message || 'OAuth baslatilamadi' });
+      onTestResult({ ok: false, msg: e.message || 'OAuth başlatılamadı' });
     }
   };
 
@@ -181,11 +181,11 @@ function OAuthSessionFields({
       {status === 'idle' && (
         <>
           <p className="text-xs text-obsidian-400 font-body">
-            Tarayicida giris yapmaniz yeterli. API anahtari otomatik alinacak.
+            Tarayıcıda giriş yapmanız yeterli. API anahtarı otomatik alınacak.
           </p>
           <button type="button" className="btn-aurora text-xs flex items-center gap-2" onClick={startOAuth}>
             <Globe size={14} />
-            Tarayicida Giris Yap
+            Tarayıcıda Giriş Yap
           </button>
         </>
       )}
@@ -194,19 +194,19 @@ function OAuthSessionFields({
         <div className="glass-card rounded-xl p-4 border border-aurora-cyan/20 space-y-3">
           <div className="flex items-center gap-2">
             <Loader2 size={16} className="animate-spin text-aurora-cyan" />
-            <p className="text-sm text-aurora-cyan font-body font-medium">Baglanti bekleniyor...</p>
+            <p className="text-sm text-aurora-cyan font-body font-medium">Bağlantı bekleniyor...</p>
           </div>
           <p className="text-xs text-obsidian-400 font-body">
-            Acilan pencerede giris yapip izin verin. Otomatik baglanacak.
+            Açılan pencerede giriş yapıp izin verin. Otomatik bağlanacak.
           </p>
           {userCode && (
             <div className="bg-white/[0.06] rounded-lg p-3 text-center">
-              <p className="text-[10px] text-obsidian-500 font-body mb-1">Bu kodu giris sayfasina girin:</p>
+              <p className="text-[10px] text-obsidian-500 font-body mb-1">Bu kodu giriş sayfasına girin:</p>
               <p className="text-2xl font-mono font-bold tracking-widest text-white">{userCode}</p>
             </div>
           )}
           <button type="button" className="btn-ghost text-xs" onClick={() => { setStatus('idle'); setUserCode(null); }}>
-            Iptal
+            İptal
           </button>
         </div>
       )}
@@ -215,7 +215,7 @@ function OAuthSessionFields({
         <div className="glass-card rounded-xl p-3 border border-aurora-emerald/20">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-aurora-emerald" />
-            <p className="text-sm text-aurora-emerald font-body font-medium">Basariyla baglandi!</p>
+            <p className="text-sm text-aurora-emerald font-body font-medium">Başarıyla bağlandı!</p>
           </div>
         </div>
       )}
@@ -331,7 +331,7 @@ function CliDelegationFields({
             <p className="text-[10px] text-obsidian-500 font-body">Versiyon: {config.config.cliVersion}</p>
           )}
           <p className="text-[10px] text-obsidian-500 font-body">
-            Oturum: {config.config.cliAuthenticated ? '✓ Acik' : '✗ Kapali - "claude" komutuyla giris yapin'}
+            Oturum: {config.config.cliAuthenticated ? '✓ Açık' : '✗ Kapalı - "claude" komutuyla giriş yapın'}
           </p>
         </div>
       )}
@@ -344,10 +344,10 @@ function CliDelegationFields({
 /* ------------------------------------------------------------------ */
 
 const AUTH_LABELS: Record<AIAuthMethod, string> = {
-  api_key: 'API Anahtari',
-  oauth_session: 'Tarayici Oturumu',
+  api_key: 'API Anahtarı',
+  oauth_session: 'Tarayıcı Oturumu',
   local: 'Yerel Model',
-  custom_endpoint: 'Ozel Endpoint',
+  custom_endpoint: 'Özel Endpoint',
   cli_delegation: 'Claude CLI',
   env_variable: 'Ortam Degiskeni',
   setup_token: 'Setup Token',
@@ -430,7 +430,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
         update({ enabled: true });
       }
     } catch (e: any) {
-      setTestResult({ ok: false, msg: e.message || 'Baglanti hatasi' });
+      setTestResult({ ok: false, msg: e.message || 'Bağlantı hatası' });
     } finally {
       setTesting(false);
     }
@@ -519,12 +519,12 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
             </h3>
             {currentConfig.enabled && (
               <span className="badge text-[10px] bg-aurora-emerald/10 text-aurora-emerald">
-                <CheckCircle2 size={10} /> Bagli
+                <CheckCircle2 size={10} /> Bağlı
               </span>
             )}
             {currentConfig.isDefault && (
               <span className="badge text-[10px] bg-aurora-cyan/10 text-aurora-cyan">
-                Varsayilan
+                Varsayılan
               </span>
             )}
           </div>
@@ -548,7 +548,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {meta.authMethods.length > 1 && (
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                Baglanti Yontemi
+                Bağlantı Yöntemi
               </label>
               <div className="flex gap-2">
                 {meta.authMethods.map((m) => (
@@ -714,7 +714,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {allModels.length > 0 && (
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                Varsayilan Model
+                Varsayılan Model
               </label>
               <select
                 value={currentConfig.config.defaultModel || ''}
@@ -763,7 +763,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 onChange={(e) => update({ isDefault: e.target.checked })}
                 className="accent-aurora-cyan w-3.5 h-3.5 rounded"
               />
-              Varsayilan saglayici
+              Varsayılan sağlayıcı
             </label>
           </div>
 

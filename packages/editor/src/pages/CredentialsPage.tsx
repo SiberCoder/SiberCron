@@ -117,9 +117,9 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     fields: [
       { key: 'host', label: 'SMTP Host', placeholder: 'smtp.gmail.com', required: true },
       { key: 'port', label: 'Port', placeholder: '587', type: 'number', required: true },
-      { key: 'user', label: 'Kullanici Adi', placeholder: 'you@example.com', required: true },
-      { key: 'password', label: 'Sifre', secret: true, required: true },
-      { key: 'from', label: 'Gonderen', placeholder: 'YourApp <you@example.com>' },
+      { key: 'user', label: 'Kullanıcı Adı', placeholder: 'you@example.com', required: true },
+      { key: 'password', label: 'Şifre', secret: true, required: true },
+      { key: 'from', label: 'Gönderen', placeholder: 'YourApp <you@example.com>' },
     ],
   },
   // ── Database / Storage ────────────────────────────────────────────────────────
@@ -335,7 +335,7 @@ function CreateCredentialModal({ onClose, onSaved }: ModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.04] shrink-0">
           <h3 className="text-[15px] font-display font-semibold text-white">
-            {step === 'type' ? 'Kimlik Bilgisi Tipi Sec' : selectedTypeDef?.displayName ?? 'Kimlik Bilgisi Ekle'}
+            {step === 'type' ? 'Kimlik Bilgisi Tipi Seç' : selectedTypeDef?.displayName ?? 'Kimlik Bilgisi Ekle'}
           </h3>
           <button
             onClick={onClose}

@@ -201,8 +201,9 @@ export async function workflowRoutes(
   // DELETE /:id - Delete workflow
   fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    // Remove from scheduler before deleting
+    // Remove from scheduler and queue before deleting
     schedulerService.onWorkflowDeactivated(id);
+    await queueService.removeJobsByWorkflowId(id);
     const deleted = db.deleteWorkflow(id);
     if (!deleted) {
       reply.code(404);
@@ -329,14 +330,11 @@ export async function workflowRoutes(
         finishedAt: new Date().toISOString(),
       });
     }).finally(() => {
-      // Clean up the ID mapping to prevent memory leak
+      // Clean up ALL entries for this executionId to prevent memory leak
       const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
       if (idMap) {
         for (const [engineId, apiId] of idMap) {
-          if (apiId === executionId) {
-            idMap.delete(engineId);
-            break;
-          }
+          if (apiId === executionId) idMap.delete(engineId);
         }
       }
     });

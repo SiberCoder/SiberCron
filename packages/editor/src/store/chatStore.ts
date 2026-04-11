@@ -122,6 +122,42 @@ export const useChatStore = create<ChatState>((set, get) => ({
         });
 
         if (!response.ok) {
+          // Fallback to standard POST if stream endpoint is unavailable
+          if (response.status === 404 || response.status === 405) {
+            console.warn('[Chat] Stream endpoint unavailable, falling back to standard POST');
+            try {
+              const data = await apiPost<ChatResponse>('/chat', {
+                message: content,
+                conversationId,
+                ...(settings || {}),
+              });
+              const aiMessage = data.message;
+              const isNoProvider = aiMessage.metadata?.provider === 'none';
+              set((state) => ({
+                messages: [...state.messages.filter((m) => m.id !== userMsg.id), userMsg, aiMessage],
+                isLoading: false,
+                isSending: false,
+                streamPhase: 'idle' as const,
+                streamingContent: '',
+                streamingToolCalls: [],
+                providerStatus: isNoProvider ? 'no_provider' as const : 'connected' as const,
+                currentModel: aiMessage.metadata?.model || state.currentModel,
+                currentProvider: aiMessage.metadata?.provider || state.currentProvider,
+              }));
+            } catch (fallbackErr) {
+              set((state) => ({
+                messages: state.messages.filter((m) => m.id !== userMsg.id),
+                isLoading: false,
+                isSending: false,
+                error: (fallbackErr as Error).message,
+                providerStatus: 'error' as const,
+                streamPhase: 'idle' as const,
+                streamingContent: '',
+                streamingToolCalls: [],
+              }));
+            }
+            return;
+          }
           const text = await response.text();
           throw new Error(text || response.statusText);
         }

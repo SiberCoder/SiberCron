@@ -38,14 +38,14 @@ function ToolCallCard({ tool }: { tool: ToolCallInfo }) {
   const [expanded, setExpanded] = useState(false);
 
   const TOOL_LABELS: Record<string, string> = {
-    list_workflows: "Workflow'lari listeledi",
-    execute_workflow: "Workflow calistirildi",
-    create_workflow: 'Workflow olusturuldu',
-    get_execution_history: 'Calistirma gecmisi getirildi',
-    send_message: 'Mesaj gonderildi',
+    list_workflows: "Workflow'ları listeledi",
+    execute_workflow: 'Workflow çalıştırıldı',
+    create_workflow: 'Workflow oluşturuldu',
+    get_execution_history: 'Çalıştırma geçmişi getirildi',
+    send_message: 'Mesaj gönderildi',
     get_system_status: 'Sistem durumu getirildi',
-    manage_account: 'Hesap islemi yapildi',
-    activate_workflow: "Workflow durumu degistirildi",
+    manage_account: 'Hesap işlemi yapıldı',
+    activate_workflow: 'Workflow durumu değiştirildi',
     delete_workflow: "Workflow silindi",
   };
 
@@ -340,7 +340,7 @@ function ContextDrawer({
         {/* Executions */}
         <div className="mb-4">
           <h4 className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
-            <Play size={12} /> Calistirmalar
+            <Play size={12} /> Çalıştırmalar
           </h4>
           <div className="bg-white/[0.03] rounded-lg p-3 text-xs text-slate-300 grid grid-cols-2 gap-2">
             <div>
@@ -348,15 +348,15 @@ function ContextDrawer({
               <div className="text-white font-medium">{state.executions.total}</div>
             </div>
             <div>
-              <span className="text-slate-500">Basarili</span>
+              <span className="text-slate-500">Başarılı</span>
               <div className="text-emerald-400 font-medium">{state.executions.success}</div>
             </div>
             <div>
-              <span className="text-slate-500">Basarisiz</span>
+              <span className="text-slate-500">Başarısız</span>
               <div className="text-red-400 font-medium">{state.executions.failed}</div>
             </div>
             <div>
-              <span className="text-slate-500">Calisiyor</span>
+              <span className="text-slate-500">Çalışıyor</span>
               <div className="text-sky-400 font-medium">{state.executions.running}</div>
             </div>
           </div>
@@ -365,7 +365,7 @@ function ContextDrawer({
         {/* Accounts */}
         <div className="mb-4">
           <h4 className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
-            <Users size={12} /> Bagli Hesaplar
+            <Users size={12} /> Bağlı Hesaplar
           </h4>
           {state.accounts.length === 0 ? (
             <p className="text-[11px] text-slate-600 px-1">Henuz bagli hesap yok</p>
@@ -467,7 +467,7 @@ function ChatSettingsPanel({
       <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
         <h3 className="text-sm font-semibold text-white flex items-center gap-2">
           <Settings2 size={14} className="text-purple-400" />
-          Chat Ayarlari
+          Chat Ayarları
         </h3>
         <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
           <X size={14} />
@@ -529,9 +529,9 @@ function ChatSettingsPanel({
           </div>
           <div className="flex gap-1">
             {([
-              { value: 'normal', label: 'Normal', desc: 'Kisa ve oz' },
-              { value: 'detailed', label: 'Detayli', desc: 'Aciklamali' },
-              { value: 'developer', label: 'Gelistirici', desc: 'Teknik detay' },
+              { value: 'normal', label: 'Normal', desc: 'Kısa ve öz' },
+              { value: 'detailed', label: 'Detaylı', desc: 'Açıklamalı' },
+              { value: 'developer', label: 'Geliştirici', desc: 'Teknik detay' },
             ] as const).map(opt => (
               <button
                 key={opt.value}
@@ -647,10 +647,10 @@ function ChatSettingsPanel({
 
 function WelcomeState({ onSuggestion }: { onSuggestion: (text: string) => void }) {
   const suggestions = [
-    { text: 'Sistem durumunu goster', icon: Activity },
-    { text: 'Yeni bir workflow olustur', icon: Plus },
-    { text: 'Son calistirmalari listele', icon: Play },
-    { text: 'Bagli hesaplari goster', icon: Users },
+    { text: 'Sistem durumunu göster', icon: Activity },
+    { text: 'Yeni bir workflow oluştur', icon: Plus },
+    { text: 'Son çalıştırmaları listele', icon: Play },
+    { text: 'Bağlı hesapları göster', icon: Users },
   ];
 
   return (
@@ -805,7 +805,7 @@ export default function ChatPage() {
   const statusText = () => {
     switch (providerStatus) {
       case 'connected':
-        return 'Bagli';
+        return 'Bağlı';
       case 'no_provider':
         return 'Saglayici yok';
       case 'error':
@@ -892,7 +892,7 @@ export default function ChatPage() {
             <button
               onClick={clearHistory}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-              title="Gecmisi temizle"
+              title="Geçmişi temizle"
             >
               <Trash2 size={14} />
             </button>

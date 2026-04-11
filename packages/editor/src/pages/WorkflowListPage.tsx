@@ -806,7 +806,7 @@ export default function WorkflowListPage() {
                         try {
                           const exec = await apiPost<{ id: string }>(`/workflows/${wf.id}/execute`, {});
                           toast.success(`"${wf.name}" başlatıldı`);
-                          if (exec?.id) navigate(`/executions/${exec.id}`);
+                          if (exec?.id) navigate(`/executions?id=${exec.id}`);
                         } catch (err) {
                           if (err instanceof ApiError && err.status === 409) {
                             toast.warning(`"${wf.name}" zaten çalışıyor`);
@@ -825,7 +825,7 @@ export default function WorkflowListPage() {
                       {executingId === wf.id
                         ? <Loader2 size={12} className="animate-spin" />
                         : <Play size={12} />}
-                      Calistir
+                      Çalıştır
                     </button>
                     <div className="flex-1" />
                     <button

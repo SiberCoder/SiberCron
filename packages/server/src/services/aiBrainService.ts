@@ -143,7 +143,28 @@ const startTime = Date.now();
 
 export class AIBrainService {
   private conversations: Map<string, ChatMessage[]> = new Map();
+  private conversationLastSeen: Map<string, number> = new Map();
   private defaultConversationId = 'main';
+
+  // Expire conversations idle for more than 24 hours to prevent memory leak
+  private readonly CONVERSATION_TTL_MS = 24 * 60 * 60 * 1000;
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    // Run cleanup every 30 minutes
+    this.cleanupTimer = setInterval(() => this.cleanupStaleConversations(), 30 * 60 * 1000);
+    if (this.cleanupTimer.unref) this.cleanupTimer.unref();
+  }
+
+  private cleanupStaleConversations(): void {
+    const cutoff = Date.now() - this.CONVERSATION_TTL_MS;
+    for (const [id, lastSeen] of this.conversationLastSeen) {
+      if (lastSeen < cutoff && id !== this.defaultConversationId) {
+        this.conversations.delete(id);
+        this.conversationLastSeen.delete(id);
+      }
+    }
+  }
 
   // ── Build system prompt ───────────────────────────────────────────────
 
@@ -254,6 +275,7 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
     if (!this.conversations.has(convId)) {
       this.conversations.set(convId, []);
     }
+    this.conversationLastSeen.set(convId, Date.now());
     const messages = this.conversations.get(convId)!;
 
     // Add user message
@@ -982,7 +1004,9 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
   }
 
   clearConversation(conversationId?: string): void {
-    this.conversations.delete(conversationId || this.defaultConversationId);
+    const id = conversationId || this.defaultConversationId;
+    this.conversations.delete(id);
+    this.conversationLastSeen.delete(id);
   }
 
   listConversations(): string[] {

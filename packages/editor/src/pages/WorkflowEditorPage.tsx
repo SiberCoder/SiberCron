@@ -171,9 +171,9 @@ function ExecutionStatusBar() {
             isError && 'text-aurora-rose',
           )}
         >
-          {isRunning && `Calisiyor… ${doneCount}/${nodeCount} node`}
-          {isSuccess && 'Basariyla tamamlandi'}
-          {isError && 'Hata olustu'}
+          {isRunning && `Çalışıyor… ${doneCount}/${nodeCount} node`}
+          {isSuccess && 'Başarıyla tamamlandı'}
+          {isError && 'Hata oluştu'}
         </p>
         {lastLog && (
           <p className="text-[10px] text-obsidian-500 font-body truncate mt-0.5">
@@ -196,7 +196,7 @@ function ExecutionStatusBar() {
       {!isRunning && (
         <button
           onClick={() => {
-            navigate('/executions');
+            navigate(execution?.id ? `/executions?id=${execution.id}` : '/executions');
             setDismissed(true);
             disconnect();
           }}
@@ -253,10 +253,10 @@ function ExecutionLogDrawer() {
       >
         <Clock size={12} className="text-obsidian-500" />
         <span className="text-[11px] font-semibold text-obsidian-400 font-body flex-1">
-          Calistirma Logu
+          Çalıştırma Logu
           {execution.status === 'running' && (
             <span className="ml-2 inline-flex items-center gap-1 text-aurora-blue">
-              <Loader2 size={9} className="animate-spin" /> Calisiyor
+              <Loader2 size={9} className="animate-spin" /> Çalışıyor
             </span>
           )}
         </span>

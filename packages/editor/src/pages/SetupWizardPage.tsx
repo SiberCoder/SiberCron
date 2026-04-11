@@ -233,11 +233,11 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       {(status === 'idle' || status === 'error') && (
         <>
           <p className="text-xs text-obsidian-400 font-body">
-            WhatsApp'i QR kod okutarak baglayin. Telefonunuzdan tarayin, otomatik baglansin.
+            WhatsApp'ı QR kod okutarak bağlayın. Telefonunuzdan tarayın, otomatik bağlansın.
           </p>
           <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] text-black text-xs font-semibold hover:bg-[#20bd5a] transition-colors" onClick={startPairing}>
             <QrCode size={14} />
-            QR Kod Olustur
+            QR Kod Oluştur
           </button>
           {errorMsg && <p className="text-xs text-red-400">{errorMsg}</p>}
         </>
@@ -246,7 +246,7 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       {status === 'loading' && (
         <div className="flex items-center gap-2 py-4">
           <Loader2 size={16} className="animate-spin text-[#25D366]" />
-          <span className="text-xs text-slate-400">QR kod olusturuluyor...</span>
+          <span className="text-xs text-slate-400">QR kod oluşturuluyor...</span>
         </div>
       )}
 
@@ -256,10 +256,10 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
             <img src={qrImage} alt="WhatsApp QR" width={200} height={200} />
           </div>
           <div className="text-center space-y-1">
-            <p className="text-sm text-white font-semibold">Telefonunuzla Tarayin</p>
+            <p className="text-sm text-white font-semibold">Telefonunuzla Tarayın</p>
             <p className="text-[11px] text-slate-400 flex items-center gap-1 justify-center">
               <Smartphone size={12} />
-              WhatsApp &gt; Ayarlar &gt; Bagli Cihazlar &gt; Cihaz Bagla
+              WhatsApp &gt; Ayarlar &gt; Bağlı Cihazlar &gt; Cihaz Bağla
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
             <span className="text-xs text-[#25D366]">Tarama bekleniyor...</span>
           </div>
           <button type="button" className="text-xs text-slate-500 hover:text-white transition-colors" onClick={() => { setStatus('idle'); setQrImage(''); }}>
-            Iptal
+            İptal
           </button>
         </div>
       )}
@@ -349,10 +349,10 @@ function MessagingStep() {
     <div className="space-y-4 animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-display font-bold text-white tracking-tight">
-          Mesajlasma Kanallarini Baglayin
+          Mesajlaşma Kanallarını Bağlayın
         </h2>
         <p className="text-sm text-obsidian-400 mt-2 font-body">
-          Istege bagli — istediginiz kanallari baglayin
+          İsteğe bağlı — istediğiniz kanalları bağlayın
         </p>
       </div>
 
@@ -380,7 +380,7 @@ function MessagingStep() {
               {data?.enabled && (
                 <span className="badge text-[10px] bg-aurora-emerald/10 text-aurora-emerald">
                   <span className="w-1.5 h-1.5 rounded-full bg-aurora-emerald" />
-                  Bagli
+                  Bağlı
                 </span>
               )}
             </div>
@@ -527,10 +527,10 @@ function SchedulingStep() {
     <div className="space-y-6 animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-display font-bold text-white tracking-tight">
-          Varsayilan Zamanlama Ayarlari
+          Varsayılan Zamanlama Ayarları
         </h2>
         <p className="text-sm text-obsidian-400 mt-2 font-body">
-          Workflow'lar icin varsayilan zamanlama ayarlarini belirleyin
+          Workflow'lar için varsayılan zamanlama ayarlarını belirleyin
         </p>
       </div>
 
@@ -556,7 +556,7 @@ function SchedulingStep() {
         {/* Default cron */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-obsidian-300 font-body">
-            Varsayilan Cron Ifadesi
+            Varsayılan Cron İfadesi
           </label>
           <input
             type="text"
