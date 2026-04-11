@@ -21,22 +21,28 @@ interface CurrentExecution {
   id: string;
   status: 'running' | 'success' | 'error' | 'cancelled';
   nodeStatuses: Record<string, NodeStatus>;
+  nodeOutputs: Record<string, unknown[]>;
 }
 
 interface ExecutionState {
   currentExecution: CurrentExecution | null;
   executionLog: LogEntry[];
   socket: Socket | null;
+  selectedOutputNodeId: string | null;
 
   connect: (executionId: string) => void;
   disconnect: () => void;
   reset: () => void;
+  setSelectedOutputNode: (nodeId: string | null) => void;
 }
 
 export const useExecutionStore = create<ExecutionState>((set, get) => ({
   currentExecution: null,
   executionLog: [],
   socket: null,
+  selectedOutputNodeId: null,
+
+  setSelectedOutputNode: (nodeId) => set({ selectedOutputNodeId: nodeId }),
 
   connect: (executionId: string) => {
     const existing = get().socket;
@@ -69,6 +75,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
             id: data.executionId,
             status: 'running',
             nodeStatuses: {},
+            nodeOutputs: {},
           },
           executionLog: [
             {
@@ -113,6 +120,10 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
               nodeStatuses: {
                 ...state.currentExecution.nodeStatuses,
                 [data.nodeId]: data.status,
+              },
+              nodeOutputs: {
+                ...state.currentExecution.nodeOutputs,
+                ...(data.output ? { [data.nodeId]: data.output } : {}),
               },
             }
           : null,
@@ -170,6 +181,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       currentExecution: null,
       executionLog: [],
       socket: null,
+      selectedOutputNodeId: null,
     });
   },
 }));

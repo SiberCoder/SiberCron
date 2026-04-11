@@ -11,6 +11,7 @@ import EditorToolbar from '../components/editor/EditorToolbar';
 import NodePalette from '../components/editor/NodePalette';
 import WorkflowCanvas from '../components/editor/WorkflowCanvas';
 import NodeConfigPanel from '../components/editor/NodeConfigPanel';
+import NodeOutputViewer from '../components/editor/NodeOutputViewer';
 
 interface LocationState {
   template?: {
@@ -254,6 +255,61 @@ export default function WorkflowEditorPage() {
     };
   }, [id, loadWorkflow, reset, resetExecution, location.state]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+      // Delete selected node
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput && selectedNodeId) {
+        e.preventDefault();
+        useWorkflowStore.getState().removeNode(selectedNodeId);
+      }
+
+      // Ctrl+S / Cmd+S — save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        useWorkflowStore.getState().saveWorkflow().catch(console.error);
+      }
+
+      // Ctrl+Z / Cmd+Z — undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !isInput) {
+        e.preventDefault();
+        useWorkflowStore.getState().undo();
+      }
+
+      // Ctrl+Shift+Z / Cmd+Shift+Z — redo
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z' && !isInput) {
+        e.preventDefault();
+        useWorkflowStore.getState().redo();
+      }
+
+      // Ctrl+Y / Cmd+Y — redo (alternative)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y' && !isInput) {
+        e.preventDefault();
+        useWorkflowStore.getState().redo();
+      }
+
+      // Ctrl+E / Cmd+E — execute workflow
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        const meta = useWorkflowStore.getState().workflowMeta;
+        if (meta.id) {
+          useWorkflowStore.getState().executeWorkflow().catch(console.error);
+        }
+      }
+
+      // Escape — deselect node
+      if (e.key === 'Escape') {
+        useWorkflowStore.getState().setSelectedNode(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId]);
+
   // Unsaved changes warning
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -308,6 +364,9 @@ export default function WorkflowEditorPage() {
 
           {/* Config panel */}
           {selectedNodeId && <NodeConfigPanel />}
+
+          {/* Node output viewer */}
+          <NodeOutputViewer />
         </div>
       </div>
     </ReactFlowProvider>

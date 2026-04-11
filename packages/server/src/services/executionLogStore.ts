@@ -13,6 +13,14 @@ export interface ExecutionLogEntry {
 class ExecutionLogStore {
   private logs = new Map<string, ExecutionLogEntry[]>();
   private maxEntriesPerExecution = 500;
+  private cleanupTimer: ReturnType<typeof setInterval>;
+
+  constructor() {
+    // Auto-cleanup stale execution logs every 30 minutes
+    this.cleanupTimer = setInterval(() => this.cleanup(), 30 * 60 * 1000);
+    // Allow Node.js to exit even if this timer is running
+    if (this.cleanupTimer.unref) this.cleanupTimer.unref();
+  }
 
   add(executionId: string, entry: Omit<ExecutionLogEntry, 'timestamp'>): void {
     if (!this.logs.has(executionId)) {
@@ -41,7 +49,7 @@ class ExecutionLogStore {
     this.logs.delete(executionId);
   }
 
-  // Clean up old entries (call periodically)
+  // Clean up old entries (called automatically every 30 min, or manually)
   cleanup(maxAgeMs = 3600000): void {
     const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
     for (const [id, entries] of this.logs) {
@@ -49,6 +57,10 @@ class ExecutionLogStore {
         this.logs.delete(id);
       }
     }
+  }
+
+  destroy(): void {
+    clearInterval(this.cleanupTimer);
   }
 }
 

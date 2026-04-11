@@ -228,6 +228,82 @@ export async function workflowRoutes(
     return runningExecution;
   });
 
+  // POST /:id/duplicate - Clone a workflow
+  fastify.post('/:id/duplicate', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const original = db.getWorkflow(id);
+    if (!original) {
+      reply.code(404);
+      return { error: 'Workflow not found' };
+    }
+
+    const duplicate = db.createWorkflow({
+      name: `${original.name} (Copy)`,
+      description: original.description,
+      nodes: original.nodes,
+      edges: original.edges,
+      settings: original.settings,
+      triggerType: original.triggerType,
+      cronExpression: original.cronExpression,
+      webhookPath: original.webhookPath
+        ? `${original.webhookPath}-copy-${Date.now()}`
+        : undefined,
+    });
+
+    reply.code(201);
+    return duplicate;
+  });
+
+  // GET /:id/export - Export workflow as JSON
+  fastify.get('/:id/export', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const workflow = db.getWorkflow(id);
+    if (!workflow) {
+      reply.code(404);
+      return { error: 'Workflow not found' };
+    }
+
+    const exportData = {
+      $schema: 'sibercron/workflow/v1',
+      exportedAt: new Date().toISOString(),
+      workflow: {
+        name: workflow.name,
+        description: workflow.description,
+        nodes: workflow.nodes,
+        edges: workflow.edges,
+        settings: workflow.settings,
+        triggerType: workflow.triggerType,
+        cronExpression: workflow.cronExpression,
+        webhookPath: workflow.webhookPath,
+      },
+    };
+
+    void reply.header('Content-Disposition', `attachment; filename="${workflow.name.replace(/[^a-z0-9]/gi, '_')}.json"`);
+    void reply.header('Content-Type', 'application/json');
+    return exportData;
+  });
+
+  // POST /import - Import a workflow from JSON
+  fastify.post('/import', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as Record<string, unknown>;
+
+    if (!body || body['$schema'] !== 'sibercron/workflow/v1' || !body['workflow']) {
+      reply.code(400);
+      return { error: 'Invalid export file. Expected a SiberCron workflow export.' };
+    }
+
+    const wf = body['workflow'] as Record<string, unknown>;
+    const parsed = CreateWorkflowSchema.safeParse(wf);
+    if (!parsed.success) {
+      reply.code(400);
+      return { error: 'Invalid workflow data', details: parsed.error.flatten().fieldErrors };
+    }
+
+    const workflow = db.createWorkflow(parsed.data as CreateWorkflowRequest);
+    reply.code(201);
+    return workflow;
+  });
+
   // POST /:id/activate - Set isActive=true
   fastify.post('/:id/activate', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };

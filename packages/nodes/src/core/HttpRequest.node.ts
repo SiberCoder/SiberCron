@@ -59,8 +59,23 @@ export const HttpRequestNode: INodeType = {
     const headersRaw = context.getParameter<string>('headers');
     const bodyRaw = context.getParameter<string>('body');
 
-    const headers: Record<string, string> = headersRaw ? JSON.parse(headersRaw) : {};
-    const body = bodyRaw ? JSON.parse(bodyRaw) : undefined;
+    let headers: Record<string, string> = {};
+    if (headersRaw) {
+      try {
+        headers = JSON.parse(headersRaw);
+      } catch {
+        throw new Error('Headers must be valid JSON (e.g. {"Authorization": "Bearer token"})');
+      }
+    }
+
+    let body: unknown;
+    if (bodyRaw) {
+      try {
+        body = JSON.parse(bodyRaw);
+      } catch {
+        throw new Error('Body must be valid JSON');
+      }
+    }
 
     context.helpers.log(`HTTP ${method} ${url}`);
 

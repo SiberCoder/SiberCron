@@ -16,6 +16,7 @@ import {
   Loader2,
   Trash2,
   AlertTriangle,
+  RotateCcw,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { io, type Socket } from 'socket.io-client';
@@ -355,7 +356,7 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
 /*  Node result row                                                    */
 /* ------------------------------------------------------------------ */
 
-function NodeResultRow({ nr, executionId, isRunning }: { nr: INodeExecutionResult; executionId: string; isRunning: boolean }) {
+function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning: boolean }) {
   const [expanded, setExpanded] = useState(isRunning);
   const nrStatus = STATUS_CONFIG[nr.status as ExecutionStatus] ?? STATUS_CONFIG.pending;
   const hasOutput = nr.output && nr.output.length > 0;
@@ -392,13 +393,10 @@ function NodeResultRow({ nr, executionId, isRunning }: { nr: INodeExecutionResul
         </div>
       )}
 
-      {expanded && (
+      {expanded && hasOutput && !isRunning && (
         <div className="px-4 pb-4 animate-fade-in">
           <div className="aurora-divider mb-3" />
-          {/* Show live logs for running executions */}
-          {isRunning && <LiveLogPanel executionId={executionId} />}
-          {/* Show final output when done */}
-          {hasOutput && !isRunning && <NodeOutputDetail output={nr.output!} />}
+          <NodeOutputDetail output={nr.output!} />
         </div>
       )}
     </div>
@@ -415,6 +413,8 @@ export default function ExecutionHistoryPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [page, setPage] = useState(1);
   const socketRef = useRef<Socket | null>(null);
   const subscribedIds = useRef<Set<string>>(new Set());
@@ -513,6 +513,27 @@ export default function ExecutionHistoryPage() {
       if (expandedId === id) setExpandedId(null);
     } catch (err) {
       console.error('Failed to delete execution:', err);
+    }
+  };
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const handleRetry = async (e: React.MouseEvent, exec: IExecution) => {
+    e.stopPropagation();
+    setRetryingId(exec.id);
+    try {
+      await apiPost(`/executions/${exec.id}/retry`);
+      setToast({ message: `"${exec.workflowName ?? exec.workflowId}" yeniden başlatıldı`, type: 'success' });
+      await load();
+    } catch {
+      setToast({ message: 'Yeniden başlatma başarısız', type: 'error' });
+    } finally {
+      setRetryingId(null);
     }
   };
 
@@ -657,6 +678,18 @@ export default function ExecutionHistoryPage() {
                     <span className="text-xs text-obsidian-400 font-mono min-w-[60px] text-right">
                       {formatDuration(exec.durationMs)}
                     </span>
+                    {(exec.status === 'error' || exec.status === 'success') && (
+                      <button
+                        onClick={(e) => handleRetry(e, exec)}
+                        disabled={retryingId === exec.id}
+                        className="p-1.5 rounded-lg text-obsidian-600 hover:text-aurora-cyan hover:bg-aurora-cyan/5 transition-all disabled:opacity-50"
+                        title="Yeniden çalıştır"
+                      >
+                        {retryingId === exec.id
+                          ? <Loader2 size={12} className="animate-spin" />
+                          : <RotateCcw size={12} />}
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -695,7 +728,7 @@ export default function ExecutionHistoryPage() {
                       {/* Node results */}
                       <div className="space-y-2.5">
                         {Object.values(exec.nodeResults).map((nr) => (
-                          <NodeResultRow key={nr.nodeId} nr={nr} executionId={exec.id} isRunning={exec.status === 'running'} />
+                          <NodeResultRow key={nr.nodeId} nr={nr} isRunning={exec.status === 'running'} />
                         ))}
                       </div>
                     </div>
@@ -738,6 +771,18 @@ export default function ExecutionHistoryPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={clsx(
+            'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-body font-medium shadow-lg animate-fade-in',
+            toast.type === 'error' ? 'bg-red-500/90 text-white' : 'bg-emerald-500/90 text-white',
+          )}
+        >
+          {toast.message}
+        </div>
       )}
 
       {/* Delete confirmation modal */}

@@ -1,3 +1,4 @@
+import vm from 'node:vm';
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
 
 export const CodeNode: INodeType = {
@@ -29,14 +30,33 @@ export const CodeNode: INodeType = {
 
     context.helpers.log('Executing custom code');
 
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const fn = new Function('items', code) as (items: INodeExecutionData[]) => INodeExecutionData[] | Promise<INodeExecutionData[]>;
-    const result = await fn(items);
+    // Wrap code in an async function so users can use await
+    const wrappedCode = `(async function(items) { ${code} })`;
+
+    let fn: (items: INodeExecutionData[]) => Promise<INodeExecutionData[]>;
+    try {
+      // Run in a sandboxed context — no access to process, require, globalThis, etc.
+      const sandbox = Object.create(null) as Record<string, unknown>;
+      vm.createContext(sandbox);
+      fn = vm.runInContext(wrappedCode, sandbox, {
+        timeout: 25_000,
+        filename: 'code-node.js',
+      }) as (items: INodeExecutionData[]) => Promise<INodeExecutionData[]>;
+    } catch (err) {
+      throw new Error(`Code syntax error: ${(err as Error).message}`);
+    }
+
+    let result: unknown;
+    try {
+      result = await fn(items);
+    } catch (err) {
+      throw new Error(`Code execution error: ${(err as Error).message}`);
+    }
 
     if (!Array.isArray(result)) {
       throw new Error('Code node must return an array of items');
     }
 
-    return result;
+    return result as INodeExecutionData[];
   },
 };

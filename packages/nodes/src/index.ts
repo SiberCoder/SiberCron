@@ -17,6 +17,9 @@ import { DiscordSendNode } from './messaging/DiscordSend.node.js';
 import { SlackSendNode } from './messaging/SlackSend.node.js';
 import { WhatsAppReceiveNode } from './messaging/WhatsAppReceive.node.js';
 import { WhatsAppSendNode } from './messaging/WhatsAppSend.node.js';
+import { LoopNode } from './core/Loop.node.js';
+import { SplitNode } from './core/Split.node.js';
+import { EmailSMTPNode } from './messaging/EmailSMTP.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -29,6 +32,8 @@ export const builtinNodes: INodeType[] = [
   TransformNode,
   MergeNode,
   DelayNode,
+  LoopNode,
+  SplitNode,
   AIAgentNode,
   AutonomousDevNode,
   TelegramSendNode,
@@ -36,6 +41,7 @@ export const builtinNodes: INodeType[] = [
   SlackSendNode,
   WhatsAppReceiveNode,
   WhatsAppSendNode,
+  EmailSMTPNode,
 ];
 
 export {
@@ -49,6 +55,8 @@ export {
   TransformNode,
   MergeNode,
   DelayNode,
+  LoopNode,
+  SplitNode,
   AIAgentNode,
   AutonomousDevNode,
   TelegramSendNode,
@@ -56,4 +64,5 @@ export {
   SlackSendNode,
   WhatsAppReceiveNode,
   WhatsAppSendNode,
+  EmailSMTPNode,
 };

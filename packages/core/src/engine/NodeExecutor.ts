@@ -6,6 +6,7 @@ import { NODE_EXECUTION_TIMEOUT } from '@sibercron/shared';
 
 import { NodeRegistry } from '../nodes/NodeRegistry.js';
 import { ExecutionContext } from './ExecutionContext.js';
+import { resolveParameterExpressions } from './ExpressionEvaluator.js';
 
 /**
  * Executes a single node within a workflow.
@@ -46,22 +47,32 @@ export class NodeExecutor {
         }
       : undefined;
 
-    const context = new ExecutionContext(inputData, parameters, resolveCredential);
+    // Resolve {{ expression }} templates in parameters before passing to the node
+    const resolvedParameters = resolveParameterExpressions(parameters, {
+      inputData,
+      executionId: inputData[0]?.json?.executionId as string | undefined,
+    });
+
+    const context = new ExecutionContext(inputData, resolvedParameters, resolveCredential);
 
     const startedAt = new Date();
     try {
       const timeoutMs = node.definition.timeout ?? NODE_EXECUTION_TIMEOUT;
       let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-      const output = await Promise.race([
-        node.execute(context),
-        new Promise<never>((_, reject) => {
-          timeoutHandle = setTimeout(
-            () => reject(new Error(`Node execution timed out after ${timeoutMs}ms`)),
-            timeoutMs,
-          );
-        }),
-      ]);
-      clearTimeout(timeoutHandle);
+      let output: INodeExecutionData[] = [];
+      try {
+        output = await Promise.race([
+          node.execute(context),
+          new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(
+              () => reject(new Error(`Node execution timed out after ${timeoutMs}ms`)),
+              timeoutMs,
+            );
+          }),
+        ]);
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
 
       const finishedAt = new Date();
       const durationMs = finishedAt.getTime() - startedAt.getTime();

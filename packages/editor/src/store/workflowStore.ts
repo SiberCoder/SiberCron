@@ -14,7 +14,7 @@ import type {
   TriggerType,
   INodeInstance,
 } from '@sibercron/shared';
-import { apiGet, apiPost, apiPut } from '../api/client';
+import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
 
 export interface WorkflowMeta {
   id: string | null;
@@ -26,12 +26,25 @@ export interface WorkflowMeta {
   webhookPath: string;
 }
 
+interface HistoryEntry {
+  nodes: Node[];
+  edges: Edge[];
+}
+
 interface WorkflowState {
   nodes: Node[];
   edges: Edge[];
   selectedNodeId: string | null;
   workflowMeta: WorkflowMeta;
   isDirty: boolean;
+
+  // Undo/Redo
+  history: HistoryEntry[];
+  historyIndex: number;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
@@ -44,6 +57,13 @@ interface WorkflowState {
   loadWorkflow: (id: string) => Promise<void>;
   saveWorkflow: () => Promise<string>;
   executeWorkflow: () => Promise<string>;
+  duplicateWorkflow: (id: string) => Promise<IWorkflow>;
+  deleteWorkflow: (id: string) => Promise<void>;
+
+  // Import/Export
+  exportWorkflow: () => string;
+  importWorkflow: (json: string) => void;
+
   reset: () => void;
 }
 
@@ -95,15 +115,58 @@ function flowToNodeInstances(nodes: Node[]): INodeInstance[] {
   }));
 }
 
+const MAX_HISTORY = 50;
+
+function pushHistory(state: WorkflowState): Partial<WorkflowState> {
+  const entry: HistoryEntry = {
+    nodes: JSON.parse(JSON.stringify(state.nodes)),
+    edges: JSON.parse(JSON.stringify(state.edges)),
+  };
+  const history = state.history.slice(0, state.historyIndex + 1);
+  history.push(entry);
+  if (history.length > MAX_HISTORY) history.shift();
+  return { history, historyIndex: history.length - 1 };
+}
+
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
   workflowMeta: { ...defaultMeta },
   isDirty: false,
+  history: [],
+  historyIndex: -1,
+
+  undo: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex <= 0) return;
+    const prev = history[historyIndex - 1];
+    set({
+      nodes: JSON.parse(JSON.stringify(prev.nodes)),
+      edges: JSON.parse(JSON.stringify(prev.edges)),
+      historyIndex: historyIndex - 1,
+      isDirty: true,
+    });
+  },
+
+  redo: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex >= history.length - 1) return;
+    const next = history[historyIndex + 1];
+    set({
+      nodes: JSON.parse(JSON.stringify(next.nodes)),
+      edges: JSON.parse(JSON.stringify(next.edges)),
+      historyIndex: historyIndex + 1,
+      isDirty: true,
+    });
+  },
+
+  canUndo: () => get().historyIndex > 0,
+  canRedo: () => get().historyIndex < get().history.length - 1,
 
   onNodesChange: (changes) => {
     set((state) => ({
+      ...pushHistory(state),
       nodes: applyNodeChanges(changes, state.nodes),
       isDirty: true,
     }));
@@ -111,6 +174,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   onEdgesChange: (changes) => {
     set((state) => ({
+      ...pushHistory(state),
       edges: applyEdgeChanges(changes, state.edges),
       isDirty: true,
     }));
@@ -118,6 +182,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   onConnect: (connection) => {
     set((state) => ({
+      ...pushHistory(state),
       edges: addEdge(
         { ...connection, animated: false },
         state.edges,
@@ -283,6 +348,75 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     return result.id;
   },
 
+  duplicateWorkflow: async (id: string) => {
+    return apiPost<IWorkflow>(`/workflows/${id}/duplicate`);
+  },
+
+  deleteWorkflow: async (id: string) => {
+    await apiDelete(`/workflows/${id}`);
+  },
+
+  exportWorkflow: () => {
+    const state = get();
+    const exported = {
+      name: state.workflowMeta.name,
+      description: state.workflowMeta.description,
+      triggerType: state.workflowMeta.triggerType,
+      cronExpression: state.workflowMeta.cronExpression,
+      webhookPath: state.workflowMeta.webhookPath,
+      nodes: flowToNodeInstances(state.nodes),
+      edges: state.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        sourceHandle: e.sourceHandle ?? 'output',
+        target: e.target,
+        targetHandle: e.targetHandle ?? 'input',
+      })),
+      exportedAt: new Date().toISOString(),
+      version: '1.0',
+    };
+    return JSON.stringify(exported, null, 2);
+  },
+
+  importWorkflow: (json: string) => {
+    const data = JSON.parse(json);
+    if (!data.nodes || !data.edges) {
+      throw new Error('Invalid workflow JSON: missing nodes or edges');
+    }
+    const workflow: IWorkflow = {
+      id: `imported_${Date.now()}`,
+      name: data.name ?? 'Imported Workflow',
+      description: data.description ?? '',
+      nodes: data.nodes,
+      edges: data.edges,
+      isActive: false,
+      triggerType: data.triggerType ?? 'manual',
+      cronExpression: data.cronExpression ?? '',
+      webhookPath: data.webhookPath ?? '',
+      settings: data.settings ?? {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const { nodes, edges } = workflowToFlow(workflow);
+    set({
+      nodes,
+      edges,
+      selectedNodeId: null,
+      isDirty: true,
+      history: [],
+      historyIndex: -1,
+      workflowMeta: {
+        id: null,
+        name: workflow.name,
+        description: workflow.description ?? '',
+        isActive: false,
+        triggerType: workflow.triggerType,
+        cronExpression: workflow.cronExpression ?? '',
+        webhookPath: workflow.webhookPath ?? '',
+      },
+    });
+  },
+
   reset: () => {
     set({
       nodes: [],
@@ -290,6 +424,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedNodeId: null,
       workflowMeta: { ...defaultMeta },
       isDirty: false,
+      history: [],
+      historyIndex: -1,
     });
     nodeCounter = 0;
   },
