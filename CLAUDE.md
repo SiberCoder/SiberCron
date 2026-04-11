@@ -170,6 +170,10 @@ Ana interface'ler:
 - **JWT Authentication**: `@fastify/jwt` + bcryptjs. Login/logout/refresh/me endpointleri. `authStore` (Zustand) + `AuthGuard`. `AUTH_ENABLED=false` ile dev modda kapatılabilir.
 - **RBAC**: `admin` ve `viewer` rolleri. İlk açılışta default admin oluşturulur (admin/admin).
 - **GoogleSheets Node**: Google Sheets API v4, service account JWT auth (client_email + private_key). getRows/appendRows/updateRange/clearRange. Ek npm paketi gerekmez.
+- **FTP/SFTP Node**: `basic-ftp` (FTP/FTPS) + `ssh2-sftp-client` (SFTP). list/download/upload/delete/rename/mkdir. Credential: host/port/username/password/privateKey.
+- **GoogleDrive Node**: Google Drive API v3, service account auth. list/upload/download/delete/createFolder/move. googleapis paketi.
+- **NotionDatabase Node**: Notion API v2022-06-28, integration token auth. queryDatabase/getPage/createPage/updatePage/archivePage/search/appendBlocks.
+- **API Anahtarı Yönetimi**: Kullanıcı başına API key oluşturma/iptal. `scx_` prefix, SHA-256 hash'leme. Settings sayfasında UI. `X-Api-Key` veya `Authorization: Bearer scx_...` header ile kullanım. Max 20 key/kullanıcı.
 
 ## Kurallar
 
