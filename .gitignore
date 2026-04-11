@@ -33,3 +33,5 @@ packages/server/data/
 *.db
 *.sqlite
 *.sqlite3
+test_live_logs.py
+*.png

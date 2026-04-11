@@ -174,6 +174,7 @@ export async function workflowRoutes(
       if (pathErr) { reply.code(400); return { error: pathErr }; }
       if (!body.webhookPath.startsWith('/')) body.webhookPath = `/${body.webhookPath}`;
 
+      body.webhookPath = body.webhookPath.toLowerCase();
       const conflict = db.listWorkflows({ webhookPath: body.webhookPath, limit: 1 });
       if (conflict.total > 0) {
         reply.code(409);
@@ -228,6 +229,7 @@ export async function workflowRoutes(
       if (pathErr) { reply.code(400); return { error: pathErr }; }
       if (!body.webhookPath.startsWith('/')) body.webhookPath = `/${body.webhookPath}`;
 
+      body.webhookPath = body.webhookPath.toLowerCase();
       const conflict = db.listWorkflows({ webhookPath: body.webhookPath, limit: 1 });
       if (conflict.total > 0 && conflict.data[0].id !== id) {
         reply.code(409);
@@ -522,7 +524,31 @@ export async function workflowRoutes(
       return { error: 'Invalid workflow data', details: parsed.error.flatten().fieldErrors };
     }
 
-    const workflow = db.createWorkflow(parsed.data as CreateWorkflowRequest);
+    const wfData = parsed.data as CreateWorkflowRequest;
+
+    // Semantic edge validation (same as POST /)
+    const importEdgeErr = validateEdges(
+      wfData.nodes as Array<{ id: string }>,
+      wfData.edges as Array<{ id: string; source: string; target: string }>,
+    );
+    if (importEdgeErr) { reply.code(400); return { error: importEdgeErr }; }
+
+    // Validate and normalize webhook path uniqueness
+    if (wfData.webhookPath) {
+      const pathErr = validateWebhookPath(wfData.webhookPath);
+      if (pathErr) { reply.code(400); return { error: pathErr }; }
+      const normalizedPath = wfData.webhookPath.toLowerCase();
+      if (!normalizedPath.startsWith('/')) wfData.webhookPath = `/${normalizedPath}`;
+      else wfData.webhookPath = normalizedPath;
+
+      const conflict = db.listWorkflows({ webhookPath: wfData.webhookPath, limit: 1 });
+      if (conflict.total > 0) {
+        reply.code(409);
+        return { error: `Webhook path "${wfData.webhookPath}" is already used by workflow "${conflict.data[0].name}"` };
+      }
+    }
+
+    const workflow = db.createWorkflow(wfData);
     reply.code(201);
     return workflow;
   });
