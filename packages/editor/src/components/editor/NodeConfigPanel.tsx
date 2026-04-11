@@ -1089,7 +1089,10 @@ export default function NodeConfigPanel() {
     if (!hasCredentials) return;
     apiGet<{ data: ICredential[] }>('/credentials')
       .then((res) => setAvailableCredentials(res.data ?? []))
-      .catch(() => setAvailableCredentials([]));
+      .catch(() => {
+        setAvailableCredentials([]);
+        console.error('[NodeConfigPanel] Kimlik bilgileri yüklenemedi');
+      });
   }, [hasCredentials]);
 
   if (!node || !selectedNodeId || !definition) return <WorkflowMetaPanel />;
@@ -1195,7 +1198,7 @@ export default function NodeConfigPanel() {
                 Kimlik bilgisi eklemek için tıklayın
               </button>
             )}
-            {definition.credentials!.map((cred) => {
+            {(definition.credentials ?? []).map((cred) => {
               // Exact type match first; fall back to fuzzy; finally show all.
               const exactMatch = availableCredentials.filter((c) => c.type === cred.name);
               const fuzzyMatch = exactMatch.length === 0

@@ -20,7 +20,7 @@ export const CodeNode: INodeType = {
         type: 'code',
         default: 'return items;',
         required: true,
-        description: 'JavaScript code. Receives "items" array and "$input" (first item json). Must return [{json:{...}}] array. Available: fetch, URL, AbortController, crypto.randomUUID, console, JSON, Math, Date, Map, Set, Promise.',
+        description: 'JavaScript code. Receives "items" array and "$input" (first item json). Must return [{json:{...}}] array. Available: fetch, URL, AbortController, crypto.randomUUID, console, JSON, Math, Date, Map, Set, Promise, Intl, setInterval, clearInterval, Uint8Array, Buffer.',
       },
       {
         name: 'timeout',
@@ -50,7 +50,7 @@ export const CodeNode: INodeType = {
       JSON, Math, parseInt, parseFloat, isNaN, isFinite,
       encodeURI, decodeURI, encodeURIComponent, decodeURIComponent,
       Map, Set, WeakMap, WeakSet,
-      Promise, setTimeout, clearTimeout,
+      Promise, setTimeout, clearTimeout, setInterval, clearInterval,
       console: {
         log: (...args: unknown[]) => context.helpers.log(args.map(String).join(' ')),
         warn: (...args: unknown[]) => context.helpers.log(`[WARN] ${args.map(String).join(' ')}`),
@@ -70,10 +70,22 @@ export const CodeNode: INodeType = {
       URLSearchParams: globalThis.URLSearchParams,
       TextEncoder: globalThis.TextEncoder,
       TextDecoder: globalThis.TextDecoder,
+      // Typed arrays — needed for crypto.getRandomValues and binary operations
+      ArrayBuffer, SharedArrayBuffer,
+      DataView,
+      Int8Array, Uint8Array, Uint8ClampedArray,
+      Int16Array, Uint16Array,
+      Int32Array, Uint32Array,
+      Float32Array, Float64Array,
+      BigInt64Array, BigUint64Array,
+      // Buffer — Node.js Buffer (base64, hex, binary conversions)
+      Buffer,
+      // Internationalization
+      Intl,
       // Crypto utils
       crypto: {
         randomUUID: () => crypto.randomUUID(),
-        getRandomValues: (arr: Uint8Array) => crypto.getRandomValues(arr),
+        getRandomValues: <T extends ArrayBufferView>(arr: T): T => crypto.getRandomValues(arr) as T,
       },
     };
     vm.createContext(sandbox);

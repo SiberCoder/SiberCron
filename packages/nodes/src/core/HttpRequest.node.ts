@@ -304,11 +304,20 @@ export const HttpRequestNode: INodeType = {
         return [{ json: responseData }];
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
-        if (attempt < maxAttempts) {
-          const delay = retryDelay * Math.pow(2, attempt - 1); // exponential backoff
-          context.helpers.log(`HTTP request failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms: ${lastError.message}`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+        // Do not retry client errors (4xx) — they indicate a permanent issue with
+        // the request itself (bad auth, not found, validation failure, etc.)
+        const match = lastError.message.match(/^HTTP (\d{3})/);
+        const statusCode = match ? parseInt(match[1], 10) : 0;
+        const isClientError = statusCode >= 400 && statusCode < 500;
+        if (isClientError || attempt >= maxAttempts) {
+          if (isClientError && attempt < maxAttempts) {
+            context.helpers.log(`HTTP ${statusCode} — not retrying client error: ${lastError.message}`);
+          }
+          break;
         }
+        const delay = retryDelay * Math.pow(2, attempt - 1); // exponential backoff
+        context.helpers.log(`HTTP request failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms: ${lastError.message}`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 

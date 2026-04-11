@@ -70,14 +70,25 @@ export class ExecutionContext implements IExecutionContext {
       timeoutId = setTimeout(() => controller.abort(), timeout);
     }
 
-    // Automatically set Content-Type for JSON bodies unless already specified
+    // Determine serialized body and Content-Type
     const mergedHeaders: Record<string, string> = { ...headers };
+    let serializedBody: string | undefined;
     if (body !== undefined) {
-      const contentTypeLower = Object.keys(mergedHeaders).find(
+      const contentTypeKey = Object.keys(mergedHeaders).find(
         (k) => k.toLowerCase() === 'content-type',
       );
-      if (!contentTypeLower) {
-        mergedHeaders['Content-Type'] = 'application/json';
+      if (typeof body === 'string') {
+        // Raw text or pre-serialized form body — send as-is
+        serializedBody = body;
+        if (!contentTypeKey) {
+          mergedHeaders['Content-Type'] = 'text/plain';
+        }
+      } else {
+        // Object → JSON
+        serializedBody = JSON.stringify(body);
+        if (!contentTypeKey) {
+          mergedHeaders['Content-Type'] = 'application/json';
+        }
       }
     }
 
@@ -85,7 +96,7 @@ export class ExecutionContext implements IExecutionContext {
       const response = await fetch(url, {
         method,
         headers: mergedHeaders,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        body: serializedBody,
         signal: controller.signal,
       });
 

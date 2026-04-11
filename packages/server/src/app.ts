@@ -579,8 +579,9 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
         reply.code(400);
         return { error: 'Payload validation failed', details: validationErrors };
       }
-    } catch {
-      // Malformed schema → skip validation, don't block
+    } catch (schemaErr) {
+      // Malformed schema → skip validation, don't block, but warn operator
+      app.log.warn({ workflowId: target.id, err: (schemaErr as Error).message }, '[Webhook] Malformed payloadSchema in webhook trigger node — skipping validation');
     }
   }
 

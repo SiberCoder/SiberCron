@@ -97,7 +97,7 @@ export async function workflowRoutes(
 
   // GET / - List workflows (paginated, searchable)
   fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
-    const query = request.query as WorkflowListQuery;
+    const query = request.query as WorkflowListQuery & { withLastExecution?: string };
     const result = db.listWorkflows({
       page: query.page ? Number(query.page) : undefined,
       limit: query.limit ? Number(query.limit) : undefined,
@@ -106,6 +106,14 @@ export async function workflowRoutes(
       triggerType: query.triggerType as TriggerType | undefined,
       tag: query.tag,
     });
+    // Optionally annotate each workflow with its last execution status
+    if (query.withLastExecution === 'true') {
+      const annotated = result.data.map((wf) => ({
+        ...wf,
+        lastExecution: db.getLastExecution(wf.id),
+      }));
+      return { ...result, data: annotated };
+    }
     return result;
   });
 

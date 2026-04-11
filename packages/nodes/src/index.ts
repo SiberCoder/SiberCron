@@ -47,6 +47,7 @@ import { VariablesNode } from './core/Variables.node.js';
 import { CSVNode } from './core/CSV.node.js';
 import { FileOperationNode } from './core/FileOperation.node.js';
 import { TextNode } from './core/Text.node.js';
+import { GraphQLNode } from './core/GraphQL.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -96,6 +97,7 @@ export const builtinNodes: INodeType[] = [
   CSVNode,
   FileOperationNode,
   TextNode,
+  GraphQLNode,
 ];
 
 export {
@@ -146,4 +148,5 @@ export {
   CSVNode,
   FileOperationNode,
   TextNode,
+  GraphQLNode,
 };

@@ -338,7 +338,7 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
     return (
       <div className="flex items-center gap-2 py-4 px-3">
         <Loader2 size={14} className="animate-spin text-aurora-cyan" />
-        <span className="text-xs text-obsidian-400">AI calisiyor, loglar bekleniyor...</span>
+        <span className="text-xs text-obsidian-400">Çalışıyor, loglar bekleniyor...</span>
       </div>
     );
   }
@@ -813,39 +813,44 @@ export default function ExecutionHistoryPage() {
   };
 
   const handleExport = (format: 'csv' | 'json') => {
-    const data = filteredExecutions;
-    let blob: Blob;
-    let filename: string;
+    try {
+      const data = filteredExecutions;
+      let blob: Blob;
+      let filename: string;
 
-    if (format === 'json') {
-      blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      filename = `executions_${new Date().toISOString().slice(0, 10)}.json`;
-    } else {
-      const headers = ['id', 'workflowName', 'workflowId', 'status', 'triggerType', 'startedAt', 'finishedAt', 'durationMs', 'triggeredBy'];
-      const csvRows = [
-        headers.join(','),
-        ...data.map((e) => [
-          e.id,
-          `"${(e.workflowName ?? e.workflowId).replace(/"/g, '""')}"`,
-          e.workflowId,
-          e.status,
-          e.triggerType ?? '',
-          e.startedAt ?? '',
-          e.finishedAt ?? '',
-          e.durationMs ?? '',
-          `"${[e.triggeredBy?.username, e.triggeredBy?.method].filter(Boolean).join(' / ')}"`,
-        ].join(',')),
-      ];
-      blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      filename = `executions_${new Date().toISOString().slice(0, 10)}.csv`;
+      if (format === 'json') {
+        blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        filename = `executions_${new Date().toISOString().slice(0, 10)}.json`;
+      } else {
+        const headers = ['id', 'workflowName', 'workflowId', 'status', 'triggerType', 'startedAt', 'finishedAt', 'durationMs', 'triggeredBy'];
+        const csvRows = [
+          headers.join(','),
+          ...data.map((e) => [
+            e.id,
+            `"${(e.workflowName ?? e.workflowId ?? '').replace(/"/g, '""')}"`,
+            e.workflowId,
+            e.status,
+            e.triggerType ?? '',
+            e.startedAt ?? '',
+            e.finishedAt ?? '',
+            e.durationMs ?? '',
+            `"${[e.triggeredBy?.username, e.triggeredBy?.method].filter(Boolean).join(' / ')}"`,
+          ].join(',')),
+        ];
+        blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        filename = `executions_${new Date().toISOString().slice(0, 10)}.csv`;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('[Export] Dışa aktarma başarısız:', err);
+      toast.error('Dışa aktarma başarısız oldu');
     }
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   // Auto-refresh every 5 seconds when enabled
