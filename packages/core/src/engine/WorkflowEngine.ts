@@ -54,7 +54,14 @@ export class WorkflowEngine {
     };
 
     // ── Workflow-level timeout ────────────────────────────────────────
-    const workflowTimeoutMs = workflow.settings?.timeout ?? 300_000; // default 5 min
+    // If any node has a custom timeout longer than the workflow timeout,
+    // extend the workflow timeout to accommodate it (e.g. AutonomousDev = 4h).
+    const maxNodeTimeout = workflow.nodes.reduce((max, n) => {
+      const nodeDef = this.registry.get(n.type);
+      return Math.max(max, nodeDef?.definition.timeout ?? 0);
+    }, 0);
+    const configuredTimeout = workflow.settings?.timeout ?? 300_000; // default 5 min
+    const workflowTimeoutMs = Math.max(configuredTimeout, maxNodeTimeout > 0 ? maxNodeTimeout + 60_000 : 0);
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutHandle = setTimeout(
