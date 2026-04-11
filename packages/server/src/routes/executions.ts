@@ -138,7 +138,7 @@ export async function executionRoutes(
         if (Date.now() - startedAt > 30 * 60 * 1000) {
           db.updateExecution(exec.id, {
             status: 'error',
-            errorMessage: 'Execution stale - sunucu yeniden baslatildi',
+            errorMessage: 'Execution stale - server restarted',
             finishedAt: new Date().toISOString(),
           });
           fixed++;

@@ -110,8 +110,8 @@ export default function WorkflowListPage() {
       await apiDelete(`/workflows/${id}`);
       setWorkflows((prev) => prev.filter((w) => w.id !== id));
       setDeleteConfirmId(null);
-    } catch (err) {
-      console.error('Failed to delete workflow:', err);
+    } catch {
+      setToast({ message: 'Silme işlemi başarısız', type: 'error' });
     }
   };
 
@@ -173,8 +173,8 @@ export default function WorkflowListPage() {
       setWorkflows((prev) =>
         prev.map((w) => (w.id === wf.id ? { ...w, isActive: updated.isActive } : w)),
       );
-    } catch (err) {
-      console.error('Failed to toggle workflow:', err);
+    } catch {
+      setToast({ message: 'Durum değiştirme başarısız', type: 'error' });
     } finally {
       setTogglingId(null);
     }

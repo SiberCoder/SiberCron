@@ -37,6 +37,24 @@ const app = Fastify({
   bodyLimit: 10 * 1024 * 1024, // 10 MB
 });
 
+// ── Optional API key auth ──────────────────────────────────────────────
+// Set API_KEY env var to enable. Skipped for /api/v1/health (liveness probes).
+
+if (config.apiKey) {
+  app.addHook('onRequest', async (request, reply) => {
+    // Skip health checks and webhooks (they use their own auth model)
+    const url = request.url;
+    if (url.startsWith('/api/v1/health') || url.startsWith('/api/v1/webhook/')) return;
+
+    const auth = request.headers.authorization;
+    const key = auth?.startsWith('Bearer ') ? auth.slice(7) : request.headers['x-api-key'];
+    if (key !== config.apiKey) {
+      reply.status(401).send({ error: 'Unauthorized: invalid or missing API key' });
+    }
+  });
+  console.log('[Auth] API key authentication enabled.');
+}
+
 // ── Simple in-memory rate limiter ──────────────────────────────────────
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -52,10 +70,18 @@ app.addHook('onRequest', async (request, reply) => {
     return;
   }
   entry.count++;
+  const remaining = Math.max(0, RATE_LIMIT - entry.count);
   if (entry.count > RATE_LIMIT) {
+    void reply.header('X-RateLimit-Limit', String(RATE_LIMIT));
+    void reply.header('X-RateLimit-Remaining', '0');
+    void reply.header('X-RateLimit-Reset', String(Math.ceil(entry.resetAt / 1000)));
+    void reply.header('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)));
     reply.status(429).send({ error: 'Too many requests' });
     return;
   }
+  void reply.header('X-RateLimit-Limit', String(RATE_LIMIT));
+  void reply.header('X-RateLimit-Remaining', String(remaining));
+  void reply.header('X-RateLimit-Reset', String(Math.ceil(entry.resetAt / 1000)));
 });
 
 // Periodic cleanup of expired rate-limit entries (every 5 minutes)
@@ -124,7 +150,10 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
         data: data.data,
       });
     }
-    io.emit('execution:log', { ...data, apiExecutionId: mappedId });
+    // Emit to the execution room (subscribers only) for efficiency.
+    // Fall back to broadcast when the ID mapping hasn't been established yet.
+    const targetId = mappedId ?? data.executionId;
+    io.to(`execution:${targetId}`).emit('execution:log', { ...data, apiExecutionId: targetId });
   }
 });
 

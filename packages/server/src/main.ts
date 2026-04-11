@@ -14,14 +14,16 @@ async function start(): Promise<void> {
     await schedulerService.init();
 
     // Fix stale executions from a previous server run (stuck in "running" state)
+    // Only mark executions older than 5 minutes as stale (gives time for legitimate runs)
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     const staleExecs = db.listExecutions({ limit: 1000 }).data.filter(
-      (e) => e.status === 'running',
+      (e) => e.status === 'running' && (!e.startedAt || e.startedAt < fiveMinAgo),
     );
     if (staleExecs.length > 0) {
       for (const exec of staleExecs) {
         db.updateExecution(exec.id, {
           status: 'error',
-          errorMessage: 'Execution stale - sunucu yeniden baslatildi',
+          errorMessage: 'Execution stale - server restarted',
           finishedAt: new Date().toISOString(),
         });
       }

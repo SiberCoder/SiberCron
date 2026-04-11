@@ -273,27 +273,47 @@ const LOG_LEVEL_CONFIG: Record<string, { icon: React.ComponentType<{ size?: numb
 function LiveLogPanel({ executionId }: { executionId: string }) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logEndRef = useRef<HTMLDivElement | null>(null);
-  const countRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
-    countRef.current = 0;
-    const poll = async () => {
-      while (!cancelled) {
-        try {
-          const res = await apiGet<{ logs: LogEntry[]; total: number }>(
-            `/executions/${executionId}/logs?since=${countRef.current}`,
-          );
-          if (!cancelled && res.logs.length > 0) {
-            countRef.current += res.logs.length;
-            setLogs((prev) => [...prev, ...res.logs]);
-          }
-        } catch { /* */ }
-        await new Promise((r) => setTimeout(r, 2000));
-      }
+
+    // Initial HTTP fetch to get logs that accumulated before this component mounted
+    apiGet<{ logs: LogEntry[]; total: number }>(`/executions/${executionId}/logs`)
+      .then((res) => {
+        if (!cancelled && res.logs.length > 0) setLogs(res.logs);
+      })
+      .catch(() => { /* best-effort */ });
+
+    // WebSocket: subscribe to real-time log events from the server
+    const socket = io('/', { transports: ['websocket'], reconnection: true });
+
+    socket.on('connect', () => {
+      socket.emit('subscribe:execution', executionId);
+    });
+
+    socket.io.on('reconnect', () => {
+      socket.emit('subscribe:execution', executionId);
+    });
+
+    socket.on('execution:log', (data: { apiExecutionId?: string; level: string; message: string; timestamp?: string; data?: Record<string, unknown> }) => {
+      if (cancelled) return;
+      // Accept logs targeted at our execution (room-filtered) or explicitly matched
+      if (data.apiExecutionId && data.apiExecutionId !== executionId) return;
+      setLogs((prev) => [
+        ...prev,
+        {
+          timestamp: data.timestamp ?? new Date().toISOString(),
+          level: data.level,
+          message: data.message,
+          data: data.data,
+        },
+      ]);
+    });
+
+    return () => {
+      cancelled = true;
+      socket.disconnect();
     };
-    poll();
-    return () => { cancelled = true; };
   }, [executionId]);
 
   // Auto-scroll to bottom
@@ -511,8 +531,8 @@ export default function ExecutionHistoryPage() {
       setExecutions((prev) => prev.filter((e) => e.id !== id));
       setDeleteConfirmId(null);
       if (expandedId === id) setExpandedId(null);
-    } catch (err) {
-      console.error('Failed to delete execution:', err);
+    } catch {
+      setToast({ message: 'Silme işlemi başarısız', type: 'error' });
     }
   };
 
@@ -539,10 +559,14 @@ export default function ExecutionHistoryPage() {
 
   const handleCleanup = async (mode: 'completed' | 'stale' | 'all') => {
     try {
-      await apiPost<{ deleted: number; fixed: number }>('/executions/cleanup', { mode });
+      const result = await apiPost<{ deleted: number; fixed: number }>('/executions/cleanup', { mode });
       await load();
-    } catch (err) {
-      console.error('Cleanup failed:', err);
+      const msg = mode === 'stale'
+        ? `${result.fixed} takılı kayıt düzeltildi`
+        : `${result.deleted} kayıt silindi`;
+      setToast({ message: msg, type: 'success' });
+    } catch {
+      setToast({ message: 'Temizleme işlemi başarısız', type: 'error' });
     }
   };
 

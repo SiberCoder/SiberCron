@@ -145,20 +145,22 @@ class QueueService {
   }
 
   /**
-   * Process a workflow execution job.
+   * Core workflow execution logic shared by processJob (BullMQ) and executeDirectly (fallback).
+   * Returns the engine result status string, or throws on failure (allowing BullMQ to retry).
    */
-  private async processJob(job: Job<WorkflowJobData>): Promise<void> {
-    const { workflowId, workflowName, triggerData } = job.data;
-
-    console.log(`[Queue] Processing job ${job.id}: workflow "${workflowName}" (${workflowId})`);
-
+  private async runWorkflowExecution(
+    workflowId: string,
+    workflowName: string,
+    triggerData: Record<string, unknown>,
+    logPrefix: string,
+  ): Promise<void> {
     const workflow = db.getWorkflow(workflowId);
     if (!workflow) {
       throw new Error(`Workflow "${workflowId}" not found. It may have been deleted.`);
     }
 
     if (!workflow.isActive) {
-      console.log(`[Queue] Workflow "${workflowName}" is no longer active. Skipping.`);
+      console.log(`[${logPrefix}] Workflow "${workflowName}" is no longer active. Skipping.`);
       return;
     }
 
@@ -166,7 +168,6 @@ class QueueService {
       throw new Error('WorkflowEngine not initialized');
     }
 
-    // Create a "running" execution record immediately so the UI can show progress
     const executionId = crypto.randomUUID();
     const now = new Date().toISOString();
     db.createExecution({
@@ -186,11 +187,9 @@ class QueueService {
         triggerData,
         (event, data) => {
           if (!this.io) return;
-          // Override engine's internal executionId with our pre-registered one
           const payload = { ...(data as Record<string, unknown>), executionId };
 
-          // Register engine's internal UUID → API executionId mapping so that
-          // AutonomousDev live logs (emitted via process.emit) are routed correctly.
+          // Map engine's internal UUID → API executionId for AutonomousDev live logs
           if (event === 'execution:started') {
             const engineId = (data as { executionId?: string })?.executionId;
             if (engineId) {
@@ -234,7 +233,6 @@ class QueueService {
         },
       );
 
-      // Update the pre-created execution record with the final result
       db.updateExecution(executionId, {
         status: engineResult.status,
         nodeResults: engineResult.nodeResults,
@@ -243,18 +241,14 @@ class QueueService {
         durationMs: engineResult.durationMs,
       });
 
-      console.log(
-        `[Queue] Workflow "${workflowName}" execution ${engineResult.status}: ${executionId}`,
-      );
+      console.log(`[${logPrefix}] Workflow "${workflowName}" execution ${engineResult.status}: ${executionId}`);
     } catch (err) {
-      // Mark execution as failed so it doesn't stay "running" forever on retry
       db.updateExecution(executionId, {
         status: 'error',
         errorMessage: (err as Error).message,
         finishedAt: new Date().toISOString(),
       });
-      // Re-throw so BullMQ can handle retry logic
-      throw err;
+      throw err; // Re-throw so BullMQ can retry and direct mode can log
     } finally {
       // Clean up executionIdMap entry to prevent memory leak
       const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
@@ -264,6 +258,15 @@ class QueueService {
         }
       }
     }
+  }
+
+  /**
+   * Process a workflow execution job from BullMQ.
+   */
+  private async processJob(job: Job<WorkflowJobData>): Promise<void> {
+    const { workflowId, workflowName, triggerData } = job.data;
+    console.log(`[Queue] Processing job ${job.id}: workflow "${workflowName}" (${workflowId})`);
+    await this.runWorkflowExecution(workflowId, workflowName, triggerData, 'Queue');
   }
 
   /**
@@ -292,128 +295,13 @@ class QueueService {
     }
 
     // Fallback: direct execution without queue.
-    // Fire-and-forget so callers (webhook handlers, etc.) are not blocked
-    // for the entire duration of the workflow execution.
+    // Fire-and-forget so callers (webhook handlers, etc.) are not blocked.
     const jobId = `direct:${Date.now()}`;
     console.log(`[Queue] Redis unavailable. Executing "${workflowName}" directly (${jobId}).`);
-    this.executeDirectly(jobData).catch((err) => {
-      console.error(`[Queue:Direct] Unhandled error for "${workflowName}":`, (err as Error).message);
+    this.runWorkflowExecution(workflowId, workflowName, triggerData, 'Queue:Direct').catch((err) => {
+      console.error(`[Queue:Direct] Workflow "${workflowName}" failed:`, (err as Error).message);
     });
     return jobId;
-  }
-
-  /**
-   * Direct execution fallback when Redis is not available.
-   */
-  private async executeDirectly(jobData: WorkflowJobData): Promise<void> {
-    const { workflowId, workflowName, triggerData } = jobData;
-
-    const workflow = db.getWorkflow(workflowId);
-    if (!workflow) {
-      console.error(`[Queue:Direct] Workflow "${workflowId}" not found.`);
-      return;
-    }
-
-    if (!workflow.isActive) {
-      console.log(`[Queue:Direct] Workflow "${workflowName}" is no longer active. Skipping.`);
-      return;
-    }
-
-    if (!this.engine) {
-      console.error('[Queue:Direct] WorkflowEngine not initialized.');
-      return;
-    }
-
-    // Create a "running" execution record immediately so the UI can show progress
-    const executionId = crypto.randomUUID();
-    const now = new Date().toISOString();
-    db.createExecution({
-      id: executionId,
-      workflowId,
-      workflowName,
-      status: 'running',
-      triggerType: workflow.triggerType,
-      nodeResults: {},
-      startedAt: now,
-      createdAt: now,
-    });
-
-    try {
-      const engineResult = await this.engine.execute(
-        workflow,
-        triggerData,
-        (event, data) => {
-          if (!this.io) return;
-          const payload = { ...(data as Record<string, unknown>), executionId };
-
-          // Register engine's internal UUID → API executionId mapping so that
-          // AutonomousDev live logs (emitted via process.emit) are routed correctly.
-          if (event === 'execution:started') {
-            const engineId = (data as { executionId?: string })?.executionId;
-            if (engineId) {
-              const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
-              idMap?.set(engineId, executionId);
-            }
-          }
-
-          if (event === WS_EVENTS.EXECUTION_NODE_DONE) {
-            const nodeData = data as {
-              nodeId?: string;
-              nodeName?: string;
-              status?: string;
-              output?: Record<string, unknown>[];
-              error?: string;
-              durationMs?: number;
-            };
-            if (nodeData.nodeId) {
-              const existing = db.getExecution(executionId);
-              if (existing) {
-                existing.nodeResults[nodeData.nodeId] = {
-                  nodeId: nodeData.nodeId,
-                  nodeName: nodeData.nodeName ?? nodeData.nodeId,
-                  status: (nodeData.status ?? 'error') as INodeExecutionResult['status'],
-                  output: nodeData.output,
-                  error: nodeData.error,
-                  durationMs: nodeData.durationMs,
-                };
-                db.updateExecution(executionId, { nodeResults: existing.nodeResults });
-              }
-            }
-          }
-
-          this.io.to(`execution:${executionId}`).emit(event, payload);
-        },
-        async (credentialId: string) => {
-          const cred = db.getCredential(credentialId);
-          if (!cred) throw new Error(`Credential "${credentialId}" not found`);
-          return cred.data;
-        },
-      );
-
-      db.updateExecution(executionId, {
-        status: engineResult.status,
-        nodeResults: engineResult.nodeResults,
-        errorMessage: engineResult.errorMessage,
-        finishedAt: engineResult.finishedAt,
-        durationMs: engineResult.durationMs,
-      });
-      console.log(`[Queue:Direct] Workflow "${workflowName}" executed: ${engineResult.status}`);
-    } catch (err) {
-      db.updateExecution(executionId, {
-        status: 'error',
-        errorMessage: (err as Error).message,
-        finishedAt: new Date().toISOString(),
-      });
-      console.error(`[Queue:Direct] Workflow "${workflowName}" failed:`, (err as Error).message);
-    } finally {
-      // Clean up executionIdMap entry to prevent memory leak
-      const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
-      if (idMap) {
-        for (const [engineId, apiId] of idMap) {
-          if (apiId === executionId) { idMap.delete(engineId); break; }
-        }
-      }
-    }
   }
 
   /**
