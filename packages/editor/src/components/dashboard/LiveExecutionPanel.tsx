@@ -212,16 +212,26 @@ export default function LiveExecutionPanel() {
                   <span className={clsx(
                     'flex-1 break-words whitespace-pre-wrap',
                     log.level === 'ai_response' ? 'text-aurora-violet/80' :
+                    log.level === 'ai_streaming' ? 'text-obsidian-300' :
                     log.level === 'ai_request' ? 'text-aurora-indigo/70' :
                     log.level === 'auto_answer' ? 'text-aurora-amber' :
                     log.level === 'error' ? 'text-aurora-rose' :
                     log.level === 'iteration' ? 'text-aurora-cyan' :
                     'text-obsidian-400',
                   )}>
-                    {log.level === 'ai_response' && log.message.length > 500
-                      ? log.message.slice(0, 500) + '...'
-                      : log.message
-                    }
+                    {(() => {
+                      const msg = log.message;
+                      if (log.level === 'ai_streaming') {
+                        // Show only the last meaningful line(s), trimmed
+                        const lines = msg.split('\n').filter(Boolean);
+                        const last3 = lines.slice(-3).join('\n');
+                        return last3.length > 300 ? last3.slice(-300) : last3;
+                      }
+                      if (log.level === 'ai_response') {
+                        return msg.length > 500 ? msg.slice(0, 500) + '...' : msg;
+                      }
+                      return msg;
+                    })()}
                   </span>
                 </div>
               );

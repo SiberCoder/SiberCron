@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback, type MouseEvent as ReactMouseEvent } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import clsx from 'clsx';
 import { getNodeIcon } from '../../lib/iconRegistry';
@@ -40,12 +40,24 @@ function BaseNode({ id, data, selected }: NodeProps) {
   const execution = useExecutionStore((s) => s.currentExecution);
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
 
+  const setSelectedOutputNode = useExecutionStore((s) => s.setSelectedOutputNode);
+
   const group = definition?.group ?? 'core';
   const iconName = definition?.icon ?? 'Box';
   const Icon = getNodeIcon(iconName);
   const nodeStatus = execution?.nodeStatuses[id];
+  const nodeOutput = execution?.nodeOutputs[id];
+  const outputCount = nodeOutput?.length ?? 0;
   const isSelected = selected || selectedNodeId === id;
   const accentColor = GROUP_ACCENT_COLORS[group] ?? '#627d98';
+  const hasOutput = nodeStatus === 'success' && outputCount > 0;
+
+  const handleOutputClick = useCallback((e: ReactMouseEvent) => {
+    if (hasOutput) {
+      e.stopPropagation();
+      setSelectedOutputNode(id);
+    }
+  }, [hasOutput, id, setSelectedOutputNode]);
 
   const inputs = definition?.inputs ?? ['main'];
   const outputs = definition?.outputs ?? ['main'];
@@ -104,12 +116,23 @@ function BaseNode({ id, data, selected }: NodeProps) {
           )}
         </div>
         {nodeStatus && (
-          <div
-            className={clsx(
-              'w-2.5 h-2.5 rounded-full shrink-0',
-              STATUS_STYLES[nodeStatus] ?? STATUS_STYLES.pending,
+          <div className="flex items-center gap-1.5 shrink-0">
+            {hasOutput && (
+              <button
+                onClick={handleOutputClick}
+                className="text-[9px] font-mono text-aurora-cyan/70 hover:text-aurora-cyan bg-aurora-cyan/10 hover:bg-aurora-cyan/20 px-1.5 py-0.5 rounded transition-colors"
+                title={`${outputCount} item — çıktıyı görmek için tıkla`}
+              >
+                {outputCount}
+              </button>
             )}
-          />
+            <div
+              className={clsx(
+                'w-2.5 h-2.5 rounded-full',
+                STATUS_STYLES[nodeStatus] ?? STATUS_STYLES.pending,
+              )}
+            />
+          </div>
         )}
       </div>
 

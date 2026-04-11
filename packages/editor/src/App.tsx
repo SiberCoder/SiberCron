@@ -104,8 +104,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [authRequired, checkAuthRequired]);
 
-  // Still checking — don't redirect yet
-  if (authRequired === null) return null;
+  // Still checking — show minimal spinner, don't redirect yet
+  if (authRequired === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-obsidian-950">
+        <div className="w-8 h-8 border-2 border-aurora-cyan/30 border-t-aurora-cyan rounded-full animate-spin" />
+      </div>
+    );
+  }
   // Auth disabled on server — let through
   if (!authRequired) return <>{children}</>;
   // Auth required — must be logged in

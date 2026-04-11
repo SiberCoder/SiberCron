@@ -352,6 +352,10 @@ export default function DashboardPage() {
           .slice(0, 8);
         setTopWorkflows(top);
       }
+
+      if (nodeErrorsRes?.nodes) {
+        setTopFailingNodes(nodeErrorsRes.nodes);
+      }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setError((err as Error).message ?? 'Dashboard verisi yüklenemedi');
@@ -535,12 +539,16 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Top workflows */}
-      {topWorkflows.length > 0 && (
-        <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>
-          <TopWorkflowsPanel items={topWorkflows} />
+      {/* Top workflows + Top failing nodes side by side when both exist */}
+      {topWorkflows.length > 0 || topFailingNodes.length > 0 ? (
+        <div className={clsx(
+          'animate-slide-up stagger-5 gap-4',
+          topWorkflows.length > 0 && topFailingNodes.length > 0 ? 'grid grid-cols-1 xl:grid-cols-2' : 'block',
+        )} style={{ animationFillMode: 'both' }}>
+          {topWorkflows.length > 0 && <TopWorkflowsPanel items={topWorkflows} />}
+          {topFailingNodes.length > 0 && <TopFailingNodesPanel items={topFailingNodes} />}
         </div>
-      )}
+      ) : null}
 
       {/* Recent executions */}
       <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>

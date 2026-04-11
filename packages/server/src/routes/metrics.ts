@@ -68,6 +68,31 @@ export async function metricsRoutes(fastify: FastifyInstance): Promise<void> {
       }
     }
 
+    // ── Top failing nodes ──────────────────────────────────────────
+    const nodeErrorMap = new Map<string, { errorCount: number; total: number }>();
+    for (const exec of allExec.data) {
+      if (!exec.nodeResults) continue;
+      for (const result of Object.values(exec.nodeResults)) {
+        const key = (result as { nodeName?: string; nodeId?: string; status?: string }).nodeName
+          ?? (result as { nodeName?: string; nodeId?: string }).nodeId
+          ?? 'unknown';
+        const entry = nodeErrorMap.get(key) ?? { errorCount: 0, total: 0 };
+        entry.total++;
+        if ((result as { status?: string }).status === 'error') entry.errorCount++;
+        nodeErrorMap.set(key, entry);
+      }
+    }
+    const topFailingNodes = Array.from(nodeErrorMap.entries())
+      .filter(([, v]) => v.errorCount > 0)
+      .sort((a, b) => b[1].errorCount - a[1].errorCount)
+      .slice(0, 5)
+      .map(([name, v]) => ({
+        name,
+        errorCount: v.errorCount,
+        total: v.total,
+        errorRatePct: Math.round((v.errorCount / v.total) * 10000) / 100,
+      }));
+
     // ── Credential stats ───────────────────────────────────────────
     const credentials = db.listCredentials();
     const credTypeBreakdown: Record<string, number> = {};
@@ -101,6 +126,7 @@ export async function metricsRoutes(fastify: FastifyInstance): Promise<void> {
         avgDurationMs,
         last24h: { total: last24hTotal, success: last24hSuccess, error: last24hError },
         last7d: { total: last7dTotal, success: last7dSuccess, error: last7dError },
+        topFailingNodes,
       },
 
       credentials: {

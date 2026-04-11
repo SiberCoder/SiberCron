@@ -827,10 +827,19 @@ export default function ExecutionHistoryPage() {
                       </p>
                       <p className="text-[10px] text-obsidian-500 font-body mt-0.5">
                         {formatDate(exec.startedAt)} &middot; {nodeCount} node &middot; {exec.triggerType}
-                        {exec.triggeredBy?.username && ` · ${exec.triggeredBy.username}`}
-                        {exec.triggeredBy?.method === 'api' && exec.triggeredBy.apiKeyName && ` · API: ${exec.triggeredBy.apiKeyName}`}
                       </p>
                     </div>
+                    {/* triggeredBy badge */}
+                    {exec.triggeredBy?.username && (
+                      <span className="hidden sm:flex items-center gap-1 text-[10px] text-obsidian-400 font-body bg-white/[0.04] border border-white/[0.06] rounded-full px-2 py-0.5 shrink-0">
+                        {exec.triggeredBy.method === 'api'
+                          ? <Terminal size={9} className="text-aurora-amber" />
+                          : <User size={9} className="text-aurora-cyan" />}
+                        {exec.triggeredBy.method === 'api' && exec.triggeredBy.apiKeyName
+                          ? exec.triggeredBy.apiKeyName
+                          : exec.triggeredBy.username}
+                      </span>
+                    )}
                     <span className={clsx('badge', statusConf.bg, statusConf.text)}>
                       <span className={clsx('w-1.5 h-1.5 rounded-full', statusConf.dot)} />
                       {statusConf.label}

@@ -7,6 +7,7 @@ import type { INodeProperty, ICredential } from '@sibercron/shared';
 import { getNodeIcon } from '../../lib/iconRegistry';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
+import { useExecutionStore } from '../../store/executionStore';
 import { apiGet } from '../../api/client';
 import { API_BASE_URL } from '../../lib/config';
 
@@ -369,13 +370,16 @@ function WebhookSecretSection({ secret, onChange }: { secret: string; onChange: 
 // ── Expression Builder ────────────────────────────────────────────────
 
 const EXPRESSION_VARS = [
-  { label: '$now', insert: '{{ $now }}', description: 'Şu anki tarih/saat (ISO)' },
-  { label: '$timestamp', insert: '{{ $timestamp }}', description: 'Unix timestamp (ms)' },
-  { label: '$runId', insert: '{{ $runId }}', description: 'Çalıştırma ID' },
-  { label: '$json.field', insert: '{{ $json.field }}', description: 'Önceki node çıktısı' },
-  { label: '$input[0].json', insert: '{{ $input[0].json.field }}', description: 'İlk girdi item alanı' },
-  { label: '$env.VAR', insert: '{{ $env.VARIABLE_NAME }}', description: 'Ortam değişkeni' },
-] as const;
+  { label: '$json.field', insert: '{{ $json.field }}', description: 'Önceki node çıktısı (ilk item)', category: 'data' },
+  { label: '$json.id', insert: '{{ $json.id }}', description: 'Önceki node çıktısından id alanı', category: 'data' },
+  { label: '$json.name', insert: '{{ $json.name }}', description: 'Önceki node çıktısından name alanı', category: 'data' },
+  { label: '$input[0].json', insert: '{{ $input[0].json.field }}', description: 'İlk girdi item alanı (index ile)', category: 'data' },
+  { label: '$item(0)', insert: '{{ $item(0).json.field }}', description: 'n. input item\'ından alan', category: 'data' },
+  { label: '$now', insert: '{{ $now }}', description: 'Şu anki tarih/saat (ISO 8601)', category: 'time' },
+  { label: '$timestamp', insert: '{{ $timestamp }}', description: 'Unix timestamp (milisaniye)', category: 'time' },
+  { label: '$runId', insert: '{{ $runId }}', description: 'Bu çalıştırmanın benzersiz ID\'si', category: 'meta' },
+  { label: '$env.VAR', insert: '{{ $env.VARIABLE_NAME }}', description: 'Sunucu ortam değişkeni', category: 'meta' },
+];
 
 function ExpressionInput({
   value,
@@ -391,26 +395,55 @@ function ExpressionInput({
   hasError: boolean;
 }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filterQuery, setFilterQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasExpression = value.includes('{{');
+
+  // Extract what user typed after {{ to filter suggestions
+  const getQueryFromCursor = (text: string, cursorPos: number): string => {
+    const before = text.slice(0, cursorPos);
+    const lastOpen = before.lastIndexOf('{{');
+    if (lastOpen === -1) return '';
+    const afterOpen = before.slice(lastOpen + 2).trimStart();
+    return afterOpen;
+  };
+
+  const filteredVars = filterQuery.trim()
+    ? EXPRESSION_VARS.filter(
+        (v) =>
+          v.label.toLowerCase().includes(filterQuery.toLowerCase()) ||
+          v.description.toLowerCase().includes(filterQuery.toLowerCase()),
+      )
+    : EXPRESSION_VARS;
 
   const insertExpression = (expr: string) => {
     const input = inputRef.current;
     if (!input) {
       onChange(value + expr);
+      setShowSuggestions(false);
       return;
     }
-    const start = input.selectionStart ?? value.length;
-    const end = input.selectionEnd ?? value.length;
-    const newVal = value.slice(0, start) + expr + value.slice(end);
+    const cursorPos = input.selectionStart ?? value.length;
+    const before = value.slice(0, cursorPos);
+    const after = value.slice(input.selectionEnd ?? cursorPos);
+    const lastOpen = before.lastIndexOf('{{');
+
+    let newVal: string;
+    if (lastOpen !== -1) {
+      // Replace from {{ to cursor with the chosen expression
+      newVal = value.slice(0, lastOpen) + expr + after;
+    } else {
+      newVal = before + expr + after;
+    }
     onChange(newVal);
+    const newPos = (lastOpen !== -1 ? lastOpen : cursorPos) + expr.length;
     setTimeout(() => {
       input.focus();
-      const pos = start + expr.length;
-      input.setSelectionRange(pos, pos);
+      input.setSelectionRange(newPos, newPos);
     }, 10);
     setShowSuggestions(false);
+    setFilterQuery('');
   };
 
   // Close suggestions when clicking outside
@@ -419,11 +452,25 @@ function ExpressionInput({
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
+        setFilterQuery('');
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showSuggestions]);
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    data: 'Veri Erişimi',
+    time: 'Tarih & Saat',
+    meta: 'Sistem',
+  };
+
+  const groupedVars = filteredVars.reduce<Record<string, typeof EXPRESSION_VARS>>((acc, v) => {
+    const cat = v.category;
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(v);
+    return acc;
+  }, {});
 
   return (
     <div ref={containerRef} className="relative">
@@ -434,12 +481,24 @@ function ExpressionInput({
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
-            // Auto-show suggestions when user types {{
-            if (e.target.value.includes('{{')) setShowSuggestions(true);
+            const query = getQueryFromCursor(e.target.value, e.target.selectionStart ?? e.target.value.length);
+            if (e.target.value.includes('{{')) {
+              setShowSuggestions(true);
+              setFilterQuery(query);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowSuggestions(false);
+              setFilterQuery('');
+            }
           }}
           onBlur={() => {
             setTimeout(() => {
-              if (!showSuggestions) onBlur();
+              if (!showSuggestions) {
+                onBlur();
+                setFilterQuery('');
+              }
             }, 150);
           }}
           placeholder={placeholder}
@@ -451,13 +510,15 @@ function ExpressionInput({
         />
         <button
           type="button"
-          title="Expression değişkeni ekle"
+          title="Expression değişkeni ekle ({{ }})"
           onClick={() => {
-            if (!showSuggestions) {
-              setShowSuggestions(true);
-              inputRef.current?.focus();
-            } else {
+            if (showSuggestions) {
               setShowSuggestions(false);
+              setFilterQuery('');
+            } else {
+              setShowSuggestions(true);
+              setFilterQuery('');
+              inputRef.current?.focus();
             }
           }}
           className={clsx(
@@ -472,25 +533,35 @@ function ExpressionInput({
       </div>
 
       {showSuggestions && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 glass-card rounded-xl border border-aurora-violet/20 shadow-2xl overflow-hidden">
-          <div className="p-2 space-y-0.5">
-            <div className="text-[9px] font-semibold text-obsidian-500 uppercase tracking-wider px-2 py-1">
-              Expression Değişkenleri
-            </div>
-            {EXPRESSION_VARS.map((v) => (
-              <button
-                key={v.label}
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  insertExpression(v.insert);
-                }}
-                className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-aurora-violet/10 flex items-center gap-2.5 transition-colors group"
-              >
-                <code className="text-[10px] text-aurora-violet font-mono shrink-0">{v.label}</code>
-                <span className="text-[10px] text-obsidian-500 group-hover:text-obsidian-300 transition-colors">{v.description}</span>
-              </button>
-            ))}
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 glass-card rounded-xl border border-aurora-violet/20 shadow-2xl overflow-hidden max-h-56 overflow-y-auto">
+          <div className="p-2 space-y-1">
+            {filteredVars.length === 0 ? (
+              <div className="text-[10px] text-obsidian-500 px-2 py-2 text-center">Eşleşen değişken yok</div>
+            ) : (
+              Object.entries(groupedVars).map(([cat, vars]) => (
+                <div key={cat}>
+                  <div className="text-[9px] font-semibold text-obsidian-600 uppercase tracking-wider px-2 py-1">
+                    {CATEGORY_LABELS[cat] ?? cat}
+                  </div>
+                  {vars.map((v) => (
+                    <button
+                      key={v.label}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        insertExpression(v.insert);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-aurora-violet/10 flex items-center gap-2.5 transition-colors group"
+                    >
+                      <code className="text-[10px] text-aurora-violet font-mono shrink-0">{v.label}</code>
+                      <span className="text-[10px] text-obsidian-500 group-hover:text-obsidian-300 transition-colors truncate">
+                        {v.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
