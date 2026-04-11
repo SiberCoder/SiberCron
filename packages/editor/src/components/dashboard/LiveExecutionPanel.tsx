@@ -132,7 +132,11 @@ export default function LiveExecutionPanel() {
 
   // Auto-scroll to bottom
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll only the log container, not the whole page
+    const container = logEndRef.current?.parentElement;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [logs]);
 
   // Don't show if no active execution and no logs

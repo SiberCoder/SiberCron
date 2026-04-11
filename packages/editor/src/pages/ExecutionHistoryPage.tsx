@@ -320,9 +320,12 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
     };
   }, [executionId]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll only the log container, not the whole page
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = logEndRef.current?.parentElement;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [logs.length]);
 
   if (logs.length === 0) {
