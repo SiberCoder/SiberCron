@@ -103,6 +103,17 @@ export interface ICommandRegistration {
   updatedAt: string;
 }
 
+// ── User Model ─────────────────────────────────────────────────────────
+
+export interface IUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  role: 'admin' | 'viewer';
+  createdAt: string;
+  updatedAt: string;
+}
+
 const MAX_VERSIONS_PER_WORKFLOW = 20;
 
 export interface IWorkflowVersion {
@@ -122,6 +133,57 @@ export class Database {
   private commandRegistrations: Map<string, ICommandRegistration> = new Map();
   /** workflow version history: workflowId → sorted array of versions (newest last) */
   private workflowVersions: Map<string, IWorkflowVersion[]> = new Map();
+  private users: Map<string, IUser> = new Map();
+
+  // ── User CRUD ────────────────────────────────────────────────────────
+
+  createUser(data: { username: string; passwordHash: string; role?: IUser['role'] }): IUser {
+    const now = new Date().toISOString();
+    const user: IUser = {
+      id: crypto.randomUUID(),
+      username: data.username,
+      passwordHash: data.passwordHash,
+      role: data.role ?? 'admin',
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.users.set(user.id, user);
+    this.save();
+    return user;
+  }
+
+  findUserByUsername(username: string): IUser | null {
+    for (const user of this.users.values()) {
+      if (user.username === username) return user;
+    }
+    return null;
+  }
+
+  findUserById(id: string): IUser | null {
+    return this.users.get(id) ?? null;
+  }
+
+  listUsers(): IUser[] {
+    return Array.from(this.users.values());
+  }
+
+  updateUserPassword(id: string, passwordHash: string): boolean {
+    const user = this.users.get(id);
+    if (!user) return false;
+    this.users.set(id, { ...user, passwordHash, updatedAt: new Date().toISOString() });
+    this.save();
+    return true;
+  }
+
+  deleteUser(id: string): boolean {
+    const result = this.users.delete(id);
+    if (result) this.save();
+    return result;
+  }
+
+  hasUsers(): boolean {
+    return this.users.size > 0;
+  }
 
   // ── Workflow CRUD ────────────────────────────────────────────────────
 
@@ -540,6 +602,7 @@ export class Database {
         commandRegistrations: Object.fromEntries(this.commandRegistrations),
         setupConfig: this.setupConfig,
         workflowVersions: Object.fromEntries(this.workflowVersions),
+        users: Object.fromEntries(this.users),
       };
       // Write to a temp file then rename for atomic replacement.
       // Prevents a corrupt data file if the process dies mid-write.
@@ -567,6 +630,7 @@ export class Database {
           Object.entries(data.workflowVersions as Record<string, IWorkflowVersion[]>),
         );
       }
+      if (data.users) this.users = new Map(Object.entries(data.users as Record<string, IUser>));
       console.log('[DB] Loaded from', DATA_FILE);
     } catch (err) {
       console.error('[DB] Load error:', (err as Error).message);

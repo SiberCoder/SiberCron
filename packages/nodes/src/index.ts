@@ -27,6 +27,7 @@ import { DatabaseQueryNode } from './core/DatabaseQuery.node.js';
 import { RedisNode } from './core/Redis.node.js';
 import { RSSFeedNode } from './core/RSSFeed.node.js';
 import { AIWebBrowserNode } from './ai/AIWebBrowser.node.js';
+import { GoogleSheetsNode } from './core/GoogleSheets.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -56,6 +57,7 @@ export const builtinNodes: INodeType[] = [
   RedisNode,
   RSSFeedNode,
   AIWebBrowserNode,
+  GoogleSheetsNode,
 ];
 
 export {
@@ -86,4 +88,5 @@ export {
   RedisNode,
   RSSFeedNode,
   AIWebBrowserNode,
+  GoogleSheetsNode,
 };

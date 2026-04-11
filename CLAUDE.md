@@ -167,6 +167,9 @@ Ana interface'ler:
 - **Redis Node**: 16 operasyon (get/set/del/exists/keys/incr/hget/hset/hgetall/lpush/lrange/sadd/smembers/publish/ttl/expire)
 - **Edge Animasyonları**: Execution sırasında edge renk ve animasyon (running=blue, success=green, error=red)
 - **Command Palette (Ctrl+K)**: Arama destekli komut paneli — workflow kaydet/çalıştır/import/export, node ekle, navigasyon
+- **JWT Authentication**: `@fastify/jwt` + bcryptjs. Login/logout/refresh/me endpointleri. `authStore` (Zustand) + `AuthGuard`. `AUTH_ENABLED=false` ile dev modda kapatılabilir.
+- **RBAC**: `admin` ve `viewer` rolleri. İlk açılışta default admin oluşturulur (admin/admin).
+- **GoogleSheets Node**: Google Sheets API v4, service account JWT auth (client_email + private_key). getRows/appendRows/updateRange/clearRange. Ek npm paketi gerekmez.
 
 ## Kurallar
 
@@ -174,3 +177,32 @@ Ana interface'ler:
 - Kullanıcı Türkçe konuşur, yanıtlar Türkçe olmalı
 - ESM modüller kullanılır ("type": "module")
 - Port: Server 3001, Editor 5173
+- Node eklerken: dosya oluştur → index.ts'e import+export ekle → build kontrol
+- Her değişiklikten sonra `pnpm build` ile doğrula
+- Mevcut kodu oku, SONRA değiştir — körlemesine yazma
+
+## Otonom Geliştirme Protokolü
+
+Bu bölüm otonom/loop modunda çalışırken uygulanır:
+
+### Döngü
+1. **DURUM**: TODO.md oku → sıradaki `[ ]` görevi belirle
+2. **BUILD**: `pnpm build` → hata varsa ÖNCE düzelt
+3. **GELİŞTİR**: Görevi uygula (en az 3 somut iş/tur)
+4. **DOĞRULA**: `pnpm build` → 0 hata olana kadar düzelt
+5. **GÜNCELLE**: TODO.md'de tamamlananları `[x]` işaretle
+6. **KEŞFET**: Kodu incelerken 2-3 yeni somut görev bul, TODO.md'ye ekle
+
+### Görev Üretme Kaynakları
+- Kod incelemesi: eksik error handling, validasyon, edge case
+- Rakip analiz: n8n/Zapier/Make.com'da olup bizde olmayan özellikler
+- UX: UI'da eksik/kötü/eksik olan feedback, loading state, empty state
+- Performans: gereksiz re-render, büyük bundle, yavaş query
+- Güvenlik: input sanitization, rate limiting, credential exposure
+- Test: birim test eksikliği, integration test
+
+### Görev Yazım Kuralı
+KÖTÜ: "kodu iyileştir", "performansı artır"
+İYİ: "HttpRequest node'a retry/exponential backoff desteği ekle"
+İYİ: "WorkflowCanvas'ta 50+ node olunca render yavaşlıyor, virtualization ekle"
+İYİ: "Code node sandbox'una fetch() desteği ekle"

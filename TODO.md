@@ -71,11 +71,13 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] AIClassifier node (metin siniflandirma)
 - [x] AIWebBrowser node (web scraping + AI ozet)
 - [x] TelegramTrigger node (incoming messages)
-- [ ] GoogleSheets node (read/write/append)
+- [x] GoogleSheets node (getRows/appendRows/updateRange/clearRange, service account JWT auth)
 - [x] MySQL / PostgreSQL query node (DatabaseQuery)
 - [x] Redis node (16 operasyon)
 - [ ] FTP/SFTP node
 - [x] RSS Feed node
+- [ ] GoogleDrive node (upload/download/list/delete dosyalar)
+- [ ] NotionDatabase node (query/create/update sayfa)
 
 #### Oncelik 3: Editor Gelistirmeleri
 - [x] Template'den workflow olusturma (templates sayfasindan)
@@ -88,13 +90,16 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [ ] Node gruplama / sub-workflow
 
 #### Oncelik 4: Production Ozellikleri
-- [ ] Kullanici kimlik dogrulama (auth)
-- [ ] Rol bazli erisim kontrolu (RBAC)
+- [x] Kullanici kimlik dogrulama (auth) — JWT, login/logout, register, refresh token
+- [x] Rol bazli erisim kontrolu (RBAC) — admin/viewer, route koruma
 - [x] Workflow versiyonlama (auto-snapshot, restore)
 - [x] Execution log retention policy (otomatik, env ile ayarlanabilir)
 - [ ] Rate limiting (gelismis)
-- [ ] API anahtari yonetimi
+- [ ] API anahtari yonetimi (kullanici bazli token uretimi ve iptal)
 - [ ] Monitoring / metricsler
+- [ ] Auth token suresini editor settings'den yapilandirma (su an sabit 8h)
+- [ ] Workflow execution'larinda user bazli audit log (kim tetikledi)
+- [ ] LoginPage'e "sifre unut" / ilk kurulum wizard'ina admin ayarla adimi ekle
 - [x] Webhook guvenligi (HMAC-SHA256 imza dogrulama)
 - [x] Node palette arama iyilestirmesi (otomatik grup acma)
 - [x] Settings sayfasi sistem bilgisi paneli

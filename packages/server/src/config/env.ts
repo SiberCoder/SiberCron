@@ -28,4 +28,10 @@ export const config = {
   corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN || 'http://localhost:5173'),
   /** Optional: set API_KEY env var to require Bearer token on all /api/v1/* routes. */
   apiKey: process.env.API_KEY || '',
+  /** JWT secret for auth tokens. Set JWT_SECRET in production. */
+  jwtSecret: process.env.JWT_SECRET || 'sibercron-dev-secret-change-in-production',
+  /** Default admin password on first startup when no users exist. */
+  defaultAdminPassword: process.env.ADMIN_PASSWORD || 'admin',
+  /** Set AUTH_ENABLED=false to disable auth (dev convenience). Default: true. */
+  authEnabled: process.env.AUTH_ENABLED !== 'false',
 };

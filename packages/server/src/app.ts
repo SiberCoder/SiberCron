@@ -1,5 +1,9 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyJwt from '@fastify/jwt';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUi from '@fastify/swagger-ui';
+import bcrypt from 'bcryptjs';
 import { Server as SocketIOServer } from 'socket.io';
 import { WorkflowEngine, NodeRegistry } from '@sibercron/core';
 import { builtinNodes } from '@sibercron/nodes';
@@ -16,6 +20,7 @@ import { socialAccountRoutes } from './routes/socialAccounts.js';
 import { messagingRoutes } from './routes/messaging.js';
 import { commandRoutes } from './routes/commands.js';
 import { chatRoutes } from './routes/chat.js';
+import { authRoutes } from './routes/auth.js';
 import { schedulerService } from './services/schedulerService.js';
 import { queueService } from './services/queueService.js';
 import { executionLogStore } from './services/executionLogStore.js';
@@ -40,12 +45,95 @@ const app = Fastify({
   trustProxy: true,
 });
 
-// ── Optional API key auth ──────────────────────────────────────────────
-// Set API_KEY env var to enable. Skipped for /api/v1/health (liveness probes).
+// ── Swagger / OpenAPI ──────────────────────────────────────────────────
 
-if (config.apiKey) {
+await app.register(fastifySwagger, {
+  openapi: {
+    openapi: '3.0.3',
+    info: {
+      title: 'SiberCron API',
+      description: 'AI-Powered Workflow Automation Platform — REST API',
+      version: '1.0.0',
+    },
+    servers: [{ url: '/api/v1', description: 'API v1' }],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
+  },
+});
+
+await app.register(fastifySwaggerUi, {
+  routePrefix: '/api/docs',
+  uiConfig: {
+    docExpansion: 'list',
+    deepLinking: true,
+  },
+  staticCSP: false,
+});
+
+// ── JWT plugin ─────────────────────────────────────────────────────────
+
+await app.register(fastifyJwt, {
+  secret: config.jwtSecret,
+});
+
+// Decorate authenticate helper used as preHandler in protected routes
+app.decorate('authenticate', async function (request: import('fastify').FastifyRequest, reply: import('fastify').FastifyReply) {
+  try {
+    await request.jwtVerify();
+  } catch (err) {
+    reply.status(401).send({ error: 'Unauthorized' });
+  }
+});
+
+// ── Auto-create default admin user if none exists ──────────────────────
+
+if (config.authEnabled && !db.hasUsers()) {
+  const passwordHash = await bcrypt.hash(config.defaultAdminPassword, 10);
+  db.createUser({ username: 'admin', passwordHash, role: 'admin' });
+  console.log(`[Auth] Created default admin user (password: ${config.defaultAdminPassword === 'admin' ? 'admin — CHANGE IT!' : '***'})`);
+}
+
+// ── JWT auth middleware (protects all /api/v1/* except public routes) ──
+
+const PUBLIC_PREFIXES = [
+  '/api/v1/health',
+  '/api/v1/auth/',
+  '/api/v1/webhook/',
+];
+
+if (config.authEnabled) {
   app.addHook('onRequest', async (request, reply) => {
-    // Skip health checks and webhooks (they use their own auth model)
+    const url = request.url.split('?')[0];
+    const isPublic = PUBLIC_PREFIXES.some((p) => url.startsWith(p));
+    if (isPublic) return;
+
+    // Only intercept /api/v1/* routes
+    if (!url.startsWith('/api/v1/')) return;
+
+    try {
+      await request.jwtVerify();
+    } catch {
+      reply.status(401).send({ error: 'Unauthorized: please log in' });
+    }
+  });
+  console.log('[Auth] JWT authentication enabled.');
+} else {
+  console.log('[Auth] Authentication DISABLED (AUTH_ENABLED=false).');
+}
+
+// ── Optional API key auth ──────────────────────────────────────────────
+// Legacy fallback: API_KEY still accepted as Bearer token if JWT is disabled.
+
+if (!config.authEnabled && config.apiKey) {
+  app.addHook('onRequest', async (request, reply) => {
     const url = request.url;
     if (url.startsWith('/api/v1/health') || url.startsWith('/api/v1/webhook/')) return;
 
@@ -197,6 +285,7 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
       (request.headers['x-signature-256'] as string) ??
       (request.headers['x-webhook-signature'] as string) ??
       '';
+
     // Strip "sha256=" prefix if present (GitHub format)
     const receivedSig = sigHeader.replace(/^sha256=/, '');
 
@@ -229,6 +318,7 @@ app.get('/api/v1/webhook/*', webhookHandler);
 
 // ── Register route plugins ──────────────────────────────────────────────
 
+await app.register(authRoutes, { prefix: '/api/v1/auth' });
 await app.register(healthRoutes, { prefix: '/api/v1/health', registry });
 await app.register(workflowRoutes, { prefix: '/api/v1/workflows', io, engine });
 await app.register(executionRoutes, { prefix: '/api/v1/executions' });
