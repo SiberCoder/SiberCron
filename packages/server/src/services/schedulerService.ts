@@ -188,8 +188,11 @@ class SchedulerService {
     const existingJob = this.jobs.get(workflow.id);
 
     if (workflow.isActive && workflow.triggerType === 'cron' && workflow.cronExpression) {
+      // Normalize whitespace before comparing so "0 * * * *" and "0  * * * *" are treated as equal
+      const normalizedNew = workflow.cronExpression.trim().replace(/\s+/g, ' ');
+      const normalizedExisting = existingJob?.cronExpression?.trim().replace(/\s+/g, ' ');
       // Re-schedule if expression changed or newly became a cron workflow
-      if (!existingJob || existingJob.cronExpression !== workflow.cronExpression) {
+      if (!existingJob || normalizedExisting !== normalizedNew) {
         this.schedule(workflow);
       }
     } else {

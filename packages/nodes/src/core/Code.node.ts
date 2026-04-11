@@ -2,6 +2,16 @@ import vm from 'node:vm';
 import crypto from 'node:crypto';
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
 
+/** Safely serialize a console argument (objects → JSON, rest → String) */
+function formatArg(arg: unknown): string {
+  if (arg === null) return 'null';
+  if (arg === undefined) return 'undefined';
+  if (typeof arg === 'object') {
+    try { return JSON.stringify(arg, null, 2); } catch { return String(arg); }
+  }
+  return String(arg);
+}
+
 export const CodeNode: INodeType = {
   definition: {
     displayName: 'Code',
@@ -39,6 +49,12 @@ export const CodeNode: INodeType = {
     const items = context.getInputData();
     const $input = items[0]?.json ?? {};
 
+    // Guard against excessively large scripts (DoS prevention)
+    const MAX_CODE_SIZE = 256 * 1024; // 256 KB
+    if (typeof code === 'string' && code.length > MAX_CODE_SIZE) {
+      throw new Error(`Code node: script exceeds maximum allowed size (${MAX_CODE_SIZE / 1024} KB)`);
+    }
+
     context.helpers.log('Executing custom code');
 
     const wrappedCode = `(async function(items, $input, $helpers) { ${code} })`;
@@ -52,9 +68,12 @@ export const CodeNode: INodeType = {
       Map, Set, WeakMap, WeakSet,
       Promise, setTimeout, clearTimeout, setInterval, clearInterval,
       console: {
-        log: (...args: unknown[]) => context.helpers.log(args.map(String).join(' ')),
-        warn: (...args: unknown[]) => context.helpers.log(`[WARN] ${args.map(String).join(' ')}`),
-        error: (...args: unknown[]) => context.helpers.log(`[ERROR] ${args.map(String).join(' ')}`),
+        log:   (...args: unknown[]) => context.helpers.log(args.map(formatArg).join(' ')),
+        info:  (...args: unknown[]) => context.helpers.log(`[INFO] ${args.map(formatArg).join(' ')}`),
+        warn:  (...args: unknown[]) => context.helpers.log(`[WARN] ${args.map(formatArg).join(' ')}`),
+        error: (...args: unknown[]) => context.helpers.log(`[ERROR] ${args.map(formatArg).join(' ')}`),
+        debug: (...args: unknown[]) => context.helpers.log(`[DEBUG] ${args.map(formatArg).join(' ')}`),
+        table: (...args: unknown[]) => context.helpers.log(`[TABLE] ${args.map(formatArg).join(' ')}`),
       },
       structuredClone: globalThis.structuredClone,
       atob: globalThis.atob,
@@ -108,9 +127,22 @@ export const CodeNode: INodeType = {
 
     const $helpers = { log: (msg: string) => context.helpers.log(msg) };
 
+    // Enforce timeout on async execution (vm.runInContext timeout only covers compilation)
     let result: unknown;
     try {
-      result = await fn(items, $input, $helpers);
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+      const executionPromise = fn(items, $input, $helpers);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(
+          () => reject(new Error(`Code execution timed out after ${timeoutMs}ms`)),
+          timeoutMs,
+        );
+      });
+      try {
+        result = await Promise.race([executionPromise, timeoutPromise]);
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
     } catch (err) {
       throw new Error(`Code execution error: ${(err as Error).message}`);
     }

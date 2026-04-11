@@ -41,6 +41,10 @@ function parseCronToUI(expr: string): { freq: CronFrequency; minute: string; hou
   while (parts.length < 5) parts.push('*');
   const [min, hr, dom, , dow] = parts;
 
+  // Every N minutes: */N * * * *  (min starts with */, all others *)
+  if (min.startsWith('*/') && hr === '*' && dom === '*' && dow === '*') {
+    return { freq: 'minute', minute: '0', hour: '0', dayOfMonth: '1', dayOfWeek: [], everyN: min.replace('*/', '') };
+  }
   if (dow !== '*' && dow !== undefined) {
     return { freq: 'week', minute: min === '*' ? '0' : min, hour: hr === '*' ? '9' : hr, dayOfMonth: '1', dayOfWeek: dow.split(','), everyN: '1' };
   }
@@ -48,7 +52,6 @@ function parseCronToUI(expr: string): { freq: CronFrequency; minute: string; hou
     return { freq: 'month', minute: min === '*' ? '0' : min, hour: hr === '*' ? '9' : hr, dayOfMonth: dom, dayOfWeek: [], everyN: '1' };
   }
   if (hr !== '*') {
-    if (min.startsWith('*/')) return { freq: 'minute', minute: '0', hour: '0', dayOfMonth: '1', dayOfWeek: [], everyN: min.replace('*/', '') };
     return { freq: 'day', minute: min === '*' ? '0' : min, hour: hr, dayOfMonth: '1', dayOfWeek: [], everyN: '1' };
   }
   if (min !== '*' && !min.startsWith('*/')) {
@@ -227,7 +230,7 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
 function CronPreview({ expression }: { expression: string }) {
   const human = useMemo(() => {
     try {
-      return cronstrue.toString(expression);
+      return cronstrue.toString(expression, { locale: 'tr' });
     } catch {
       return null;
     }

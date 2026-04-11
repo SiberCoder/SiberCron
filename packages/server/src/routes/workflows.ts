@@ -338,6 +338,9 @@ export async function workflowRoutes(
     // Respond immediately
     reply.code(202);
 
+    // Pass API execution ID so nodes (like AutonomousDev) can use it for log correlation
+    triggerData._apiExecutionId = executionId;
+
     // Execute in background
     engine.execute(
       workflow,
@@ -365,17 +368,24 @@ export async function workflowRoutes(
             output?: Record<string, unknown>[];
             error?: string;
             durationMs?: number;
+            startedAt?: string;
+            finishedAt?: string;
           };
           if (nodeData.nodeId) {
             const existing = db.getExecution(executionId);
             if (existing) {
+              const now = new Date().toISOString();
+              const durationMs = nodeData.durationMs ?? 0;
               existing.nodeResults[nodeData.nodeId] = {
                 nodeId: nodeData.nodeId,
                 nodeName: nodeData.nodeName ?? nodeData.nodeId,
                 status: (nodeData.status ?? 'error') as INodeExecutionResult['status'],
                 output: nodeData.output,
                 error: nodeData.error,
-                durationMs: nodeData.durationMs,
+                durationMs,
+                // Use engine-provided timestamps when available, fall back to approximation
+                startedAt: nodeData.startedAt ?? new Date(Date.now() - durationMs).toISOString(),
+                finishedAt: nodeData.finishedAt ?? now,
               };
               db.updateExecution(executionId, { nodeResults: existing.nodeResults });
             }

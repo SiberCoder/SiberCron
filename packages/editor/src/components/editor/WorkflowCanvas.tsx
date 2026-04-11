@@ -112,9 +112,12 @@ export default function WorkflowCanvas() {
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: { id: string }) => {
       setSelectedNode(node.id);
-      // If this node has execution output, show it in the output viewer
+      // Show output viewer only when this specific node has execution results;
+      // otherwise fall back to the config panel
       if (nodeStatuses[node.id] === 'success' || nodeStatuses[node.id] === 'error') {
         setSelectedOutputNode(node.id);
+      } else {
+        setSelectedOutputNode(null);
       }
     },
     [setSelectedNode, setSelectedOutputNode, nodeStatuses],

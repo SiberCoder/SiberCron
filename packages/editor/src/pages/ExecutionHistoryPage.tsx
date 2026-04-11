@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Play,
   CheckCircle2,
@@ -27,7 +27,7 @@ import {
 import clsx from 'clsx';
 import type { Socket } from 'socket.io-client';
 import { getSocket, releaseSocket } from '../lib/socket';
-import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsExecutionCompleted } from '@sibercron/shared';
+import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsNodeStart, WsExecutionCompleted } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
 import { toast } from '../store/toastStore';
 import { useAuthStore } from '../store/authStore';
@@ -77,6 +77,15 @@ const STATUS_CONFIG: Record<
     text: 'text-aurora-amber',
     bg: 'bg-aurora-amber/10',
   },
+};
+
+// Node-specific status config (superset of ExecutionStatus — adds 'skipped' and 'running' node states)
+const NODE_STATUS_CONFIG: Record<string, { dot: string; text: string; bg: string; label: string }> = {
+  success: { dot: 'bg-aurora-emerald', text: 'text-aurora-emerald', bg: 'bg-aurora-emerald/10', label: 'Başarılı' },
+  error:   { dot: 'bg-aurora-rose',    text: 'text-aurora-rose',    bg: 'bg-aurora-rose/10',    label: 'Hata'     },
+  skipped: { dot: 'bg-obsidian-500',   text: 'text-obsidian-400',  bg: 'bg-white/[0.04]',      label: 'Atlandı'  },
+  running: { dot: 'bg-aurora-blue animate-pulse', text: 'text-aurora-blue', bg: 'bg-aurora-blue/10', label: 'Çalışıyor' },
+  pending: { dot: 'bg-obsidian-500',   text: 'text-obsidian-400',  bg: 'bg-white/[0.04]',      label: 'Bekliyor' },
 };
 
 function formatDuration(ms?: number) {
@@ -166,7 +175,13 @@ function ConversationHistory({ history }: { history: Array<{ role: string; conte
 function NodeOutputDetail({ output }: { output: Record<string, unknown>[] }) {
   if (!output || output.length === 0) return null;
 
-  const data = output[0];
+  // Check for truncation marker appended by the WorkflowEngine (> 500 items)
+  const truncationInfo = output[output.length - 1]?._truncated
+    ? output[output.length - 1] as { _truncated: boolean; _totalItems: number; _storedItems: number; _message: string }
+    : null;
+  const visibleOutput = truncationInfo ? output.slice(0, -1) : output;
+
+  const data = visibleOutput[0] ?? {};
 
   // AutonomousDev node output
   const conversationHistory = data.conversationHistory as Array<{ role: string; content: string }> | undefined;
@@ -247,7 +262,13 @@ function NodeOutputDetail({ output }: { output: Record<string, unknown>[] }) {
   // Generic node output - show as formatted JSON
   return (
     <div className="space-y-2">
-      {output.map((item, i) => (
+      {truncationInfo && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-aurora-amber/5 border border-aurora-amber/20 rounded-xl text-xs text-aurora-amber font-body">
+          <AlertTriangle size={12} className="shrink-0" />
+          <span>{truncationInfo._message}</span>
+        </div>
+      )}
+      {visibleOutput.map((item, i) => (
         <div key={i} className="glass-panel rounded-xl p-3">
           <pre className="text-xs text-obsidian-300 whitespace-pre-wrap break-words font-mono max-h-60 overflow-y-auto">
             {JSON.stringify(item, null, 2)}
@@ -273,10 +294,13 @@ const LOG_LEVEL_CONFIG: Record<string, { icon: React.ComponentType<{ size?: numb
   iteration: { icon: RefreshCw, color: 'text-aurora-blue', label: 'Iterasyon' },
   ai_request: { icon: Terminal, color: 'text-aurora-amber', label: 'Talimat' },
   ai_response: { icon: Bot, color: 'text-aurora-violet', label: 'AI Cevabi' },
+  ai_streaming: { icon: Bot, color: 'text-aurora-violet', label: 'AI Token' },
   auto_answer: { icon: User, color: 'text-aurora-cyan', label: 'Oto. Cevap' },
   system: { icon: AlertCircle, color: 'text-obsidian-400', label: 'Sistem' },
   error: { icon: XCircle, color: 'text-aurora-rose', label: 'Hata' },
+  warn: { icon: AlertTriangle, color: 'text-aurora-amber', label: 'Uyarı' },
   info: { icon: MessageSquare, color: 'text-obsidian-400', label: 'Bilgi' },
+  debug: { icon: Terminal, color: 'text-obsidian-500', label: 'Debug' },
 };
 
 function LiveLogPanel({ executionId }: { executionId: string }) {
@@ -294,6 +318,7 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
       .catch(() => { /* best-effort */ });
 
     // WebSocket: subscribe to real-time log events from the server
+    // If already connected, subscribe immediately (onConnect won't fire again)
     const socket = getSocket();
 
     const onConnect = () => { socket.emit('subscribe:execution', executionId); };
@@ -316,6 +341,11 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
     socket.on('connect', onConnect);
     socket.io.on('reconnect', onReconnect);
     socket.on('execution:log', onLog);
+
+    // If socket is already connected, subscribe immediately
+    if (socket.connected) {
+      socket.emit('subscribe:execution', executionId);
+    }
 
     return () => {
       cancelled = true;
@@ -474,9 +504,11 @@ function ExecutionTimeline({ exec }: { exec: IExecution }) {
 
 function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning: boolean }) {
   const [expanded, setExpanded] = useState(isRunning);
-  const nrStatus = STATUS_CONFIG[nr.status as ExecutionStatus] ?? STATUS_CONFIG.pending;
-  const hasOutput = nr.output && nr.output.length > 0;
   const isNodeRunning = nr.status === 'running' || (isRunning && !nr.finishedAt);
+  const nodeStatusCfg = isNodeRunning
+    ? NODE_STATUS_CONFIG.running
+    : (NODE_STATUS_CONFIG[nr.status] ?? NODE_STATUS_CONFIG.pending);
+  const hasOutput = nr.output && nr.output.length > 0;
 
   return (
     <div className="glass-panel rounded-xl overflow-hidden">
@@ -487,11 +519,11 @@ function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning:
         {isNodeRunning ? (
           <Loader2 size={14} className="animate-spin text-aurora-blue shrink-0" />
         ) : (
-          <span className={clsx('w-2 h-2 rounded-full shrink-0', nrStatus.dot)} />
+          <span className={clsx('w-2 h-2 rounded-full shrink-0', nodeStatusCfg.dot)} />
         )}
         <span className="text-sm text-white font-medium flex-1 font-body">{nr.nodeName}</span>
-        <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-md', nrStatus.bg, nrStatus.text)}>
-          {isNodeRunning ? 'Çalışıyor' : nr.status}
+        <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-md', nodeStatusCfg.bg, nodeStatusCfg.text)}>
+          {nodeStatusCfg.label}
         </span>
         {nr.durationMs != null && (
           <span className="text-[10px] text-obsidian-600 font-mono">{formatDuration(nr.durationMs)}</span>
@@ -525,6 +557,7 @@ function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning:
 
 export default function ExecutionHistoryPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
   const isAdmin = !currentUser || currentUser.role === 'admin';
   const [executions, setExecutions] = useState<IExecution[]>([]);
@@ -537,12 +570,9 @@ export default function ExecutionHistoryPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [page, setPage] = useState(1);
-  // Filter state — workflowId from URL params pre-fills the workflow name filter
+  // Filter state — workflowId from URL params is handled separately via urlWorkflowId
   const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterWorkflow, setFilterWorkflow] = useState(() => {
-    const params = new URLSearchParams(location.search);
-    return params.get('workflowId') ?? '';
-  });
+  const [filterWorkflow, setFilterWorkflow] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterTriggeredBy, setFilterTriggeredBy] = useState('');
@@ -552,10 +582,21 @@ export default function ExecutionHistoryPage() {
 
   // When navigating from the editor toolbar with ?workflowId=..., the ID is
   // used for exact match. For manual text entry we fall back to name search.
-  const urlWorkflowId = useMemo(() => {
+  // Stored in state so user can clear it by editing the filter input.
+  const [urlWorkflowId, setUrlWorkflowId] = useState(() => {
     const params = new URLSearchParams(location.search);
     return params.get('workflowId') ?? '';
-  }, [location.search]);
+  });
+  // Resolved workflow name for the URL-based filter (shown instead of UUID)
+  const [urlWorkflowName, setUrlWorkflowName] = useState('');
+
+  // Resolve workflow name when filtering by workflow ID (avoids showing raw UUID in banner)
+  useEffect(() => {
+    if (!urlWorkflowId) { setUrlWorkflowName(''); return; }
+    apiGet<{ name: string }>(`/workflows/${urlWorkflowId}`)
+      .then((wf) => setUrlWorkflowName(wf.name))
+      .catch(() => setUrlWorkflowName(urlWorkflowId)); // fallback to ID if not found
+  }, [urlWorkflowId]);
 
   // ?id=<executionId> auto-expands a specific execution row (e.g. from notification links)
   const urlExecutionId = useMemo(
@@ -595,7 +636,7 @@ export default function ExecutionHistoryPage() {
       }
       return true;
     });
-  }, [executions, filterStatus, filterWorkflow, filterStartDate, filterEndDate, filterTriggeredBy]);
+  }, [executions, filterStatus, filterWorkflow, urlWorkflowId, filterStartDate, filterEndDate, filterTriggeredBy]);
 
   const totalPages = useMemo(() => Math.ceil(filteredExecutions.length / pageSize), [filteredExecutions.length]);
   const paginatedExecutions = useMemo(
@@ -629,6 +670,30 @@ export default function ExecutionHistoryPage() {
     const socket = getSocket();
     socketRef.current = socket;
 
+    // Show node as "running" immediately when it starts (before onNodeDone fires)
+    const onNodeStart = (data: WsNodeStart & { executionId?: string }) => {
+      if (!data.executionId) return;
+      setExecutions((prev) =>
+        prev.map((exec) => {
+          if (exec.id !== data.executionId) return exec;
+          // Only add if not already present (avoid overwriting a done result)
+          if (exec.nodeResults[data.nodeId]) return exec;
+          return {
+            ...exec,
+            nodeResults: {
+              ...exec.nodeResults,
+              [data.nodeId]: {
+                nodeId: data.nodeId,
+                nodeName: data.nodeName,
+                status: 'running' as INodeExecutionResult['status'],
+                startedAt: data.startedAt,
+              },
+            },
+          };
+        }),
+      );
+    };
+
     const onNodeDone = (data: WsNodeDone & { executionId?: string }) => {
       if (!data.executionId) return;
       setExecutions((prev) =>
@@ -645,6 +710,8 @@ export default function ExecutionHistoryPage() {
                 output: data.output,
                 error: data.error,
                 durationMs: data.durationMs,
+                startedAt: data.startedAt,
+                finishedAt: data.finishedAt,
               },
             },
           };
@@ -669,10 +736,12 @@ export default function ExecutionHistoryPage() {
       );
     };
 
+    socket.on('execution:node:start', onNodeStart);
     socket.on('execution:node:done', onNodeDone);
     socket.on('execution:completed', onCompleted);
 
     return () => {
+      socket.off('execution:node:start', onNodeStart);
       socket.off('execution:node:done', onNodeDone);
       socket.off('execution:completed', onCompleted);
       releaseSocket();
@@ -964,6 +1033,28 @@ export default function ExecutionHistoryPage() {
         </div>
       </div>
 
+      {/* Active workflow filter banner */}
+      {urlWorkflowId && (
+        <div className="flex items-center gap-3 px-4 py-2.5 glass-card rounded-xl border border-aurora-violet/20 bg-aurora-violet/5">
+          <span className="text-xs text-obsidian-400 font-body">Filtreleniyor:</span>
+          <span className="text-xs font-semibold text-white font-body">{urlWorkflowName || urlWorkflowId}</span>
+          <button
+            onClick={() => navigate('/workflows/' + urlWorkflowId)}
+            className="text-[10px] text-aurora-violet hover:text-white transition-colors font-body"
+            title="Workflow editörüne git"
+          >
+            Editöre Aç ↗
+          </button>
+          <button
+            onClick={() => { setUrlWorkflowId(''); setUrlWorkflowName(''); setPage(1); }}
+            className="ml-auto text-obsidian-500 hover:text-white transition-colors"
+            title="Filtreyi temizle"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="glass-card rounded-2xl p-4 flex flex-wrap gap-3 items-end">
         {/* Workflow name search */}
@@ -975,7 +1066,7 @@ export default function ExecutionHistoryPage() {
             type="text"
             placeholder="Ara..."
             value={filterWorkflow}
-            onChange={(e) => { setFilterWorkflow(e.target.value); setPage(1); }}
+            onChange={(e) => { setFilterWorkflow(e.target.value); setUrlWorkflowId(''); setUrlWorkflowName(''); setPage(1); }}
             className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white placeholder-obsidian-500 focus:outline-none focus:border-aurora-cyan/40 font-body"
           />
         </div>
@@ -1038,9 +1129,9 @@ export default function ExecutionHistoryPage() {
         </div>
 
         {/* Clear filters */}
-        {(filterStatus || filterWorkflow || filterStartDate || filterEndDate || filterTriggeredBy) && (
+        {(filterStatus || filterWorkflow || urlWorkflowId || filterStartDate || filterEndDate || filterTriggeredBy) && (
           <button
-            onClick={() => { setFilterStatus(''); setFilterWorkflow(''); setFilterStartDate(''); setFilterEndDate(''); setFilterTriggeredBy(''); setPage(1); }}
+            onClick={() => { setFilterStatus(''); setFilterWorkflow(''); setUrlWorkflowId(''); setFilterStartDate(''); setFilterEndDate(''); setFilterTriggeredBy(''); setPage(1); }}
             className="btn-ghost text-xs self-end"
           >
             <X size={12} /> Temizle
@@ -1089,7 +1180,7 @@ export default function ExecutionHistoryPage() {
             {(filterStartDate || filterEndDate) && <span className="text-xs bg-aurora-emerald/10 text-aurora-emerald border border-aurora-emerald/20 rounded-full px-3 py-1">Tarih aralığı</span>}
           </div>
           <button
-            onClick={() => { setFilterStatus(''); setFilterWorkflow(''); setFilterStartDate(''); setFilterEndDate(''); setFilterTriggeredBy(''); setPage(1); }}
+            onClick={() => { setFilterStatus(''); setFilterWorkflow(''); setUrlWorkflowId(''); setUrlWorkflowName(''); setFilterStartDate(''); setFilterEndDate(''); setFilterTriggeredBy(''); setPage(1); }}
             className="btn-ghost text-sm"
           >
             <X size={14} /> Filtreleri temizle
@@ -1142,8 +1233,14 @@ export default function ExecutionHistoryPage() {
                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </span>
                     <div className="flex-1 text-left min-w-0">
-                      <p className="text-sm font-semibold text-white truncate font-body">
-                        {exec.workflowName ?? exec.workflowId}
+                      <p className="text-sm font-semibold text-white truncate font-body flex items-center gap-1.5">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/workflows/${exec.workflowId}`); }}
+                          className="hover:text-aurora-cyan transition-colors truncate"
+                          title="Workflow editörüne git"
+                        >
+                          {exec.workflowName ?? exec.workflowId}
+                        </button>
                       </p>
                       <p className="text-[10px] text-obsidian-500 font-body mt-0.5">
                         {formatDate(exec.startedAt)} &middot; {nodeCount} node &middot; {exec.triggerType}
@@ -1253,11 +1350,10 @@ export default function ExecutionHistoryPage() {
                         </div>
                       )}
 
-                      {/* Timeline waterfall — shown for completed/error executions with multiple nodes */}
-                      {(exec.status === 'success' || exec.status === 'error') &&
-                        Object.keys(exec.nodeResults || {}).length > 1 && (
-                          <ExecutionTimeline exec={exec} />
-                        )}
+                      {/* Timeline waterfall — shown for multi-node executions */}
+                      {Object.keys(exec.nodeResults || {}).length > 1 && (
+                        <ExecutionTimeline exec={exec} />
+                      )}
 
                       {/* Node results */}
                       <div className="space-y-2.5">
@@ -1273,7 +1369,7 @@ export default function ExecutionHistoryPage() {
           </div>
 
           {/* Pagination */}
-          {executions.length > pageSize && (
+          {filteredExecutions.length > pageSize && (
             <div className="flex items-center justify-center gap-4 pt-4">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}

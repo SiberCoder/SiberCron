@@ -109,6 +109,7 @@ const PUBLIC_PREFIXES = [
   '/api/v1/auth/',
   '/api/v1/webhook/',
   '/api/v1/setup/status', // public: lets frontend verify setup state without auth
+  '/api/v1/metrics',      // public: monitoring tools poll this without credentials
 ];
 
 if (config.authEnabled) {
@@ -337,8 +338,6 @@ io.on('connection', (socket) => {
 const engine = new WorkflowEngine(registry);
 
 // ── Live execution log capture ─────────────────────────────────────────
-// Map engine executionIds to API executionIds
-const executionIdMap = new Map<string, string>();
 
 process.on('autonomousDev:log' as any, (data: { executionId: string; level: string; message: string; data?: Record<string, unknown> }) => {
   if (data.executionId) {
@@ -399,26 +398,45 @@ process.on('ai:stream' as any, (data: { executionId: string; nodeId: string; nod
   });
 });
 
+// ── TTL-aware execution ID map ─────────────────────────────────────────────
+// Tracks engine-executionId → api-executionId mappings with 2-hour TTL.
+// Uses a clean wrapper instead of monkey-patching Map.prototype.set.
+class TtlMap<K, V> {
+  private readonly data = new Map<K, V>();
+  private readonly timestamps = new Map<K, number>();
+
+  set(key: K, value: V): this {
+    this.timestamps.set(key, Date.now());
+    this.data.set(key, value);
+    return this;
+  }
+
+  get(key: K): V | undefined { return this.data.get(key); }
+  has(key: K): boolean { return this.data.has(key); }
+  delete(key: K): boolean {
+    this.timestamps.delete(key);
+    return this.data.delete(key);
+  }
+  [Symbol.iterator](): IterableIterator<[K, V]> { return this.data[Symbol.iterator](); }
+
+  evictExpired(ttlMs: number): void {
+    const cutoff = Date.now() - ttlMs;
+    for (const [key, ts] of this.timestamps) {
+      if (ts < cutoff) {
+        this.data.delete(key);
+        this.timestamps.delete(key);
+      }
+    }
+  }
+}
+
+const executionIdMap = new TtlMap<string, string>();
+
 // Expose the map so workflow route can register mappings
 (globalThis as any).__executionIdMap = executionIdMap;
 
-// ── executionIdMap TTL cleanup ─────────────────────────────────────────────
-// Remove entries older than 2 hours to prevent unbounded memory growth.
-const executionIdTimestamps = new Map<string, number>();
-const _originalSet = executionIdMap.set.bind(executionIdMap);
-executionIdMap.set = (k: string, v: string) => {
-  executionIdTimestamps.set(k, Date.now());
-  return _originalSet(k, v);
-};
-setInterval(() => {
-  const cutoff = Date.now() - 2 * 60 * 60 * 1000; // 2 hours
-  for (const [key, ts] of executionIdTimestamps) {
-    if (ts < cutoff) {
-      executionIdMap.delete(key);
-      executionIdTimestamps.delete(key);
-    }
-  }
-}, 30 * 60_000).unref(); // every 30 minutes
+// Periodic TTL cleanup every 30 minutes (2-hour TTL)
+setInterval(() => executionIdMap.evictExpired(2 * 60 * 60 * 1000), 30 * 60_000).unref();
 
 // ── JSON Schema subset validator (for webhook payload validation) ────────
 type JsonSchemaNode = {
@@ -623,6 +641,10 @@ await app.register(messagingRoutes, { prefix: '/api/v1/messaging/webhook' });
 await app.register(commandRoutes, { prefix: '/api/v1/commands' });
 await app.register(chatRoutes, { prefix: '/api/v1/chat' });
 await app.register(metricsRoutes, { prefix: '/api/v1/metrics' });
+
+// ── Startup stale execution cleanup ────────────────────────────────────
+// Handled in main.ts after server.listen() — stale executions are auto-resumed
+// instead of just marked as error. Do NOT duplicate cleanup here.
 
 // ── Execution retention policy ─────────────────────────────────────────
 // Automatically clean up old executions to prevent unbounded growth.

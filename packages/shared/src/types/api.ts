@@ -61,16 +61,19 @@ export interface WsNodeStart {
   executionId: string;
   nodeId: string;
   nodeName: string;
+  startedAt?: string;
 }
 
 export interface WsNodeDone {
   executionId: string;
   nodeId: string;
   nodeName: string;
-  status: 'success' | 'error' | 'skipped';
+  status: 'success' | 'error' | 'skipped' | 'running';
   output?: Record<string, unknown>[];
   error?: string;
   durationMs: number;
+  startedAt?: string;
+  finishedAt?: string;
 }
 
 export interface WsExecutionCompleted {

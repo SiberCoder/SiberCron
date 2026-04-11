@@ -331,8 +331,9 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       {meta.triggerType === 'webhook' && meta.webhookPath && meta.id && (
         <button
           onClick={() => {
-            const base = API_BASE_URL || window.location.origin;
-            const url = `${base}/api/v1/webhook/${meta.webhookPath}`;
+            const base = (API_BASE_URL || window.location.origin).replace(/\/+$/, '');
+            const hookPath = (meta.webhookPath ?? '').replace(/^\/+/, '');
+            const url = `${base}/api/v1/webhook/${hookPath}`;
             navigator.clipboard.writeText(url).then(() => {
               toast.success('Webhook URL kopyalandı');
             }).catch(() => {
@@ -340,7 +341,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
             });
           }}
           className="btn-ghost text-xs text-obsidian-500 hover:text-aurora-cyan"
-          title={`Webhook URL'yi kopyala: /api/v1/webhook/${meta.webhookPath}`}
+          title={`Webhook URL'yi kopyala: /api/v1/webhook/${(meta.webhookPath ?? '').replace(/^\/+/, '')}`}
         >
           <Link size={14} />
           <Copy size={12} className="-ml-1" />
