@@ -97,7 +97,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [ ] Rate limiting (gelismis)
 - [x] API anahtari yonetimi (kullanici bazli token uretimi ve iptal — scx_ prefix, SHA-256 hash, Settings UI)
 - [ ] Monitoring / metricsler
-- [ ] Auth token suresini editor settings'den yapilandirma (su an sabit 8h)
+- [x] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
 - [x] Workflow execution'larinda user bazli audit log (kim tetikledi)
 - [ ] LoginPage'e "sifre unut" / ilk kurulum wizard'ina admin ayarla adimi ekle
 - [x] Webhook guvenligi (HMAC-SHA256 imza dogrulama)
@@ -114,13 +114,18 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Minimap iyilestirmeleri: node tipine gore renk, toggle butonu, konum duzeltme
 
 #### Oncelik 4c: Yeni Gorevler
-- [ ] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
-- [ ] Node config panelinde expression builder: `{{ $json. }}` yazinca workflow input degiskenlerini onerir
-- [ ] Execution list'te `triggeredBy` sutunu (kim tetikledi) goster
-- [ ] WorkflowListPage'de workflow kategorilendirme / tag sistemi
-- [ ] Settings sayfasina JWT token suresi ve rate limit degerlerini gosterme/duzenle paneli
-- [ ] Webhook tetikleyici node'unda beklenen payload schema validation (Zod)
-- [ ] Dashboard: en cok hata veren node istatistigi (node-level error chart)
+- [x] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
+- [x] Node config panelinde expression builder: `{{ $json. }}` yazinca onceki node cikti alanlarini onerir
+- [x] Execution list'te `triggeredBy` sutunu (kim tetikledi) goster
+- [x] WorkflowListPage'de workflow kategorilendirme / tag sistemi
+- [ ] Settings sayfasina rate limit degerlerini gosterme/duzenle paneli
+- [x] Webhook tetikleyici node'unda beklenen payload schema validation (JSON Schema subset)
+- [x] Dashboard: en cok hata veren node istatistigi (node-level error chart)
+- [x] WebhookTrigger: respondWith HTTP kodu secenegi (200/202/204)
+- [x] WorkflowCanvas: klavye kisayollari tooltip butonu
+- [x] AutonomousDev: session-aware devam (--continue), canli streaming cikti
+- [x] BaseNode/WorkflowCanvas: skipped durumu destegi (slate renk)
+- [x] LiveExecutionPanel: ai_streaming log tipi, otomatik reset (30s)
 
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci

@@ -23,6 +23,7 @@ import {
   X,
   User,
   Users,
+  Gauge,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
@@ -1258,6 +1259,31 @@ export default function SettingsPage() {
                   <code className="font-mono bg-white/[0.04] px-1 rounded">X-API-Key</code> header gerekir.
                 </p>
               </div>
+            </div>
+
+            {/* Rate limit info */}
+            <div className="glass-panel rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Gauge size={14} className="text-aurora-indigo" />
+                <span className="text-xs font-semibold text-white">Rate Limiting (IP Başına / Dakika)</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                {[
+                  { path: '/api/v1/auth/', limit: 10, label: 'Auth (login/logout)' },
+                  { path: '/api/v1/chat', limit: 20, label: 'AI Chat' },
+                  { path: '/api/v1/workflows', limit: 60, label: 'Workflows' },
+                  { path: '/api/v1/', limit: 200, label: 'Genel API' },
+                ].map((b) => (
+                  <div key={b.path} className="flex items-center justify-between gap-2">
+                    <span className="text-obsidian-400 truncate">{b.label}</span>
+                    <span className="font-mono text-obsidian-300 shrink-0">{b.limit} req/dk</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-obsidian-600">
+                Aşıldığında <code className="font-mono bg-white/[0.04] px-1 rounded">429 Too Many Requests</code> döner.
+                Header'larda kalan istek sayısı ve sıfırlanma süresi bildirilir.
+              </p>
             </div>
           </div>
         </Section>

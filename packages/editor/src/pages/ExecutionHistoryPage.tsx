@@ -449,6 +449,7 @@ export default function ExecutionHistoryPage() {
   });
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterTriggeredBy, setFilterTriggeredBy] = useState('');
   const socketRef = useRef<Socket | null>(null);
   const subscribedIds = useRef<Set<string>>(new Set());
   const pageSize = 10;
@@ -480,9 +481,19 @@ export default function ExecutionHistoryPage() {
         // Add 'T23:59:59' so the end date is inclusive for the whole day
         if (ts > filterEndDate + 'T23:59:59') return false;
       }
+      if (filterTriggeredBy) {
+        const q = filterTriggeredBy.toLowerCase();
+        const tb = e.triggeredBy;
+        if (!tb) return false;
+        if (
+          !tb.username?.toLowerCase().includes(q) &&
+          !tb.method?.toLowerCase().includes(q) &&
+          !tb.apiKeyName?.toLowerCase().includes(q)
+        ) return false;
+      }
       return true;
     });
-  }, [executions, filterStatus, filterWorkflow, filterStartDate, filterEndDate]);
+  }, [executions, filterStatus, filterWorkflow, filterStartDate, filterEndDate, filterTriggeredBy]);
 
   const totalPages = useMemo(() => Math.ceil(filteredExecutions.length / pageSize), [filteredExecutions.length]);
   const paginatedExecutions = useMemo(
@@ -764,10 +775,24 @@ export default function ExecutionHistoryPage() {
           />
         </div>
 
+        {/* TriggeredBy filter */}
+        <div className="min-w-[140px]">
+          <label className="block text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider mb-1.5 font-body">
+            Kim Tetikledi
+          </label>
+          <input
+            type="text"
+            placeholder="Kullanıcı adı..."
+            value={filterTriggeredBy}
+            onChange={(e) => { setFilterTriggeredBy(e.target.value); setPage(1); }}
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white placeholder-obsidian-500 focus:outline-none focus:border-aurora-cyan/40 font-body"
+          />
+        </div>
+
         {/* Clear filters */}
-        {(filterStatus || filterWorkflow || filterStartDate || filterEndDate) && (
+        {(filterStatus || filterWorkflow || filterStartDate || filterEndDate || filterTriggeredBy) && (
           <button
-            onClick={() => { setFilterStatus(''); setFilterWorkflow(''); setFilterStartDate(''); setFilterEndDate(''); setPage(1); }}
+            onClick={() => { setFilterStatus(''); setFilterWorkflow(''); setFilterStartDate(''); setFilterEndDate(''); setFilterTriggeredBy(''); setPage(1); }}
             className="btn-ghost text-xs self-end"
           >
             <X size={12} /> Temizle

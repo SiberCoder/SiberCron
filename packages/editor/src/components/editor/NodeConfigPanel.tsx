@@ -980,7 +980,9 @@ export default function NodeConfigPanel() {
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
   const workflowMeta = useWorkflowStore((s) => s.workflowMeta);
   const updateMeta = useWorkflowStore((s) => s.updateMeta);
+  const edges = useWorkflowStore((s) => s.edges);
   const getByName = useNodeRegistryStore((s) => s.getByName);
+  const currentExecution = useExecutionStore((s) => s.currentExecution);
   const [availableCredentials, setAvailableCredentials] = useState<ICredential[]>([]);
   const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState('');
@@ -989,6 +991,40 @@ export default function NodeConfigPanel() {
   const nodeType = node ? (node.data.nodeType as string) : '';
   const definition = nodeType ? getByName(nodeType) : null;
   const hasCredentials = !!(definition?.credentials && definition.credentials.length > 0);
+
+  // Compute expression context vars from previous node outputs (last execution)
+  const contextVars = useMemo((): ExpressionVar[] => {
+    if (!selectedNodeId || !currentExecution?.nodeOutputs) return [];
+    // Find all nodes that have edges pointing to the selected node
+    const sourceIds = edges
+      .filter((e) => e.target === selectedNodeId)
+      .map((e) => e.source);
+    if (sourceIds.length === 0) return [];
+
+    const vars: ExpressionVar[] = [];
+    for (const srcId of sourceIds) {
+      const outputs = currentExecution.nodeOutputs[srcId];
+      if (!outputs || outputs.length === 0) continue;
+      const firstItem = outputs[0] as Record<string, unknown> | undefined;
+      if (!firstItem) continue;
+      // Use items that look like {json: {...}} or flat objects
+      const data = (firstItem as Record<string, unknown>).json
+        ? (firstItem as Record<string, unknown>).json as Record<string, unknown>
+        : firstItem;
+      if (typeof data !== 'object' || data === null) continue;
+      const srcNode = nodes.find((n) => n.id === srcId);
+      const srcLabel = (srcNode?.data?.label as string) ?? srcId;
+      for (const key of Object.keys(data).slice(0, 10)) {
+        vars.push({
+          label: `$json.${key}`,
+          insert: `{{ $json.${key} }}`,
+          description: `${srcLabel} → ${key}`,
+          category: 'context',
+        });
+      }
+    }
+    return vars;
+  }, [selectedNodeId, edges, nodes, currentExecution]);
 
   // Hooks must all be called before any early returns (Rules of Hooks).
   useEffect(() => {
@@ -1161,6 +1197,7 @@ export default function NodeConfigPanel() {
                 property={prop}
                 value={parameters[prop.name] ?? prop.default}
                 onChange={handleChange}
+                contextVars={contextVars}
               />
             ))
         )}

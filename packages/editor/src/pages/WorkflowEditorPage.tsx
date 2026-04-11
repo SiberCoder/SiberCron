@@ -308,6 +308,7 @@ export default function WorkflowEditorPage() {
   const fetchNodeTypes = useNodeRegistryStore((s) => s.fetchNodeTypes);
   const nodeTypesCount = useNodeRegistryStore((s) => s.nodeTypes.length);
   const resetExecution = useExecutionStore((s) => s.reset);
+  const selectedOutputNodeId = useExecutionStore((s) => s.selectedOutputNodeId);
 
   useEffect(() => {
     if (nodeTypesCount === 0) {
@@ -486,11 +487,8 @@ export default function WorkflowEditorPage() {
             <ExecutionLogDrawer />
           </div>
 
-          {/* Config panel — shows node config when a node is selected, workflow settings otherwise */}
-          <NodeConfigPanel />
-
-          {/* Node output viewer */}
-          <NodeOutputViewer />
+          {/* Right panel: output viewer takes priority when open, otherwise show config */}
+          {selectedOutputNodeId ? <NodeOutputViewer /> : <NodeConfigPanel />}
         </div>
 
         {/* Version history panel */}
