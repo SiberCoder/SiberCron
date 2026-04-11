@@ -20,6 +20,7 @@ import { socialAccountRoutes } from './routes/socialAccounts.js';
 import { messagingRoutes } from './routes/messaging.js';
 import { commandRoutes } from './routes/commands.js';
 import { chatRoutes } from './routes/chat.js';
+import { metricsRoutes } from './routes/metrics.js';
 import { authRoutes } from './routes/auth.js';
 import { schedulerService } from './services/schedulerService.js';
 import { queueService } from './services/queueService.js';
@@ -105,6 +106,7 @@ if (config.authEnabled && !db.hasUsers()) {
 
 const PUBLIC_PREFIXES = [
   '/api/v1/health',
+  '/api/v1/metrics',
   '/api/v1/auth/',
   '/api/v1/webhook/',
 ];
@@ -391,6 +393,7 @@ await app.register(socialAccountRoutes, { prefix: '/api/v1/social-accounts' });
 await app.register(messagingRoutes, { prefix: '/api/v1/messaging/webhook' });
 await app.register(commandRoutes, { prefix: '/api/v1/commands' });
 await app.register(chatRoutes, { prefix: '/api/v1/chat' });
+await app.register(metricsRoutes, { prefix: '/api/v1/metrics' });
 
 // ── Execution retention policy ─────────────────────────────────────────
 // Automatically clean up old executions to prevent unbounded growth.

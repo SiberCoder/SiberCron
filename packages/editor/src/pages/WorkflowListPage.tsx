@@ -67,6 +67,9 @@ export default function WorkflowListPage() {
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [triggerFilter, setTriggerFilter] = useState<'all' | TriggerType>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'updatedAt' | 'lastRun' | 'successRate'>('updatedAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const pageSize = 10;
@@ -78,16 +81,45 @@ export default function WorkflowListPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  const toggleSort = (col: typeof sortBy) => {
+    if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortBy(col); setSortDir('desc'); }
+    setPage(1);
+  };
+
   const filtered = useMemo(() => {
     let list = workflows;
     if (statusFilter === 'active') list = list.filter((w) => w.isActive);
     else if (statusFilter === 'inactive') list = list.filter((w) => !w.isActive);
-    if (!search.trim()) return list;
-    const q = search.toLowerCase();
-    return list.filter(
-      (w) => w.name.toLowerCase().includes(q) || w.description?.toLowerCase().includes(q),
-    );
-  }, [workflows, search, statusFilter]);
+    if (triggerFilter !== 'all') list = list.filter((w) => w.triggerType === triggerFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (w) => w.name.toLowerCase().includes(q) || w.description?.toLowerCase().includes(q),
+      );
+    }
+    // Sort
+    list = [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === 'name') {
+        cmp = a.name.localeCompare(b.name, 'tr');
+      } else if (sortBy === 'updatedAt') {
+        cmp = (a.updatedAt ?? a.createdAt ?? '').localeCompare(b.updatedAt ?? b.createdAt ?? '');
+      } else if (sortBy === 'lastRun') {
+        const aLast = summary[a.id]?.lastAt ?? '';
+        const bLast = summary[b.id]?.lastAt ?? '';
+        cmp = aLast.localeCompare(bLast);
+      } else if (sortBy === 'successRate') {
+        const aS = summary[a.id];
+        const bS = summary[b.id];
+        const aRate = aS?.total ? aS.success / aS.total : -1;
+        const bRate = bS?.total ? bS.success / bS.total : -1;
+        cmp = aRate - bRate;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [workflows, search, statusFilter, triggerFilter, sortBy, sortDir, summary]);
 
   const loadWorkflows = useCallback(async () => {
     try {
@@ -273,6 +305,46 @@ export default function WorkflowListPage() {
                 <span className="ml-1 opacity-60">
                   ({f === 'active' ? workflows.filter((w) => w.isActive).length : workflows.filter((w) => !w.isActive).length})
                 </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Trigger type filter */}
+        <select
+          value={triggerFilter}
+          onChange={(e) => { setTriggerFilter(e.target.value as typeof triggerFilter); setPage(1); }}
+          className="px-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:border-aurora-cyan/40 font-body"
+        >
+          <option value="all">Tüm Triggerlar</option>
+          <option value="manual">Manuel</option>
+          <option value="cron">Cron</option>
+          <option value="webhook">Webhook</option>
+          <option value="event">Event</option>
+        </select>
+
+        {/* Sort control */}
+        <div className="flex items-center gap-1 ml-auto">
+          <span className="text-[10px] text-obsidian-500 font-body">Sırala:</span>
+          {([
+            { key: 'updatedAt', label: 'Tarih' },
+            { key: 'name', label: 'İsim' },
+            { key: 'lastRun', label: 'Son Çalışma' },
+            { key: 'successRate', label: 'Başarı' },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => toggleSort(key)}
+              className={clsx(
+                'px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all font-body flex items-center gap-1',
+                sortBy === key
+                  ? 'bg-aurora-cyan/15 text-aurora-cyan border border-aurora-cyan/20'
+                  : 'text-obsidian-500 hover:text-white',
+              )}
+            >
+              {label}
+              {sortBy === key && (
+                <span className="text-[8px]">{sortDir === 'asc' ? '↑' : '↓'}</span>
               )}
             </button>
           ))}

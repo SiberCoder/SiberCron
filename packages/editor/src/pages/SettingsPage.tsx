@@ -985,6 +985,26 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {/* Metrics link */}
+            <div className="glass-panel rounded-xl p-4 flex items-center gap-3">
+              <Activity size={14} className="text-aurora-violet shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white">Platform Metrikleri</p>
+                <p className="text-[10px] text-obsidian-500 mt-0.5">
+                  Execution istatistikleri, bellek kullanımı ve kuyruk durumu.
+                  Monitoring araçları (Grafana, Uptime Kuma) bu endpoint'i kullanabilir.
+                </p>
+              </div>
+              <a
+                href={`${API_BASE_URL || ''}/api/v1/metrics`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-[10px] text-aurora-cyan hover:underline font-mono"
+              >
+                /api/v1/metrics ↗
+              </a>
+            </div>
+
             {/* API Key info */}
             <div className="glass-panel rounded-xl p-4 flex items-center gap-3">
               <Shield size={14} className="text-aurora-amber shrink-0" />
