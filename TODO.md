@@ -137,6 +137,21 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] AIAgent node: streaming output destegi (SSE)
 - [x] Node config paneli: JSON field icin syntax highlighting editor
 
+#### Oncelik 4e: Production Hardening (Tamamlandi)
+- [x] Socket.io singleton refactor (getSocket/releaseSocket) — coklu baglanti sorunu giderildi
+- [x] Guvenlik headerlari (X-Frame-Options, X-Content-Type-Options, XSS, Referrer-Policy)
+- [x] Webhook path kucuk harf normalizasyonu (case-insensitive matching)
+- [x] Webhook secret minimum uzunluk validasyonu (>=8 karakter)
+- [x] executionIdMap TTL cleanup — memory leak onlendi
+- [x] API client 429 rate limit otomatik toast bildirimi
+- [x] DashboardPage tum API cagrilari .catch() ile resilient hale getirildi
+- [x] SettingsPage API key son gecerlilik tarihi gosterimi
+- [x] Workflow pre-execution validation endpoint (GET /workflows/:id/validate)
+- [x] Execute butonu validasyondan gectikten sonra calistirir (credential eksik ise bloklar)
+- [x] WorkflowEngine: node timeout > workflow timeout ise otomatik uzatma (AutonomousDev fix)
+- [x] Startup: pending status'taki stale execution'lar da temizlenir
+- [x] agentLoop/aiBrainService: isActive kontrolu execute oncesi
+
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
 - [ ] Community node marketplace sayfasi
