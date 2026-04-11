@@ -192,6 +192,50 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ success: true, id: request.params.id, role });
   });
 
+  // POST /api/v1/auth/emergency-reset  (no auth — uses ADMIN_RESET_SECRET env)
+  // Allows resetting the admin password without being logged in.
+  // Only enabled when ADMIN_RESET_SECRET env var is non-empty.
+  app.post<{
+    Body: { secret: string; newPassword: string };
+  }>('/emergency-reset', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['secret', 'newPassword'],
+        properties: {
+          secret: { type: 'string', minLength: 1 },
+          newPassword: { type: 'string', minLength: 6 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const { secret, newPassword } = request.body;
+
+    // Endpoint is disabled when no reset secret is configured
+    if (!config.adminResetSecret) {
+      return reply.status(404).send({ error: 'Emergency reset is not enabled on this server. Set ADMIN_RESET_SECRET env var.' });
+    }
+
+    if (secret !== config.adminResetSecret) {
+      return reply.status(401).send({ error: 'Invalid reset secret' });
+    }
+
+    if (newPassword.length < 6) {
+      return reply.status(400).send({ error: 'New password must be at least 6 characters' });
+    }
+
+    // Find the first admin user
+    const adminUser = db.listUsers().find((u) => u.role === 'admin');
+    if (!adminUser) {
+      return reply.status(404).send({ error: 'No admin user found' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    db.updateUserPassword(adminUser.id, passwordHash);
+
+    return reply.send({ success: true, username: adminUser.username });
+  });
+
   // ── API Key Management ─────────────────────────────────────────────────
 
   // GET /api/v1/auth/api-keys  — list own API keys

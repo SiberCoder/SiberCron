@@ -39,4 +39,10 @@ export const config = {
    * Can be overridden via JWT_ACCESS_TTL env var or persisted via /api/v1/setup/auth-settings.
    */
   jwtAccessTtl: process.env.JWT_ACCESS_TTL || '8h',
+  /**
+   * Emergency admin password reset secret. Set ADMIN_RESET_SECRET in .env to enable
+   * the /api/v1/auth/emergency-reset endpoint (used when admin forgets their password).
+   * Leave empty to disable this endpoint.
+   */
+  adminResetSecret: process.env.ADMIN_RESET_SECRET || '',
 };

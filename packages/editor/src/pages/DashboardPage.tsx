@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   GitBranch,
@@ -15,9 +15,10 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { io } from 'socket.io-client';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
 import { apiGet } from '../api/client';
+import { getSocket, releaseSocket } from '../lib/socket';
+import { io } from 'socket.io-client';
 import { SOCKET_URL } from '../lib/config';
 import LiveExecutionPanel from '../components/dashboard/LiveExecutionPanel';
 
@@ -370,18 +371,15 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Socket.io: refresh stats when any execution completes
+  // Socket.io: refresh stats when any execution completes (shared singleton)
   useEffect(() => {
-    const socket = io(SOCKET_URL, {
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: 3,
-      timeout: 10000,
-    });
-    socket.on('execution:completed', () => {
-      fetchDashboardData(true);
-    });
-    return () => { socket.disconnect(); };
+    const socket = getSocket();
+    const onCompleted = () => fetchDashboardData(true);
+    socket.on('execution:completed', onCompleted);
+    return () => {
+      socket.off('execution:completed', onCompleted);
+      releaseSocket();
+    };
   }, [fetchDashboardData]);
 
   const STATS_CONFIG = [

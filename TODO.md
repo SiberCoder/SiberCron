@@ -128,7 +128,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] LiveExecutionPanel: ai_streaming log tipi, otomatik reset (30s)
 
 #### Oncelik 4d: Kalan Gelistirmeler
-- [ ] LoginPage'e "sifre unut" senaryosu (admin reset flow)
+- [x] LoginPage'e "sifre unut" senaryosu (admin reset flow)
 - [ ] FTP/SFTP node: buyuk dosyalar icin streaming download (su an tum dosyayi belleğe cekiyor)
 - [ ] Node gruplama / sub-workflow (complex, lower priority)
 - [x] Minimap toggle butonu ve konum duzeltme (minor)
