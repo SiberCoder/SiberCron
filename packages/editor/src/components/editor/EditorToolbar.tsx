@@ -124,10 +124,12 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
   handleSaveRef.current = handleSave;
   handleExecuteRef.current = handleExecute;
 
-  // Keyboard shortcuts: Ctrl+S save | Ctrl+Enter execute | Ctrl+Z undo | Ctrl+Shift+Z redo
+  // Keyboard shortcuts: Escape close modal | Ctrl+S save | Ctrl+Enter execute | Ctrl+Z undo | Ctrl+Shift+Z redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if (e.key === 'Escape') {
+        setShowDeleteConfirm(false);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         handleSaveRef.current();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Play,
@@ -30,6 +30,7 @@ import { getSocket, releaseSocket } from '../lib/socket';
 import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsExecutionCompleted } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
 import { toast } from '../store/toastStore';
+import { useAuthStore } from '../store/authStore';
 
 const STATUS_CONFIG: Record<
   ExecutionStatus,
@@ -104,7 +105,7 @@ function ConversationHistory({ history }: { history: Array<{ role: string; conte
 
         return (
           <div
-            key={i}
+            key={`${entry.role}-${i}-${entry.content.slice(0, 20)}`}
             className={clsx(
               'flex gap-3 animate-fade-in',
               isAI ? 'items-start' : 'items-start',
@@ -385,6 +386,89 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Timeline / Waterfall chart                                         */
+/* ------------------------------------------------------------------ */
+
+function ExecutionTimeline({ exec }: { exec: IExecution }) {
+  const nodeResults = Object.values(exec.nodeResults || {});
+  if (nodeResults.length === 0) return null;
+
+  const startMs = exec.startedAt ? new Date(exec.startedAt).getTime() : 0;
+  const totalDurationMs = exec.durationMs ?? (
+    exec.finishedAt ? new Date(exec.finishedAt).getTime() - startMs : 0
+  );
+
+  let cursor = 0;
+  const items = nodeResults.map((nr) => {
+    const nodeStart = nr.startedAt
+      ? Math.max(0, new Date(nr.startedAt).getTime() - startMs)
+      : cursor;
+    const nodeEnd = nr.finishedAt
+      ? new Date(nr.finishedAt).getTime() - startMs
+      : nodeStart + (nr.durationMs ?? 0);
+    cursor = Math.max(cursor, nodeEnd);
+    return { nr, nodeStart, nodeEnd };
+  });
+
+  const scale = Math.max(cursor, totalDurationMs, 1);
+  const formatMs = (ms: number) =>
+    ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
+
+  const statusColor: Record<string, string> = {
+    success: 'bg-aurora-emerald',
+    error: 'bg-aurora-rose',
+    running: 'bg-aurora-blue animate-pulse',
+    skipped: 'bg-obsidian-600',
+    pending: 'bg-obsidian-700',
+  };
+
+  return (
+    <div className="glass-panel rounded-xl p-4 mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs font-semibold text-obsidian-300 font-body">Zaman Çizelgesi</span>
+        <span className="text-[10px] text-obsidian-500 font-mono">
+          Toplam: {formatMs(scale)}
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {items.map(({ nr, nodeStart, nodeEnd }) => {
+          const duration = nodeEnd - nodeStart;
+          const leftPct = (nodeStart / scale) * 100;
+          const widthPct = Math.max(0.5, (duration / scale) * 100);
+          const color = statusColor[nr.status] ?? 'bg-obsidian-600';
+          return (
+            <div key={nr.nodeId} className="flex items-center gap-2">
+              <span
+                className="text-[10px] text-obsidian-400 font-body truncate shrink-0"
+                style={{ width: 120 }}
+                title={nr.nodeName}
+              >
+                {nr.nodeName}
+              </span>
+              <div className="flex-1 relative h-5 bg-obsidian-800 rounded overflow-hidden">
+                <div
+                  className={clsx('absolute top-0 h-full rounded', color)}
+                  style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 4 }}
+                  title={`+${formatMs(nodeStart)} → süre: ${formatMs(duration)}`}
+                />
+              </div>
+              <span className="text-[10px] text-obsidian-500 font-mono shrink-0 w-12 text-right">
+                {duration > 0 ? formatMs(duration) : '—'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex justify-between mt-2 pl-[136px] pr-14">
+        <span className="text-[9px] text-obsidian-600 font-mono">0</span>
+        <span className="text-[9px] text-obsidian-600 font-mono">{formatMs(scale / 2)}</span>
+        <span className="text-[9px] text-obsidian-600 font-mono">{formatMs(scale)}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Node result row                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -441,6 +525,8 @@ function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning:
 
 export default function ExecutionHistoryPage() {
   const location = useLocation();
+  const currentUser = useAuthStore((s) => s.user);
+  const isAdmin = !currentUser || currentUser.role === 'admin';
   const [executions, setExecutions] = useState<IExecution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -517,16 +603,26 @@ export default function ExecutionHistoryPage() {
     [filteredExecutions, page],
   );
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const res = await apiGet<{ data: IExecution[] }>('/executions?limit=500');
+      const params = new URLSearchParams();
+      params.set('limit', '200');
+      if (filterStatus) params.set('status', filterStatus);
+      if (urlWorkflowId) params.set('workflowId', urlWorkflowId);
+      else if (filterWorkflow) params.set('workflowName', filterWorkflow);
+      if (filterStartDate) params.set('startDate', filterStartDate);
+      if (filterEndDate) params.set('endDate', filterEndDate + 'T23:59:59');
+      if (filterTriggeredBy) params.set('triggeredBy', filterTriggeredBy);
+      const res = await apiGet<{ data: IExecution[]; total: number }>(`/executions?${params.toString()}`);
       setExecutions(res.data ?? []);
     } catch {
       setExecutions([]);
+      toast.error('Çalıştırma geçmişi yüklenemedi');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filterStatus, urlWorkflowId, filterWorkflow, filterStartDate, filterEndDate, filterTriggeredBy]);
 
   // WebSocket: subscribe to running executions for live updates
   useEffect(() => {
@@ -598,9 +694,11 @@ export default function ExecutionHistoryPage() {
     }
   }, [executions]);
 
+  // Initial load + reload when filters change (reset to page 1)
   useEffect(() => {
+    setPage(1);
     load();
-  }, []);
+  }, [load]);
 
   // Auto-expand a specific execution when ?id=<executionId> is in the URL.
   // Runs when executions first load or when the URL changes (e.g. clicking a notification link).
@@ -755,7 +853,7 @@ export default function ExecutionHistoryPage() {
     if (!autoRefresh) return;
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, load]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
@@ -775,7 +873,7 @@ export default function ExecutionHistoryPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
+          {isAdmin && selectedIds.size > 0 && (
             <button
               onClick={handleBulkDelete}
               disabled={isBulkDeleting}
@@ -820,7 +918,7 @@ export default function ExecutionHistoryPage() {
               </div>
             </div>
           )}
-          {executions.length > 0 && (
+          {isAdmin && executions.length > 0 && (
             <div className="relative group">
               <button className="btn-ghost text-xs">
                 <Trash2 size={12} /> Temizle
@@ -1091,16 +1189,18 @@ export default function ExecutionHistoryPage() {
                           : <RotateCcw size={12} />}
                       </button>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirmId(exec.id);
-                      }}
-                      className="ml-1 p-1.5 rounded-lg text-obsidian-600 hover:text-aurora-rose hover:bg-aurora-rose/5 transition-all"
-                      title="Çalıştırmayı sil"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmId(exec.id);
+                        }}
+                        className="ml-1 p-1.5 rounded-lg text-obsidian-600 hover:text-aurora-rose hover:bg-aurora-rose/5 transition-all"
+                        title="Çalıştırmayı sil"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Expanded details */}
@@ -1147,6 +1247,12 @@ export default function ExecutionHistoryPage() {
                           <LiveLogPanel executionId={exec.id} />
                         </div>
                       )}
+
+                      {/* Timeline waterfall — shown for completed/error executions with multiple nodes */}
+                      {(exec.status === 'success' || exec.status === 'error') &&
+                        Object.keys(exec.nodeResults || {}).length > 1 && (
+                          <ExecutionTimeline exec={exec} />
+                        )}
 
                       {/* Node results */}
                       <div className="space-y-2.5">

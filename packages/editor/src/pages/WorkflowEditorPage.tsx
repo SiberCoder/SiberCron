@@ -436,6 +436,29 @@ export default function WorkflowEditorPage() {
     };
   }, [isDirty]);
 
+  // Auto-save: debounced 2s after any change, only for saved workflows
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const store = useWorkflowStore.getState();
+    if (!isDirty || !store.workflowMeta.id || store.isSaving) return;
+
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      const s = useWorkflowStore.getState();
+      if (s.isDirty && s.workflowMeta.id && !s.isSaving) {
+        try {
+          await s.saveWorkflow();
+        } catch {
+          // silent — user can still manually save; don't spam errors on auto-save failure
+        }
+      }
+    }, 2000);
+
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [isDirty]);
+
 
   if (isLoading) {
     return (

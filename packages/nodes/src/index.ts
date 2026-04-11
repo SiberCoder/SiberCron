@@ -44,6 +44,9 @@ import { ExecuteWorkflowNode } from './core/ExecuteWorkflow.node.js';
 import { XMLNode } from './core/XML.node.js';
 import { CryptoNode } from './core/Crypto.node.js';
 import { VariablesNode } from './core/Variables.node.js';
+import { CSVNode } from './core/CSV.node.js';
+import { FileOperationNode } from './core/FileOperation.node.js';
+import { TextNode } from './core/Text.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -90,6 +93,9 @@ export const builtinNodes: INodeType[] = [
   XMLNode,
   CryptoNode,
   VariablesNode,
+  CSVNode,
+  FileOperationNode,
+  TextNode,
 ];
 
 export {
@@ -137,4 +143,7 @@ export {
   XMLNode,
   CryptoNode,
   VariablesNode,
+  CSVNode,
+  FileOperationNode,
+  TextNode,
 };

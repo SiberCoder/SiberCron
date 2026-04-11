@@ -67,6 +67,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout() {
+    // Notify server to revoke refresh token (fire-and-forget)
+    const refreshToken = get().refreshToken ?? localStorage.getItem(LS_REFRESH);
+    if (refreshToken) {
+      fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => { /* ignore network errors on logout */ });
+    }
     localStorage.removeItem(LS_ACCESS);
     localStorage.removeItem(LS_REFRESH);
     localStorage.removeItem(LS_USER);

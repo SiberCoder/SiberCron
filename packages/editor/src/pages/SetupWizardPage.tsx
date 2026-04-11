@@ -222,9 +222,9 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       }, 3000);
 
       setTimeout(() => { stopped = true; clearInterval(poll); }, 300000);
-    } catch (e: any) {
+    } catch (e) {
       setStatus('error');
-      setErrorMsg(e.message || 'QR olusturulamadi');
+      setErrorMsg(e instanceof Error ? e.message : 'QR olusturulamadi');
     }
   };
 
@@ -335,10 +335,10 @@ function MessagingStep() {
         ...r,
         [platform]: { ok: res.success, msg: res.message },
       }));
-    } catch (e: any) {
+    } catch (e) {
       setTestResults((r) => ({
         ...r,
-        [platform]: { ok: false, msg: e.message || 'Hata' },
+        [platform]: { ok: false, msg: e instanceof Error ? e.message : 'Hata' },
       }));
     } finally {
       setTesting(null);

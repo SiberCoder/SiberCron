@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { API_BASE_URL } from './lib/config';
 import AppShell from './components/layout/AppShell';
 import DashboardPage from './pages/DashboardPage';
 import WorkflowListPage from './pages/WorkflowListPage';
@@ -85,8 +86,35 @@ class ErrorBoundary extends React.Component<
 }
 
 function SetupGuard({ children }: { children: React.ReactNode }) {
-  const setupComplete = localStorage.getItem('sibercron_setup_complete') === 'true';
-  if (!setupComplete) {
+  // First check localStorage for instant response
+  const localComplete = localStorage.getItem('sibercron_setup_complete') === 'true';
+  const [serverComplete, setServerComplete] = useState<boolean | null>(localComplete ? true : null);
+
+  useEffect(() => {
+    // Always verify against server to handle cross-browser / cleared localStorage cases
+    fetch(`${API_BASE_URL}/api/v1/setup/status`)
+      .then((r) => r.json())
+      .then((data: { complete: boolean }) => {
+        setServerComplete(data.complete);
+        if (data.complete) {
+          localStorage.setItem('sibercron_setup_complete', 'true');
+        } else {
+          localStorage.removeItem('sibercron_setup_complete');
+        }
+      })
+      .catch(() => {
+        // Network error — fall back to localStorage state
+        setServerComplete(localComplete);
+      });
+  // Only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // While checking server, if localStorage says complete show children (avoids flash)
+  if (serverComplete === null) {
+    return localComplete ? <>{children}</> : <Navigate to="/setup" replace />;
+  }
+  if (!serverComplete) {
     return <Navigate to="/setup" replace />;
   }
   return <>{children}</>;

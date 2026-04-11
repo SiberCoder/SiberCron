@@ -178,6 +178,19 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] Templates: Jira Bug Triage ve RSS→Notion yeni sablon olarak eklendi
 - [x] CommandPalette: save/execute silent console.error → toast bildirimi ile degistirildi
 
+#### Oncelik 4i: Bug Fixes & New Nodes (2026-04-12)
+- [x] Crypto node: Math.random() → randomBytes (kriptografik güvenli integer üretimi)
+- [x] Crypto node: global crypto.randomUUID() → named import randomUUID from node:crypto
+- [x] Variables node: items[0].json.executionId yerine context.executionId kullan (kritik bug)
+- [x] executions.ts bulk delete: requested count slice sonrası yanlış sayı döndürülüyordu
+- [x] WorkflowEngine: 500+ item çıktılarında DB truncation (downstream node'lar etkilenmiyor)
+- [x] CSV node: RFC 4180 uyumlu CSV parse/generate (no external dep), auto-cast, quoted fields
+- [x] FileOperation node: read/write/append/delete/list/exists/move/stat, path traversal koruması (FILE_OP_ROOTS)
+- [x] iconRegistry: FileSpreadsheet, Type ikonları eklendi (CSV + Text node)
+- [x] Text node: uppercase/lowercase/titleCase/camelCase/snakeCase/kebabCase/trim/replace/regexReplace/split/join/substring/truncate/pad/urlEncode/htmlEncode/slugify/count/reverse/repeat/startsWith/endsWith/contains/regexMatch
+- [x] HttpRequest node: bodyType seçeneği eklendi (json/form-urlencoded/raw-text)
+- [x] HttpRequest node: allowPrivateUrls toggle (SSRF korumasını iç ağ için devre dışı bırakma)
+
 #### Oncelik 4g: Security & Performance
 - [x] Login brute-force koruması: 5 basarisiz deneme → 15 dakika lockout (username bazli)
 - [x] ExecutionHistoryPage: filtreler sonucsuz kaldığında aktif filter badge'leri + temizle butonu

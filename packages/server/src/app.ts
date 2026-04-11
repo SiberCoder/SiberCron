@@ -106,9 +106,9 @@ if (config.authEnabled && !db.hasUsers()) {
 
 const PUBLIC_PREFIXES = [
   '/api/v1/health',
-  '/api/v1/metrics',
   '/api/v1/auth/',
   '/api/v1/webhook/',
+  '/api/v1/setup/status', // public: lets frontend verify setup state without auth
 ];
 
 if (config.authEnabled) {
@@ -197,11 +197,13 @@ interface RateLimitBucket {
 const RATE_BUCKETS: RateLimitBucket[] = [
   { prefix: '/api/v1/auth/',     limit: 10  },
   { prefix: '/api/v1/chat',      limit: 20  },
+  { prefix: '/api/v1/webhook/',  limit: 30  },  // webhook triggers: stricter to prevent flood
   { prefix: '/api/v1/workflows', limit: 60  },
   { prefix: '/api/v1/',          limit: 200 },
 ];
 
 const RATE_WINDOW = 60_000; // 1 minute
+const RATE_MAP_MAX = 50_000; // evict oldest entries when map exceeds this size
 // key: `${ip}::${bucketPrefix}`
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -216,6 +218,13 @@ app.addHook('onRequest', async (request, reply) => {
 
   let entry = rateLimitMap.get(key);
   if (!entry || now > entry.resetAt) {
+    // Evict stale entries when map grows large (prevents unbounded memory under DDoS)
+    if (rateLimitMap.size >= RATE_MAP_MAX) {
+      for (const [k, v] of rateLimitMap) {
+        if (now > v.resetAt) rateLimitMap.delete(k);
+        if (rateLimitMap.size < RATE_MAP_MAX * 0.8) break;
+      }
+    }
     entry = { count: 1, resetAt: now + RATE_WINDOW };
     rateLimitMap.set(key, entry);
   } else {
@@ -267,6 +276,15 @@ app.addHook('onSend', async (request, reply) => {
   void reply.header('X-Frame-Options', 'DENY');
   void reply.header('X-XSS-Protection', '1; mode=block');
   void reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // CSP: allow self + ws/wss for Socket.io. unsafe-inline/eval needed for Vite dev builds.
+  void reply.header(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; font-src 'self' data:; worker-src 'self' blob:",
+  );
+  // HSTS: only send on HTTPS (checked via X-Forwarded-Proto from reverse proxy)
+  if (request.headers['x-forwarded-proto'] === 'https') {
+    void reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
 });
 
 // ── Socket.io setup ─────────────────────────────────────────────────────
@@ -277,6 +295,31 @@ const io = new SocketIOServer(app.server, {
     credentials: true,
   },
 });
+
+// Socket.io auth middleware — validate JWT when auth is enabled.
+// Allow connection even without valid token (mark as unauthenticated) so
+// the socket can reconnect and upgrade its token later. This prevents
+// persistent 500 errors on polling when the token expires.
+if (config.authEnabled) {
+  io.use(async (socket, next) => {
+    const token =
+      (socket.handshake.auth as Record<string, unknown>)?.token as string | undefined
+      ?? socket.handshake.headers.authorization?.replace(/^Bearer\s+/i, '');
+    if (token) {
+      try {
+        const payload = app.jwt.verify(token);
+        (socket.data as Record<string, unknown>).user = payload;
+        (socket.data as Record<string, unknown>).authenticated = true;
+      } catch {
+        // Token invalid/expired — allow connection but mark as unauthenticated
+        (socket.data as Record<string, unknown>).authenticated = false;
+      }
+    } else {
+      (socket.data as Record<string, unknown>).authenticated = false;
+    }
+    next();
+  });
+}
 
 io.on('connection', (socket) => {
   // Allow clients to subscribe to execution updates

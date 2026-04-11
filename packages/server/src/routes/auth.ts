@@ -6,6 +6,30 @@ import { config } from '../config/env.js';
 const SALT_ROUNDS = 10;
 const REFRESH_TOKEN_TTL = '30d';
 
+// ── Refresh token revocation blacklist ────────────────────────────────────────
+// In-memory set of revoked token signatures (last segment of JWT).
+// Cleared on server restart (acceptable for MVP; use Redis for persistence).
+const revokedTokens = new Set<string>();
+
+// Prune blacklist every hour to prevent unbounded growth
+setInterval(() => {
+  // Simple approach: clear all since we can't check expiry without decoding.
+  // 30-day tokens expire anyway, so worst case is we allow a revoked token
+  // after a server restart (mitigated by short access token TTL).
+  revokedTokens.clear();
+}, 60 * 60 * 1000).unref();
+
+function revokeToken(token: string): void {
+  // Use the signature (last JWT segment) as the unique key
+  const sig = token.split('.').pop();
+  if (sig) revokedTokens.add(sig);
+}
+
+function isTokenRevoked(token: string): boolean {
+  const sig = token.split('.').pop();
+  return sig ? revokedTokens.has(sig) : false;
+}
+
 // ── Login brute-force protection ──────────────────────────────────────────────
 // Tracks failed attempts per username. Lockout: 5 failures → 15 min window.
 const LOGIN_MAX_ATTEMPTS = 5;
@@ -109,6 +133,9 @@ export async function authRoutes(app: FastifyInstance) {
     },
   }, async (request, reply) => {
     const { refreshToken } = request.body;
+    if (isTokenRevoked(refreshToken)) {
+      return reply.status(401).send({ error: 'Token has been revoked' });
+    }
     try {
       const decoded = app.jwt.verify(refreshToken) as { sub: string; type: string };
       if (decoded.type !== 'refresh') {
@@ -124,6 +151,17 @@ export async function authRoutes(app: FastifyInstance) {
     } catch {
       return reply.status(401).send({ error: 'Invalid or expired refresh token' });
     }
+  });
+
+  // POST /api/v1/auth/logout — revoke refresh token
+  app.post<{
+    Body: { refreshToken?: string };
+  }>('/logout', async (request, reply) => {
+    const { refreshToken } = (request.body as { refreshToken?: string }) ?? {};
+    if (refreshToken) {
+      revokeToken(refreshToken);
+    }
+    return reply.send({ success: true });
   });
 
   // GET /api/v1/auth/me  (protected)

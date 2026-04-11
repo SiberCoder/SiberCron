@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type {
   IWorkflow,
   IExecution,
@@ -71,7 +72,7 @@ function decryptCredentialData(data: Record<string, unknown> | string): Record<s
 
 // Resolve data directory relative to the server package root (2 levels up from this file).
 // This ensures data is always at packages/server/data/ regardless of process.cwd().
-const __dirname = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Z]:)/i, '$1');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'sibercron.json');
 

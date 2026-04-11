@@ -12,6 +12,14 @@ import { SOCKET_URL } from './config';
 let socket: Socket | null = null;
 let refCount = 0;
 
+function getToken(): string {
+  try {
+    return localStorage.getItem('sibercron_access_token') ?? '';
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Get (or create) the shared Socket.io connection.
  * Call releaseSocket() in your cleanup to allow disconnect when no one uses it.
@@ -19,11 +27,20 @@ let refCount = 0;
 export function getSocket(): Socket {
   if (!socket || socket.disconnected) {
     socket = io(SOCKET_URL, {
+      auth: { token: getToken() },
       transports: ['polling', 'websocket'],
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
       timeout: 10000,
+    });
+
+    // Refresh token on each reconnect attempt so expired tokens don't block
+    socket.on('reconnect_attempt', () => {
+      if (socket) {
+        (socket.auth as Record<string, string>).token = getToken();
+      }
     });
   }
   refCount++;

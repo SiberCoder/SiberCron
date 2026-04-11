@@ -85,11 +85,29 @@ export const HttpRequestNode: INodeType = {
         description: 'HTTP headers as JSON object',
       },
       {
+        name: 'bodyType',
+        displayName: 'Body Type',
+        type: 'select',
+        default: 'json',
+        description: 'Format used to send the request body',
+        options: [
+          { name: 'JSON', value: 'json' },
+          { name: 'Form (URL-encoded)', value: 'form' },
+          { name: 'Raw Text', value: 'raw' },
+        ],
+        displayOptions: {
+          show: { method: ['POST', 'PUT', 'PATCH'] },
+        },
+      },
+      {
         name: 'body',
         displayName: 'Body',
         type: 'json',
         default: '',
-        description: 'Request body as JSON (for POST/PUT/PATCH)',
+        description: 'Request body — JSON object for "JSON" type, key-value pairs for "Form", or plain string for "Raw Text"',
+        displayOptions: {
+          show: { method: ['POST', 'PUT', 'PATCH'] },
+        },
       },
       {
         name: 'timeout',
@@ -110,6 +128,13 @@ export const HttpRequestNode: INodeType = {
           { name: 'Text', value: 'text' },
           { name: 'Full Response', value: 'full' },
         ],
+      },
+      {
+        name: 'allowPrivateUrls',
+        displayName: 'Allow Private / Internal URLs',
+        type: 'boolean',
+        default: false,
+        description: 'Disable SSRF protection to allow requests to localhost or private IP ranges (use only in trusted internal environments)',
       },
       {
         name: 'retryOnFail',
@@ -146,8 +171,10 @@ export const HttpRequestNode: INodeType = {
     const queryParamsRaw = context.getParameter<string>('queryParams') ?? '';
     const headersRaw = context.getParameter<string>('headers') ?? '';
     const bodyRaw = context.getParameter<string>('body') ?? '';
+    const bodyType = context.getParameter<string>('bodyType') ?? 'json';
     const timeout = context.getParameter<number>('timeout') ?? 30000;
     const responseType = context.getParameter<string>('responseType') ?? 'auto';
+    const allowPrivateUrls = context.getParameter<boolean>('allowPrivateUrls') ?? false;
     const retryOnFail = context.getParameter<boolean>('retryOnFail') ?? false;
     const retryCount = context.getParameter<number>('retryCount') ?? 3;
     const retryDelay = context.getParameter<number>('retryDelay') ?? 1000;
@@ -186,14 +213,63 @@ export const HttpRequestNode: INodeType = {
       }
     }
 
-    // Parse body
+    // Parse body — supports JSON, form-urlencoded, and raw text
     let body: unknown;
     if (bodyRaw && method !== 'GET' && method !== 'HEAD') {
-      try {
-        body = typeof bodyRaw === 'object' ? bodyRaw : JSON.parse(bodyRaw);
-      } catch {
-        throw new Error('Body must be valid JSON');
+      if (bodyType === 'raw') {
+        body = typeof bodyRaw === 'string' ? bodyRaw : String(bodyRaw);
+        if (!headers['Content-Type'] && !headers['content-type']) {
+          headers['Content-Type'] = 'text/plain';
+        }
+      } else if (bodyType === 'form') {
+        try {
+          const obj = typeof bodyRaw === 'object' ? bodyRaw as Record<string, unknown> : JSON.parse(bodyRaw);
+          const params = new URLSearchParams();
+          for (const [key, value] of Object.entries(obj)) {
+            params.set(key, String(value ?? ''));
+          }
+          body = params.toString();
+          if (!headers['Content-Type'] && !headers['content-type']) {
+            headers['Content-Type'] = 'application/x-www-form-urlencoded';
+          }
+        } catch {
+          throw new Error('Form body must be a valid JSON object (e.g. {"key": "value"})');
+        }
+      } else {
+        // Default: JSON
+        try {
+          body = typeof bodyRaw === 'object' ? bodyRaw : JSON.parse(bodyRaw);
+        } catch {
+          throw new Error('Body must be valid JSON');
+        }
       }
+    }
+
+    // SSRF protection: block requests to private/loopback addresses (unless bypassed)
+    if (!allowPrivateUrls) try {
+      const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname.toLowerCase();
+      const BLOCKED_PATTERNS = [
+        /^localhost$/i,
+        /^127\./,
+        /^0\./,
+        /^10\./,
+        /^172\.(1[6-9]|2\d|3[01])\./,
+        /^192\.168\./,
+        /^169\.254\./,       // link-local
+        /^::1$/,             // IPv6 loopback
+        /^fc00:/i,           // IPv6 ULA
+        /^fe80:/i,           // IPv6 link-local
+        /^0\.0\.0\.0$/,
+        /^metadata\.google\.internal$/i,
+      ];
+      if (BLOCKED_PATTERNS.some((p) => p.test(hostname))) {
+        throw new Error(`SSRF protection: requests to "${hostname}" are not allowed.`);
+      }
+    } catch (e) {
+      // Re-throw SSRF errors directly; let URL parse errors through as informative messages
+      if ((e as Error).message.startsWith('SSRF')) throw e;
+      throw new Error(`Invalid URL: ${url}`);
     }
 
     context.helpers.log(`HTTP ${method} ${url}`);

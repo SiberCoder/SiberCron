@@ -79,6 +79,16 @@ const UpdateWorkflowSchema = z.object({
   webhookPath: z.string().max(255).optional(),
 });
 
+/** Returns true and sends 403 when the requesting user is not an admin. */
+function requireAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+  const user = request.user as { role?: string } | undefined;
+  if (user && user.role !== 'admin') {
+    reply.code(403).send({ error: 'Admin role required' });
+    return true;
+  }
+  return false;
+}
+
 export async function workflowRoutes(
   fastify: FastifyInstance,
   opts: { io: SocketIOServer; engine: WorkflowEngine },
@@ -118,8 +128,9 @@ export async function workflowRoutes(
     };
   });
 
-  // POST / - Create workflow
+  // POST / - Create workflow (admin only)
   fastify.post('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const parsed = CreateWorkflowSchema.safeParse(request.body);
     if (!parsed.success) {
       reply.code(400);
@@ -175,8 +186,9 @@ export async function workflowRoutes(
     return workflow;
   });
 
-  // PUT /:id - Update workflow
+  // PUT /:id - Update workflow (admin only)
   fastify.put('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const { id } = request.params as { id: string };
     const parsed = UpdateWorkflowSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -222,8 +234,9 @@ export async function workflowRoutes(
     return workflow;
   });
 
-  // DELETE /:id - Delete workflow
+  // DELETE /:id - Delete workflow (admin only)
   fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const { id } = request.params as { id: string };
     const query = request.query as { force?: string };
 
@@ -264,6 +277,26 @@ export async function workflowRoutes(
         reply.code(409);
         return { error: 'Workflow is already running. Wait for it to finish or enable concurrent execution in settings.' };
       }
+    }
+
+    // Pre-execution validation: fail fast on structural errors
+    if (!workflow.nodes || workflow.nodes.length === 0) {
+      reply.code(422);
+      return { error: 'Workflow has no nodes. Add at least one node before executing.' };
+    }
+    // Check that all referenced credentials exist
+    const missingCreds: string[] = [];
+    for (const node of workflow.nodes) {
+      if (!node.credentials) continue;
+      for (const [credType, credId] of Object.entries(node.credentials)) {
+        if (typeof credId === 'string' && credId && !db.getCredential(credId)) {
+          missingCreds.push(`"${node.name}" → ${credType}`);
+        }
+      }
+    }
+    if (missingCreds.length > 0) {
+      reply.code(422);
+      return { error: `Missing credentials: ${missingCreds.join(', ')}. Update the node configuration before executing.` };
     }
 
     const triggerData = (request.body as Record<string, unknown>) ?? {};
@@ -377,8 +410,9 @@ export async function workflowRoutes(
     return runningExecution;
   });
 
-  // POST /:id/duplicate - Clone a workflow
+  // POST /:id/duplicate - Clone a workflow (admin only)
   fastify.post('/:id/duplicate', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const { id } = request.params as { id: string };
     const original = db.getWorkflow(id);
     if (!original) {
@@ -432,8 +466,9 @@ export async function workflowRoutes(
     return exportData;
   });
 
-  // POST /import - Import a workflow from JSON
+  // POST /import - Import a workflow from JSON (admin only)
   fastify.post('/import', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const body = request.body as Record<string, unknown>;
 
     if (!body || body['$schema'] !== 'sibercron/workflow/v1' || !body['workflow']) {
@@ -525,8 +560,9 @@ export async function workflowRoutes(
     return { valid, errors, warnings };
   });
 
-  // POST /:id/activate - Set isActive=true
+  // POST /:id/activate - Set isActive=true (admin only)
   fastify.post('/:id/activate', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const { id } = request.params as { id: string };
     const workflow = db.updateWorkflow(id, { isActive: true });
     if (!workflow) {
@@ -539,8 +575,9 @@ export async function workflowRoutes(
     return workflow;
   });
 
-  // POST /:id/deactivate - Set isActive=false
+  // POST /:id/deactivate - Set isActive=false (admin only)
   fastify.post('/:id/deactivate', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const { id } = request.params as { id: string };
     const workflow = db.updateWorkflow(id, { isActive: false });
     if (!workflow) {
@@ -575,8 +612,9 @@ export async function workflowRoutes(
     return { versions };
   });
 
-  // POST /:id/versions/:version/restore - restore a snapshot
+  // POST /:id/versions/:version/restore - restore a snapshot (admin only)
   fastify.post('/:id/versions/:version/restore', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const { id, version } = request.params as { id: string; version: string };
     const versionNum = parseInt(version, 10);
     if (isNaN(versionNum)) {

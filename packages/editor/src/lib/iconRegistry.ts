@@ -57,6 +57,8 @@ import {
   FileCode,
   Lock,
   Braces,
+  FileSpreadsheet,
+  Type,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -110,6 +112,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   FileCode,
   Lock,
   Braces,
+  FileSpreadsheet,
+  Type,
 };
 
 /**

@@ -16,6 +16,15 @@ const UpdateCredentialSchema = z.object({
   data: z.record(z.unknown()).optional(),
 });
 
+function requireAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+  const user = request.user as { role?: string } | undefined;
+  if (user && user.role !== 'admin') {
+    reply.code(403).send({ error: 'Admin role required' });
+    return true;
+  }
+  return false;
+}
+
 export async function credentialRoutes(
   fastify: FastifyInstance,
 ): Promise<void> {
@@ -24,8 +33,9 @@ export async function credentialRoutes(
     return db.listCredentials();
   });
 
-  // POST / - Create credential
+  // POST / - Create credential (admin only)
   fastify.post('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const parsed = CreateCredentialSchema.safeParse(request.body);
     if (!parsed.success) {
       reply.code(400);
@@ -39,8 +49,9 @@ export async function credentialRoutes(
     return safe;
   });
 
-  // PUT /:id - Update credential
+  // PUT /:id - Update credential (admin only)
   fastify.put('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const { id } = request.params as { id: string };
     const parsed = UpdateCredentialSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -57,8 +68,9 @@ export async function credentialRoutes(
     return safe;
   });
 
-  // DELETE /:id - Delete credential (cascades: removes refs from all workflow nodes)
+  // DELETE /:id - Delete credential (admin only; cascades: removes refs from all workflow nodes)
   fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (requireAdmin(request, reply)) return;
     const { id } = request.params as { id: string };
     const deleted = db.deleteCredential(id);
     if (!deleted) {

@@ -117,6 +117,13 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
     return { success: true, config: safeConfig };
   });
 
+  // GET /status - Public endpoint: setup tamamlanma durumunu döner (localStorage güvencesi için)
+  fastify.get('/status', async (_request: FastifyRequest, _reply: FastifyReply) => {
+    const cfg = db.getSetupConfig();
+    const hasUsers = db.hasUsers();
+    return { complete: !!(cfg && hasUsers) };
+  });
+
   // GET /config - Mevcut yapilandirmayi getir (anahtarlar maskeli)
   fastify.get('/config', async (_request: FastifyRequest, _reply: FastifyReply) => {
     const config = db.getSetupConfig();

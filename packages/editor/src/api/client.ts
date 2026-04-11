@@ -137,6 +137,11 @@ async function request<T>(
       toast.warning(rateLimitMsg, 6000);
       throw new ApiError(429, rateLimitMsg);
     }
+    // Permission denied — auto-toast so viewer users understand why their action failed
+    if (res.status === 403) {
+      toast.error('Bu işlem için yönetici yetkisi gerekiyor.');
+      throw new ApiError(403, message || 'Admin role required');
+    }
     throw new ApiError(res.status, message);
   }
 

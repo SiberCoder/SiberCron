@@ -29,6 +29,8 @@ import cronstrue from 'cronstrue';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
 import { toast } from '../store/toastStore';
+import { API_BASE_URL } from '../lib/config';
+import { useAuthStore } from '../store/authStore';
 
 function getNextCronRun(expr: string): string {
   try {
@@ -62,6 +64,8 @@ const TRIGGER_COLORS: Record<TriggerType, string> = {
 
 export default function WorkflowListPage() {
   const navigate = useNavigate();
+  const currentUser = useAuthStore((s) => s.user);
+  const isAdmin = !currentUser || currentUser.role === 'admin'; // allow all when auth disabled (user is null)
   const [workflows, setWorkflows] = useState<IWorkflow[]>([]);
   const [summary, setSummary] = useState<Record<string, WorkflowSummary>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -146,6 +150,7 @@ export default function WorkflowListPage() {
         setWorkflows(workflowsRes.value.data ?? []);
       } else {
         setWorkflows([]);
+        toast.error('Workflow listesi yüklenemedi');
       }
       if (summaryRes.status === 'fulfilled') {
         setSummary(summaryRes.value ?? {});
@@ -335,28 +340,32 @@ export default function WorkflowListPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={handleImport}
-          />
-          <button
-            onClick={() => importInputRef.current?.click()}
-            className="btn-ghost"
-            title="JSON dosyasından içe aktar"
-          >
-            <Upload size={14} />
-            İçe Aktar
-          </button>
-          <button
-            onClick={() => navigate('/workflows/new')}
-            className="btn-aurora"
-          >
-            <Plus size={16} />
-            New Workflow
-          </button>
+          {isAdmin && (
+            <>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <button
+                onClick={() => importInputRef.current?.click()}
+                className="btn-ghost"
+                title="JSON dosyasından içe aktar"
+              >
+                <Upload size={14} />
+                İçe Aktar
+              </button>
+              <button
+                onClick={() => navigate('/workflows/new')}
+                className="btn-aurora"
+              >
+                <Plus size={16} />
+                New Workflow
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -391,14 +400,16 @@ export default function WorkflowListPage() {
             Tümünü Durdur
           </button>
           <div className="flex-1" />
-          <button
-            onClick={() => setBulkDeleteConfirm(true)}
-            disabled={bulkDeleting}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-rose hover:bg-aurora-rose/10 rounded-lg transition-all font-body disabled:opacity-50"
-          >
-            {bulkDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-            Tümünü Sil
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setBulkDeleteConfirm(true)}
+              disabled={bulkDeleting}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-rose hover:bg-aurora-rose/10 rounded-lg transition-all font-body disabled:opacity-50"
+            >
+              {bulkDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              Tümünü Sil
+            </button>
+          )}
         </div>
       )}
 
@@ -531,13 +542,15 @@ export default function WorkflowListPage() {
             Create your first workflow to start automating tasks with AI-powered
             nodes
           </p>
-          <button
-            onClick={() => navigate('/workflows/new')}
-            className="btn-aurora"
-          >
-            <Plus size={16} />
-            Create Workflow
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/workflows/new')}
+              className="btn-aurora"
+            >
+              <Plus size={16} />
+              Create Workflow
+            </button>
+          )}
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -697,13 +710,13 @@ export default function WorkflowListPage() {
                   {wf.triggerType === 'webhook' && wf.webhookPath && (
                     <div className="mt-1.5 flex items-center gap-1 text-[10px] text-aurora-blue/70 font-body group/webhook">
                       <Globe size={10} />
-                      <span className="truncate font-mono" title={`${window.location.origin.replace('5173', '3001')}/api/v1/webhook${wf.webhookPath}`}>
+                      <span className="truncate font-mono" title={`${API_BASE_URL}/api/v1/webhook${wf.webhookPath}`}>
                         /webhook{wf.webhookPath}
                       </span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const url = `${window.location.origin.replace('5173', '3001')}/api/v1/webhook${wf.webhookPath}`;
+                          const url = `${API_BASE_URL}/api/v1/webhook${wf.webhookPath}`;
                           navigator.clipboard.writeText(url);
                           toast.success('Webhook URL kopyalandı');
                         }}
@@ -828,14 +841,16 @@ export default function WorkflowListPage() {
                       Çalıştır
                     </button>
                     <div className="flex-1" />
-                    <button
-                      onClick={(e) => handleDuplicate(e, wf)}
-                      disabled={duplicatingId === wf.id}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-cyan hover:bg-aurora-cyan/5 rounded-lg transition-all font-body disabled:opacity-50"
-                      title="Kopyala"
-                    >
-                      <Copy size={12} />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => handleDuplicate(e, wf)}
+                        disabled={duplicatingId === wf.id}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-cyan hover:bg-aurora-cyan/5 rounded-lg transition-all font-body disabled:opacity-50"
+                        title="Kopyala"
+                      >
+                        <Copy size={12} />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => handleExport(e, wf)}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-indigo hover:bg-aurora-indigo/5 rounded-lg transition-all font-body"
@@ -843,13 +858,15 @@ export default function WorkflowListPage() {
                     >
                       <Download size={12} />
                     </button>
-                    <button
-                      onClick={() => setDeleteConfirmId(wf.id)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-rose hover:bg-aurora-rose/5 rounded-lg transition-all font-body"
-                      title="Sil"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setDeleteConfirmId(wf.id)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-rose hover:bg-aurora-rose/5 rounded-lg transition-all font-body"
+                        title="Sil"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

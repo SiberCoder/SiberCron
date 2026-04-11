@@ -198,24 +198,40 @@ export class WorkflowEngine {
         result.nodeId = nodeId;
         result.nodeName = nodeInstance.name;
 
-        execution.nodeResults[nodeId] = result;
-
-        // Store output for downstream nodes
+        // Store full output for downstream nodes BEFORE truncation
         if (result.status === 'success' && result.output) {
-          nodeOutputs.set(
-            nodeId,
-            result.output.map((json) => ({ json })),
-          );
+          nodeOutputs.set(nodeId, result.output.map((json) => ({ json })));
         }
+
+        // Truncate output stored in the execution record to prevent large payloads
+        // from bloating the database. Downstream nodes already got the full data above.
+        const MAX_STORED_ITEMS = 500;
+        const storedResult: INodeExecutionResult =
+          result.output && result.output.length > MAX_STORED_ITEMS
+            ? {
+                ...result,
+                output: [
+                  ...result.output.slice(0, MAX_STORED_ITEMS),
+                  {
+                    _truncated: true,
+                    _totalItems: result.output.length,
+                    _storedItems: MAX_STORED_ITEMS,
+                    _message: `Output truncated: first ${MAX_STORED_ITEMS} of ${result.output.length} items stored`,
+                  },
+                ],
+              }
+            : result;
+
+        execution.nodeResults[nodeId] = storedResult;
 
         emit('execution:node:done', {
           executionId,
           nodeId,
-          nodeName: result.nodeName,
-          status: result.status,
-          output: result.output,
-          error: result.error,
-          durationMs: result.durationMs ?? 0,
+          nodeName: storedResult.nodeName,
+          status: storedResult.status,
+          output: storedResult.output,
+          error: storedResult.error,
+          durationMs: storedResult.durationMs ?? 0,
         });
 
         // If a node fails and the workflow is not configured to continue, stop.

@@ -188,7 +188,8 @@ export async function executionRoutes(
       }
     }
 
-    return { deleted, fixed, remaining: all.total - deleted };
+    const remaining = db.listExecutions({ limit: 1 }).total;
+    return { deleted, fixed, remaining };
   });
 
   // POST /:id/cancel - Cancel a running execution
@@ -261,8 +262,13 @@ export async function executionRoutes(
     return { message: isResume ? 'Resume queued' : 'Retry queued', workflowId: workflow.id, jobId };
   });
 
-  // DELETE /:id - Delete execution
+  // DELETE /:id - Delete execution (admin only)
   fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    const jwtUser = request.user as { role?: string } | undefined;
+    if (jwtUser && jwtUser.role !== 'admin') {
+      reply.code(403);
+      return { error: 'Admin role required' };
+    }
     const { id } = request.params as { id: string };
     const deleted = db.deleteExecution(id);
     if (!deleted) {
@@ -273,8 +279,13 @@ export async function executionRoutes(
     return;
   });
 
-  // DELETE / - Bulk delete executions by ID list
+  // DELETE / - Bulk delete executions by ID list (admin only)
   fastify.delete('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    const jwtUser = request.user as { role?: string } | undefined;
+    if (jwtUser && jwtUser.role !== 'admin') {
+      reply.code(403);
+      return { error: 'Admin role required' };
+    }
     const body = request.body as { ids?: string[] } | undefined;
     if (!body?.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
       reply.code(400);
