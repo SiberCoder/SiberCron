@@ -22,8 +22,17 @@ import {
   Activity,
 } from 'lucide-react';
 import clsx from 'clsx';
+import cronstrue from 'cronstrue';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
+
+function getNextCronRun(expr: string): string {
+  try {
+    return cronstrue.toString(expr, { locale: 'tr', throwExceptionOnParseError: true });
+  } catch {
+    return expr;
+  }
+}
 
 interface WorkflowSummary {
   lastStatus: string;
@@ -366,6 +375,22 @@ export default function WorkflowListPage() {
                       {new Date(wf.updatedAt).toLocaleDateString()}
                     </span>
                   </div>
+
+                  {/* Cron schedule human-readable description */}
+                  {wf.triggerType === 'cron' && wf.cronExpression && (
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-aurora-amber/70 font-body" title={wf.cronExpression}>
+                      <Clock size={10} />
+                      <span className="truncate">{getNextCronRun(wf.cronExpression)}</span>
+                    </div>
+                  )}
+
+                  {/* Webhook path */}
+                  {wf.triggerType === 'webhook' && wf.webhookPath && (
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-aurora-blue/70 font-body" title={`/api/v1/webhook/${wf.webhookPath}`}>
+                      <Globe size={10} />
+                      <span className="truncate font-mono">/webhook/{wf.webhookPath}</span>
+                    </div>
+                  )}
 
                   {/* Last execution badge */}
                   {summary[wf.id] ? (

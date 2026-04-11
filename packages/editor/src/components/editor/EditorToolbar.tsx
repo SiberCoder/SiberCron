@@ -34,6 +34,7 @@ export default function EditorToolbar() {
 
   const meta = useWorkflowStore((s) => s.workflowMeta);
   const isDirty = useWorkflowStore((s) => s.isDirty);
+  const nodes = useWorkflowStore((s) => s.nodes);
   const updateMeta = useWorkflowStore((s) => s.updateMeta);
   const saveWorkflow = useWorkflowStore((s) => s.saveWorkflow);
   const executeWorkflow = useWorkflowStore((s) => s.executeWorkflow);
@@ -50,6 +51,19 @@ export default function EditorToolbar() {
   const handleExecuteRef = useRef<() => Promise<void>>(async () => {});
 
   const handleSave = useCallback(async () => {
+    // Validate name
+    if (!meta.name.trim()) {
+      setToast({ message: 'Workflow adı boş olamaz', type: 'error' });
+      return;
+    }
+
+    // Warn if no trigger node
+    const TRIGGER_TYPES = ['sibercron.cronTrigger', 'sibercron.webhookTrigger', 'sibercron.manualTrigger', 'sibercron.telegramTrigger'];
+    const hasTrigger = nodes.some((n) => TRIGGER_TYPES.includes(n.data.nodeType as string));
+    if (!hasTrigger && nodes.length > 0) {
+      setToast({ message: 'Uyarı: Trigger node yok. Workflow sadece manuel çalıştırılabilir.', type: 'error' });
+    }
+
     setIsSaving(true);
     try {
       const id = await saveWorkflow();
@@ -58,11 +72,12 @@ export default function EditorToolbar() {
       }
     } catch (err) {
       console.error('Save failed:', err);
-      setToast({ message: 'Save failed. Please try again.', type: 'error' });
+      const msg = err instanceof Error ? err.message : 'Save failed. Please try again.';
+      setToast({ message: msg, type: 'error' });
     } finally {
       setIsSaving(false);
     }
-  }, [saveWorkflow, meta.id, navigate]);
+  }, [saveWorkflow, meta.id, meta.name, nodes, navigate]);
 
   const handleExecute = useCallback(async () => {
     setIsExecuting(true);

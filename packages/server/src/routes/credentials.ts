@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 
 import { db } from '../db/database.js';
+import type { INodeInstance } from '@sibercron/shared';
 
 const CreateCredentialSchema = z.object({
   name: z.string().min(1, 'name is required'),
@@ -46,7 +47,7 @@ export async function credentialRoutes(
     return safe;
   });
 
-  // DELETE /:id - Delete credential
+  // DELETE /:id - Delete credential (cascades: removes refs from all workflow nodes)
   fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
     const deleted = db.deleteCredential(id);
@@ -54,6 +55,33 @@ export async function credentialRoutes(
       reply.code(404);
       return { error: 'Credential not found' };
     }
+
+    // Cascade: remove credential reference from any workflow nodes using it
+    const workflows = db.listWorkflows({ limit: 5000 });
+    for (const workflow of workflows.data) {
+      let changed = false;
+      const updatedNodes = workflow.nodes.map((node: INodeInstance) => {
+        if (!node.credentials) return node;
+        const updatedCreds: Record<string, string> = {};
+        let nodeChanged = false;
+        for (const [key, val] of Object.entries(node.credentials)) {
+          if (val === id) {
+            nodeChanged = true;
+          } else {
+            updatedCreds[key] = val;
+          }
+        }
+        if (nodeChanged) {
+          changed = true;
+          return { ...node, credentials: Object.keys(updatedCreds).length > 0 ? updatedCreds : undefined };
+        }
+        return node;
+      });
+      if (changed) {
+        db.updateWorkflow(workflow.id, { nodes: updatedNodes });
+      }
+    }
+
     reply.code(204);
     return;
   });

@@ -435,6 +435,7 @@ export default function ExecutionHistoryPage() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [page, setPage] = useState(1);
   const socketRef = useRef<Socket | null>(null);
@@ -543,6 +544,26 @@ export default function ExecutionHistoryPage() {
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  const handleCancel = async (e: React.MouseEvent, exec: IExecution) => {
+    e.stopPropagation();
+    setCancellingId(exec.id);
+    try {
+      await apiPost(`/executions/${exec.id}/cancel`);
+      setExecutions((prev) =>
+        prev.map((ex) =>
+          ex.id === exec.id
+            ? { ...ex, status: 'cancelled' as const, finishedAt: new Date().toISOString() }
+            : ex,
+        ),
+      );
+      setToast({ message: 'Çalıştırma iptal edildi', type: 'success' });
+    } catch {
+      setToast({ message: 'İptal başarısız', type: 'error' });
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const handleRetry = async (e: React.MouseEvent, exec: IExecution) => {
     e.stopPropagation();
@@ -703,6 +724,18 @@ export default function ExecutionHistoryPage() {
                     <span className="text-xs text-obsidian-400 font-mono min-w-[60px] text-right">
                       {formatDuration(exec.durationMs)}
                     </span>
+                    {exec.status === 'running' && (
+                      <button
+                        onClick={(e) => handleCancel(e, exec)}
+                        disabled={cancellingId === exec.id}
+                        className="p-1.5 rounded-lg text-obsidian-600 hover:text-aurora-amber hover:bg-aurora-amber/5 transition-all disabled:opacity-50"
+                        title="İptal et"
+                      >
+                        {cancellingId === exec.id
+                          ? <Loader2 size={12} className="animate-spin" />
+                          : <Ban size={12} />}
+                      </button>
+                    )}
                     {(exec.status === 'error' || exec.status === 'success') && (
                       <button
                         onClick={(e) => handleRetry(e, exec)}

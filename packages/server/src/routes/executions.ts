@@ -149,6 +149,26 @@ export async function executionRoutes(
     return { deleted, fixed, remaining: all.total - deleted };
   });
 
+  // POST /:id/cancel - Cancel a running execution
+  fastify.post('/:id/cancel', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const execution = db.getExecution(id);
+    if (!execution) {
+      reply.code(404);
+      return { error: 'Execution not found' };
+    }
+    if (execution.status !== 'running' && execution.status !== 'pending') {
+      reply.code(409);
+      return { error: `Cannot cancel execution in status "${execution.status}"` };
+    }
+    db.updateExecution(id, {
+      status: 'cancelled',
+      errorMessage: 'Cancelled by user',
+      finishedAt: new Date().toISOString(),
+    });
+    return { message: 'Execution cancelled', executionId: id };
+  });
+
   // POST /:id/retry - Re-run a failed or completed execution
   fastify.post('/:id/retry', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };

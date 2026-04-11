@@ -67,6 +67,17 @@ export async function workflowRoutes(
       return { error: 'Validation failed', details: parsed.error.flatten().fieldErrors };
     }
     const body = parsed.data as CreateWorkflowRequest;
+
+    // Enforce webhook path uniqueness
+    if (body.webhookPath) {
+      const existing = db.listWorkflows({ limit: 5000 });
+      const conflict = existing.data.find((w) => w.webhookPath === body.webhookPath);
+      if (conflict) {
+        reply.code(409);
+        return { error: `Webhook path "${body.webhookPath}" is already used by workflow "${conflict.name}"` };
+      }
+    }
+
     const workflow = db.createWorkflow(body);
     reply.code(201);
     return workflow;
@@ -92,6 +103,17 @@ export async function workflowRoutes(
       return { error: 'Validation failed', details: parsed.error.flatten().fieldErrors };
     }
     const body = parsed.data as UpdateWorkflowRequest;
+
+    // Enforce webhook path uniqueness (skip check if path unchanged)
+    if (body.webhookPath) {
+      const existing = db.listWorkflows({ limit: 5000 });
+      const conflict = existing.data.find((w) => w.webhookPath === body.webhookPath && w.id !== id);
+      if (conflict) {
+        reply.code(409);
+        return { error: `Webhook path "${body.webhookPath}" is already used by workflow "${conflict.name}"` };
+      }
+    }
+
     const workflow = db.updateWorkflow(id, body);
     if (!workflow) {
       reply.code(404);
