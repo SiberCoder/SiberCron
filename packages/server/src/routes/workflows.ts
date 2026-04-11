@@ -15,6 +15,7 @@ import { z } from 'zod';
 
 import { db } from '../db/database.js';
 import { schedulerService } from '../services/schedulerService.js';
+import { validate as validateCron } from 'node-cron';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -33,27 +34,34 @@ function validateWebhookPath(path: string): string | null {
 
 // ── Zod Schemas ───────────────────────────────────────────────────────
 
+const TagsSchema = z
+  .array(z.string().min(1).max(50).regex(/^[a-zA-Z0-9_\-\s]+$/, 'Tag contains invalid characters'))
+  .max(10)
+  .optional();
+
 const CreateWorkflowSchema = z.object({
   name: z.string().min(1, 'name is required').max(200),
-  description: z.string().optional(),
+  description: z.string().max(2000).optional(),
+  tags: TagsSchema,
   nodes: z.array(z.any()).optional(),
   edges: z.array(z.any()).optional(),
   settings: z.record(z.unknown()).optional(),
   triggerType: z.enum(['manual', 'cron', 'webhook', 'event']).optional(),
-  cronExpression: z.string().optional(),
-  webhookPath: z.string().optional(),
+  cronExpression: z.string().max(100).optional(),
+  webhookPath: z.string().max(255).optional(),
 });
 
 const UpdateWorkflowSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  description: z.string().optional(),
+  description: z.string().max(2000).optional(),
+  tags: TagsSchema,
   nodes: z.array(z.any()).optional(),
   edges: z.array(z.any()).optional(),
   settings: z.record(z.unknown()).optional(),
   isActive: z.boolean().optional(),
   triggerType: z.enum(['manual', 'cron', 'webhook', 'event']).optional(),
-  cronExpression: z.string().optional(),
-  webhookPath: z.string().optional(),
+  cronExpression: z.string().max(100).optional(),
+  webhookPath: z.string().max(255).optional(),
 });
 
 export async function workflowRoutes(
@@ -71,6 +79,7 @@ export async function workflowRoutes(
       search: query.search,
       isActive: query.isActive !== undefined ? String(query.isActive) === 'true' : undefined,
       triggerType: query.triggerType as TriggerType | undefined,
+      tag: query.tag,
     });
     return result;
   });
@@ -84,8 +93,20 @@ export async function workflowRoutes(
     }
     const body = parsed.data as CreateWorkflowRequest;
 
-    // Enforce webhook path uniqueness
+    // Validate cron expression
+    if (body.cronExpression) {
+      if (!schedulerService.validateCron(body.cronExpression)) {
+        reply.code(400);
+        return { error: `Invalid cron expression: "${body.cronExpression}"` };
+      }
+    }
+
+    // Validate and normalize webhook path
     if (body.webhookPath) {
+      const pathErr = validateWebhookPath(body.webhookPath);
+      if (pathErr) { reply.code(400); return { error: pathErr }; }
+      if (!body.webhookPath.startsWith('/')) body.webhookPath = `/${body.webhookPath}`;
+
       const existing = db.listWorkflows({ limit: 5000 });
       const conflict = existing.data.find((w) => w.webhookPath === body.webhookPath);
       if (conflict) {
@@ -120,8 +141,20 @@ export async function workflowRoutes(
     }
     const body = parsed.data as UpdateWorkflowRequest;
 
-    // Enforce webhook path uniqueness (skip check if path unchanged)
+    // Validate cron expression if provided
+    if (body.cronExpression) {
+      if (!schedulerService.validateCron(body.cronExpression)) {
+        reply.code(400);
+        return { error: `Invalid cron expression: "${body.cronExpression}"` };
+      }
+    }
+
+    // Validate and enforce webhook path uniqueness (skip check if path unchanged)
     if (body.webhookPath) {
+      const pathErr = validateWebhookPath(body.webhookPath);
+      if (pathErr) { reply.code(400); return { error: pathErr }; }
+      if (!body.webhookPath.startsWith('/')) body.webhookPath = `/${body.webhookPath}`;
+
       const existing = db.listWorkflows({ limit: 5000 });
       const conflict = existing.data.find((w) => w.webhookPath === body.webhookPath && w.id !== id);
       if (conflict) {

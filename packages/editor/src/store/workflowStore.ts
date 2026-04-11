@@ -21,6 +21,7 @@ export interface WorkflowMeta {
   id: string | null;
   name: string;
   description: string;
+  tags: string[];
   isActive: boolean;
   triggerType: TriggerType;
   cronExpression: string;
@@ -74,6 +75,7 @@ const defaultMeta: WorkflowMeta = {
   id: null,
   name: 'Untitled Workflow',
   description: '',
+  tags: [],
   isActive: false,
   triggerType: 'manual',
   cronExpression: '',
@@ -276,6 +278,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         id: workflow.id,
         name: workflow.name,
         description: workflow.description ?? '',
+        tags: workflow.tags ?? [],
         isActive: workflow.isActive,
         triggerType: workflow.triggerType,
         cronExpression: workflow.cronExpression ?? '',
@@ -316,6 +319,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const payload = {
       name: workflowMeta.name,
       description: workflowMeta.description || undefined,
+      tags: workflowMeta.tags.length > 0 ? workflowMeta.tags : undefined,
       nodes: nodeInstances,
       edges: edges.map((e) => ({
         id: e.id,
@@ -347,6 +351,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       workflowMeta: {
         ...workflowMeta,
         id: saved.id,
+        tags: saved.tags ?? [],
         triggerType: saved.triggerType,
         cronExpression: saved.cronExpression ?? '',
         webhookPath: saved.webhookPath ?? '',
@@ -448,6 +453,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         id: null,
         name: workflow.name,
         description: workflow.description ?? '',
+        tags: workflow.tags ?? [],
         isActive: false,
         triggerType: workflow.triggerType,
         cronExpression: workflow.cronExpression ?? '',

@@ -17,6 +17,7 @@ import {
 import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useExecutionStore } from '../../store/executionStore';
+import { toast } from '../../store/toastStore';
 import { apiPost, apiDelete } from '../../api/client';
 
 interface EditorToolbarProps {
@@ -29,13 +30,6 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
   const [isExecuting, setIsExecuting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   const meta = useWorkflowStore((s) => s.workflowMeta);
   const isDirty = useWorkflowStore((s) => s.isDirty);
@@ -58,7 +52,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
   const handleSave = useCallback(async () => {
     // Validate name
     if (!meta.name.trim()) {
-      setToast({ message: 'Workflow adı boş olamaz', type: 'error' });
+      toast.error('Workflow adı boş olamaz');
       return;
     }
 
@@ -66,7 +60,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
     const TRIGGER_TYPES = ['sibercron.cronTrigger', 'sibercron.webhookTrigger', 'sibercron.manualTrigger', 'sibercron.telegramTrigger'];
     const hasTrigger = nodes.some((n) => TRIGGER_TYPES.includes(n.data.nodeType as string));
     if (!hasTrigger && nodes.length > 0) {
-      setToast({ message: 'Uyarı: Trigger node yok. Workflow sadece manuel çalıştırılabilir.', type: 'error' });
+      toast.warning('Trigger node yok. Workflow sadece manuel çalıştırılabilir.');
     }
 
     setIsSaving(true);
@@ -74,11 +68,12 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       const id = await saveWorkflow();
       if (!meta.id) {
         navigate(`/workflows/${id}`, { replace: true });
+      } else {
+        toast.success('Workflow kaydedildi');
       }
     } catch (err) {
-      console.error('Save failed:', err);
-      const msg = err instanceof Error ? err.message : 'Save failed. Please try again.';
-      setToast({ message: msg, type: 'error' });
+      const msg = err instanceof Error ? err.message : 'Kayıt başarısız. Lütfen tekrar deneyin.';
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
@@ -93,8 +88,8 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       const executionId = await executeWorkflow();
       connectExecution(executionId);
     } catch (err) {
-      console.error('Execute failed:', err);
-      setToast({ message: 'Execution failed. Please try again.', type: 'error' });
+      const msg = err instanceof Error ? err.message : 'Çalıştırma başarısız. Lütfen tekrar deneyin.';
+      toast.error(msg);
     } finally {
       setIsExecuting(false);
     }
@@ -147,13 +142,9 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         : `/workflows/${meta.id}/activate`;
       await apiPost(endpoint);
       updateMeta({ isActive: !meta.isActive });
-      setToast({
-        message: meta.isActive ? 'Workflow devre disi birakildi' : 'Workflow aktif edildi',
-        type: 'success',
-      });
+      toast.success(meta.isActive ? 'Workflow devre dışı bırakıldı' : 'Workflow aktif edildi');
     } catch (err) {
-      console.error('Toggle failed:', err);
-      setToast({ message: 'Durum degistirilemedi', type: 'error' });
+      toast.error('Durum değiştirilemedi');
     } finally {
       setIsToggling(false);
     }
@@ -166,8 +157,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       setShowDeleteConfirm(false);
       navigate('/workflows');
     } catch (err) {
-      console.error('Delete failed:', err);
-      setToast({ message: 'Silme islemi basarisiz', type: 'error' });
+      toast.error('Silme işlemi başarısız');
     }
   }, [meta.id, navigate]);
 
@@ -240,7 +230,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
             a.download = `${meta.name.replace(/\s+/g, '_')}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            setToast({ message: 'Workflow disa aktarildi', type: 'success' });
+            toast.success('Workflow dışa aktarıldı');
           }}
           className="btn-ghost text-xs"
           title="Disa Aktar (JSON)"
@@ -261,9 +251,9 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
               reader.onload = (ev) => {
                 try {
                   importWorkflow(ev.target?.result as string);
-                  setToast({ message: 'Workflow ice aktarildi', type: 'success' });
+                  toast.success('Workflow içe aktarıldı');
                 } catch {
-                  setToast({ message: 'Gecersiz workflow dosyasi', type: 'error' });
+                  toast.error('Geçersiz workflow dosyası');
                 }
               };
               reader.readAsText(file);
@@ -356,19 +346,6 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         )}
         Execute
       </button>
-
-      {toast && (
-        <div
-          className={clsx(
-            'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-body font-medium shadow-lg transition-all animate-fade-in',
-            toast.type === 'error'
-              ? 'bg-red-500/90 text-white'
-              : 'bg-emerald-500/90 text-white',
-          )}
-        >
-          {toast.message}
-        </div>
-      )}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (

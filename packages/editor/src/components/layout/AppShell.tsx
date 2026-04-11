@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import clsx from 'clsx';
 import Sidebar from './Sidebar';
+import ToastContainer from '../ui/ToastContainer';
 
 export default function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
@@ -19,6 +20,7 @@ export default function AppShell() {
           <Outlet />
         </div>
       </main>
+      <ToastContainer />
     </div>
   );
 }

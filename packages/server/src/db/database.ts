@@ -265,6 +265,7 @@ export class Database {
       id: crypto.randomUUID(),
       name: data.name,
       description: data.description,
+      tags: data.tags,
       nodes: data.nodes ?? [],
       edges: data.edges ?? [],
       settings: { ...DEFAULT_WORKFLOW_SETTINGS, ...data.settings },
@@ -285,7 +286,7 @@ export class Database {
   }
 
   listWorkflows(query: WorkflowListQuery = {}): PaginatedResponse<IWorkflow> {
-    const { page = 1, search, isActive, triggerType } = query;
+    const { page = 1, search, isActive, triggerType, tag } = query;
     const limit = Math.min(query.limit ?? 20, 1000); // cap at 1000 to prevent DoS
 
     let items = Array.from(this.workflows.values());
@@ -295,7 +296,8 @@ export class Database {
       items = items.filter(
         (w) =>
           w.name.toLowerCase().includes(lower) ||
-          w.description?.toLowerCase().includes(lower),
+          w.description?.toLowerCase().includes(lower) ||
+          w.tags?.some((t) => t.toLowerCase().includes(lower)),
       );
     }
 
@@ -305,6 +307,11 @@ export class Database {
 
     if (triggerType) {
       items = items.filter((w) => w.triggerType === triggerType);
+    }
+
+    if (tag) {
+      const lowerTag = tag.toLowerCase();
+      items = items.filter((w) => w.tags?.some((t) => t.toLowerCase() === lowerTag));
     }
 
     // Sort by updatedAt descending
@@ -500,19 +507,28 @@ export class Database {
     const existing = this.credentials.get(id);
     if (!existing) return null;
 
-    const updatedData = data.data ? encryptCredentialData(data.data) : existing.data;
+    // Merge new data fields with existing ones so partial updates don't wipe other fields.
+    let mergedData: Record<string, unknown>;
+    if (data.data && Object.keys(data.data).length > 0) {
+      const existingDecrypted = decryptCredentialData(existing.data);
+      mergedData = { ...existingDecrypted, ...data.data };
+    } else {
+      mergedData = decryptCredentialData(existing.data);
+    }
+    const updatedEncryptedData = encryptCredentialData(mergedData);
     const updated: ICredentialWithData = {
       ...existing,
-      ...data,
-      data: updatedData as Record<string, unknown>,
+      name: data.name ?? existing.name,
+      type: data.type ?? existing.type,
+      data: updatedEncryptedData as Record<string, unknown>,
       id: existing.id,
       createdAt: existing.createdAt,
       updatedAt: new Date().toISOString(),
     };
     this.credentials.set(id, updated);
     this.save();
-    // Return with decrypted data
-    return { ...updated, data: data.data ? data.data : decryptCredentialData(existing.data) };
+    // Return with decrypted merged data
+    return { ...updated, data: mergedData };
   }
 
   deleteCredential(id: string): boolean {

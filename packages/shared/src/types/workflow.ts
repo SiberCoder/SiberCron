@@ -30,12 +30,15 @@ export interface IWorkflowSettings {
   maxRetries?: number;
   retryWaitMs?: number;
   continueOnFail?: boolean;
+  /** Optional HMAC secret for validating incoming webhook signatures */
+  webhookSecret?: string;
 }
 
 export interface IWorkflow {
   id: string;
   name: string;
   description?: string;
+  tags?: string[];
   nodes: INodeInstance[];
   edges: IEdge[];
   settings: IWorkflowSettings;

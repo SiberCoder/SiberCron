@@ -7,6 +7,7 @@ import type { IExecution, ExecutionStatus } from './execution.js';
 export interface CreateWorkflowRequest {
   name: string;
   description?: string;
+  tags?: string[];
   nodes: IWorkflow['nodes'];
   edges: IWorkflow['edges'];
   settings?: IWorkflow['settings'];
@@ -23,6 +24,7 @@ export interface WorkflowListQuery {
   search?: string;
   isActive?: boolean;
   triggerType?: TriggerType;
+  tag?: string;
 }
 
 // Execution API

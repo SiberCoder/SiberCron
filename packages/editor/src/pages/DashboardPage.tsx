@@ -218,6 +218,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalWorkflows: 0,
     activeWorkflows: 0,
@@ -275,6 +276,7 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
+      setError((err as Error).message ?? 'Dashboard verisi yüklenemedi');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -348,6 +350,14 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-fade-in">
+      {/* Error banner */}
+      {error && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-aurora-rose/10 border border-aurora-rose/20 text-aurora-rose text-sm">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="shrink-0 hover:opacity-70 transition-opacity">✕</button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="relative">
         {/* Background aurora glow */}

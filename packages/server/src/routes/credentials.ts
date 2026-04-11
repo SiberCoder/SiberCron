@@ -5,9 +5,15 @@ import { db } from '../db/database.js';
 import type { INodeInstance } from '@sibercron/shared';
 
 const CreateCredentialSchema = z.object({
-  name: z.string().min(1, 'name is required'),
-  type: z.string().min(1, 'type is required'),
+  name: z.string().min(1, 'name is required').max(200),
+  type: z.string().min(1, 'type is required').max(100),
   data: z.record(z.unknown()),
+});
+
+const UpdateCredentialSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  type: z.string().min(1).max(100).optional(),
+  data: z.record(z.unknown()).optional(),
 });
 
 export async function credentialRoutes(
@@ -36,8 +42,12 @@ export async function credentialRoutes(
   // PUT /:id - Update credential
   fastify.put('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    const body = request.body as Partial<{ name: string; type: string; data: Record<string, unknown> }>;
-    const credential = db.updateCredential(id, body);
+    const parsed = UpdateCredentialSchema.safeParse(request.body);
+    if (!parsed.success) {
+      reply.code(400);
+      return { error: 'Validation failed', details: parsed.error.flatten().fieldErrors };
+    }
+    const credential = db.updateCredential(id, parsed.data);
     if (!credential) {
       reply.code(404);
       return { error: 'Credential not found' };

@@ -153,7 +153,9 @@ export const DatabaseQueryNode: INodeType = {
       const pg = await (Function('m', 'return import(m)')('pg') as Promise<any>);
       const client = new pg.default.Client({
         host, port, database, user, password,
-        ssl: ssl ? { rejectUnauthorized: false } : undefined,
+        ssl: ssl ? { rejectUnauthorized: true } : undefined,
+        connectionTimeoutMillis: 10000,
+        query_timeout: 30000,
       });
       try {
         await client.connect();
@@ -169,7 +171,8 @@ export const DatabaseQueryNode: INodeType = {
       const mysql = await (Function('m', 'return import(m)')('mysql2/promise') as Promise<any>);
       const connection = await mysql.createConnection({
         host, port, database, user, password,
-        ssl: ssl ? {} : undefined,
+        ssl: ssl ? { rejectUnauthorized: true } : undefined,
+        connectTimeout: 10000,
       });
       try {
         const [result] = await connection.execute(query, params);
@@ -201,6 +204,18 @@ export const DatabaseQueryNode: INodeType = {
   },
 };
 
+/**
+ * Validates that a table/column name contains only safe characters.
+ * Prevents SQL injection via identifier names.
+ */
+function validateIdentifier(name: string, label: string): void {
+  if (!name || !/^[a-zA-Z_][a-zA-Z0-9_$.]*$/.test(name)) {
+    throw new Error(
+      `Invalid ${label} "${name}". Only alphanumeric characters, underscores, dots, and dollar signs are allowed.`,
+    );
+  }
+}
+
 function buildSqlForOperation(
   operation: string,
   table: string,
@@ -208,8 +223,17 @@ function buildSqlForOperation(
   whereClause: string,
   dbType: string,
 ): { sql: string; values: unknown[] } {
+  // Guard against SQL injection via identifier names
+  validateIdentifier(table, 'table name');
+
   const keys = Object.keys(columns);
   const values = Object.values(columns);
+
+  // Validate all column names
+  for (const key of keys) {
+    validateIdentifier(key, 'column name');
+  }
+
   const placeholder = (i: number) => dbType === 'postgresql' ? `$${i + 1}` : '?';
 
   if (operation === 'insert') {
@@ -220,6 +244,11 @@ function buildSqlForOperation(
 
   if (operation === 'update') {
     const setClauses = keys.map((key, i) => `${key} = ${placeholder(i)}`).join(', ');
+    // whereClause is a raw string from the user — validate it contains no stacked statements.
+    // We cannot fully parameterize a free-form WHERE clause, so we reject dangerous patterns.
+    if (whereClause && /--|;|\/\*|\*\/|xp_|exec\s|union\s/i.test(whereClause)) {
+      throw new Error('WHERE clause contains potentially unsafe SQL. Use parameterized queries instead.');
+    }
     const sql = whereClause
       ? `UPDATE ${table} SET ${setClauses} WHERE ${whereClause}`
       : `UPDATE ${table} SET ${setClauses}`;
@@ -227,6 +256,9 @@ function buildSqlForOperation(
   }
 
   if (operation === 'delete') {
+    if (whereClause && /--|;|\/\*|\*\/|xp_|exec\s|union\s/i.test(whereClause)) {
+      throw new Error('WHERE clause contains potentially unsafe SQL. Use parameterized queries instead.');
+    }
     const sql = whereClause
       ? `DELETE FROM ${table} WHERE ${whereClause}`
       : `DELETE FROM ${table}`;

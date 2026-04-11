@@ -13,10 +13,11 @@ import {
   Database,
   Globe,
   Brain,
+  Pencil,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { ICredential } from '@sibercron/shared';
-import { apiGet, apiPost, apiDelete } from '../api/client';
+import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
 
 // ── Credential type definitions ─────────────────────────────────────────────
 

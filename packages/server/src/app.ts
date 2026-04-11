@@ -350,7 +350,18 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
     // Strip "sha256=" prefix if present (GitHub format)
     const receivedSig = sigHeader.replace(/^sha256=/, '');
 
-    if (!receivedSig || !crypto.timingSafeEqual(Buffer.from(expectedSig, 'hex'), Buffer.from(receivedSig, 'hex'))) {
+    let sigMatch = false;
+    try {
+      const expectedBuf = Buffer.from(expectedSig, 'hex');
+      const receivedBuf = Buffer.from(receivedSig, 'hex');
+      // timingSafeEqual requires same-length buffers; length mismatch = definitely invalid
+      if (expectedBuf.length === receivedBuf.length && receivedBuf.length > 0) {
+        sigMatch = crypto.timingSafeEqual(expectedBuf, receivedBuf);
+      }
+    } catch {
+      sigMatch = false;
+    }
+    if (!receivedSig || !sigMatch) {
       reply.code(401);
       return { error: 'Invalid webhook signature' };
     }

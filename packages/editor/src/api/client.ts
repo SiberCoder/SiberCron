@@ -33,10 +33,14 @@ async function tryRefreshToken(): Promise<string | null> {
       body: JSON.stringify({ refreshToken: refresh }),
     });
     if (!res.ok) {
-      // Refresh failed — clear tokens so AuthGuard redirects to login
+      // Refresh failed — clear all tokens and force re-login
       localStorage.removeItem(LS_ACCESS);
       localStorage.removeItem(LS_REFRESH);
       localStorage.removeItem('sibercron_user');
+      // Hard redirect resets Zustand state so AuthGuard sends user to /login
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.replace('/login');
+      }
       return null;
     }
     const data = await res.json() as { accessToken: string };

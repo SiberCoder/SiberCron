@@ -132,13 +132,17 @@ function ApiKeySection() {
   const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sectionError, setSectionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await apiGet<ApiKeyInfo[]>('/auth/api-keys');
       setKeys(Array.isArray(data) ? data : []);
-    } catch { /* ignore */ }
+      setSectionError(null);
+    } catch (err) {
+      setSectionError((err as Error).message ?? 'API anahtarları yüklenemedi');
+    }
     setLoading(false);
   }, []);
 
@@ -152,14 +156,20 @@ function ApiKeySection() {
       if (data.key) setNewKey(data.key);
       setNewName('');
       void load();
-    } catch { /* ignore */ }
+    } catch (err) {
+      setSectionError((err as Error).message ?? 'API anahtarı oluşturulamadı');
+    }
     setCreating(false);
   };
 
   const handleRevoke = async (id: string) => {
     if (!window.confirm('Bu API anahtarını iptal etmek istediğinizden emin misiniz?')) return;
-    await apiDelete(`/auth/api-keys/${id}`);
-    void load();
+    try {
+      await apiDelete(`/auth/api-keys/${id}`);
+      void load();
+    } catch (err) {
+      setSectionError((err as Error).message ?? 'API anahtarı iptal edilemedi');
+    }
   };
 
   const handleCopy = () => {
@@ -173,6 +183,14 @@ function ApiKeySection() {
   return (
     <Section icon={Key} title="API Anahtarları" description="Programatik API erişimi için kişisel erişim anahtarları" defaultOpen={false}>
       <div className="space-y-3">
+        {/* Section-level error */}
+        {sectionError && (
+          <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-aurora-rose/10 border border-aurora-rose/20 text-aurora-rose text-xs">
+            <span>{sectionError}</span>
+            <button onClick={() => setSectionError(null)} className="shrink-0 hover:opacity-70">✕</button>
+          </div>
+        )}
+
         {/* New key reveal */}
         {newKey && (
           <div className="glass-panel rounded-xl p-4 space-y-2 border border-aurora-emerald/30">

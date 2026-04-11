@@ -125,8 +125,14 @@ export async function executionRoutes(
     return { executionId: id, logs, total: allLogs.length };
   });
 
-  // POST /cleanup - Delete completed/old executions, fix stale running ones
-  fastify.post('/cleanup', async (request: FastifyRequest, _reply: FastifyReply) => {
+  // POST /cleanup - Delete completed/old executions, fix stale running ones (admin only)
+  fastify.post('/cleanup', async (request: FastifyRequest, reply: FastifyReply) => {
+    const jwtUser = request.user as { role?: string } | undefined;
+    if (jwtUser && jwtUser.role !== 'admin') {
+      reply.code(403);
+      return { error: 'Admin role required' };
+    }
+
     const body = request.body as { mode?: string } | undefined;
     const mode = body?.mode || 'completed'; // 'completed' | 'stale' | 'all'
 
