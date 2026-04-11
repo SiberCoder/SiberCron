@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { io, type Socket } from 'socket.io-client';
-import { SOCKET_URL } from '../lib/config';
+import { getSocket, releaseSocket } from '../lib/socket';
 import type {
   WsExecutionStarted,
   WsNodeStart,
@@ -28,7 +27,7 @@ interface CurrentExecution {
 interface ExecutionState {
   currentExecution: CurrentExecution | null;
   executionLog: LogEntry[];
-  socket: Socket | null;
+  connected: boolean;
   selectedOutputNodeId: string | null;
 
   connect: (executionId: string) => void;
@@ -37,45 +36,18 @@ interface ExecutionState {
   setSelectedOutputNode: (nodeId: string | null) => void;
 }
 
-export const useExecutionStore = create<ExecutionState>((set, get) => ({
+export const useExecutionStore = create<ExecutionState>((set, _get) => ({
   currentExecution: null,
   executionLog: [],
-  socket: null,
+  connected: false,
   selectedOutputNodeId: null,
 
   setSelectedOutputNode: (nodeId) => set({ selectedOutputNodeId: nodeId }),
 
   connect: (executionId: string) => {
-    const existing = get().socket;
-    if (existing) {
-      existing.removeAllListeners();
-      existing.disconnect();
-    }
-
-    const socket = io(SOCKET_URL, {
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000,
-    });
-
-    socket.on('connect', () => {
-      socket.emit('subscribe:execution', executionId);
-    });
-
-    socket.on('connect_error', (err) => {
-      console.warn('[ExecutionStore] Socket connection error:', err.message);
-    });
-
-    socket.on('error', (err) => {
-      console.error('[ExecutionStore] Socket error:', err);
-    });
-
-    socket.io.on('reconnect', () => {
-      // Re-subscribe after reconnection
-      socket.emit('subscribe:execution', executionId);
-    });
+    const socket = getSocket();
+    socket.emit('subscribe:execution', executionId);
+    set({ connected: socket.connected });
 
     socket.on(
       'execution:started',
@@ -182,26 +154,20 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       },
     );
 
-    set({ socket });
+    set({ connected: true });
   },
 
   disconnect: () => {
-    const { socket } = get();
-    if (socket) {
-      socket.disconnect();
-      set({ socket: null });
-    }
+    releaseSocket();
+    set({ connected: false });
   },
 
   reset: () => {
-    const { socket } = get();
-    if (socket) {
-      socket.disconnect();
-    }
+    releaseSocket();
     set({
       currentExecution: null,
       executionLog: [],
-      socket: null,
+      connected: false,
       selectedOutputNodeId: null,
     });
   },

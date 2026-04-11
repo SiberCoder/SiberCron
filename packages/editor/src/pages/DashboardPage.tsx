@@ -309,14 +309,16 @@ export default function DashboardPage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [workflowsRes, executionsRes, trendRes, summaryRes, nodeErrorsRes] = await Promise.all([
-        apiGet<PaginatedResponse<IWorkflow>>('/workflows?limit=100'),
-        apiGet<PaginatedResponse<IExecution>>('/executions?limit=100'),
+      const [workflowsSettled, executionsSettled, trendRes, summaryRes, nodeErrorsRes] = await Promise.all([
+        apiGet<PaginatedResponse<IWorkflow>>('/workflows?limit=100').catch(() => null),
+        apiGet<PaginatedResponse<IExecution>>('/executions?limit=100').catch(() => null),
         apiGet<{ days: number; data: TrendBucket[] }>('/executions/trend?days=7').catch(() => null),
         apiGet<Record<string, { lastStatus: string; lastAt: string; total: number; success: number; error: number }>>('/executions/summary').catch(() => null),
         apiGet<{ nodes: NodeErrorStat[] }>('/executions/node-errors?limit=8').catch(() => null),
       ]);
 
+      const workflowsRes = workflowsSettled;
+      const executionsRes = executionsSettled;
       const workflows = workflowsRes?.data ?? [];
       const executions = executionsRes?.data ?? [];
 

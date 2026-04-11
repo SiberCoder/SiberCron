@@ -408,6 +408,10 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
           return { error: `Workflow bulunamadi: ${workflowId}` };
         }
 
+        if (!workflow.isActive) {
+          return { error: `Workflow "${workflow.name}" aktif degil. Once aktif edin.` };
+        }
+
         // Queue the workflow for actual execution (uses BullMQ or direct fallback)
         const jobId = await queueService.addWorkflowJob(workflow.id, workflow.name, {
           triggeredBy: 'ai_brain',

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../lib/config.js';
+import { toast } from '../store/toastStore.js';
 
 const API_BASE = `${API_BASE_URL}/api/v1`;
 
@@ -103,6 +104,14 @@ async function request<T>(
       message = json.error || json.message || body;
     } catch {
       message = body || res.statusText;
+    }
+    // Provide a clear rate limit message and auto-toast
+    if (res.status === 429) {
+      const retryAfter = res.headers.get('Retry-After');
+      const waitMsg = retryAfter ? ` ${retryAfter}s sonra tekrar deneyin.` : '';
+      const rateLimitMsg = `Çok fazla istek gönderildi.${waitMsg}`;
+      toast.warning(rateLimitMsg, 6000);
+      throw new ApiError(429, rateLimitMsg);
     }
     throw new ApiError(res.status, message);
   }

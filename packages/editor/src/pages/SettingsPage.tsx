@@ -250,7 +250,15 @@ function ApiKeySection() {
                 <Key size={13} className="text-obsidian-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-white truncate">{k.name}</p>
-                  <p className="text-[10px] text-obsidian-500 font-mono">{k.prefix}… · Oluşturuldu: {new Date(k.createdAt).toLocaleDateString('tr-TR')}{k.lastUsedAt ? ` · Son kullanım: ${new Date(k.lastUsedAt).toLocaleDateString('tr-TR')}` : ' · Hiç kullanılmadı'}</p>
+                  <p className="text-[10px] text-obsidian-500 font-mono">
+                    {k.prefix}… · Oluşturuldu: {new Date(k.createdAt).toLocaleDateString('tr-TR')}
+                    {k.lastUsedAt ? ` · Son kullanım: ${new Date(k.lastUsedAt).toLocaleDateString('tr-TR')}` : ' · Hiç kullanılmadı'}
+                    {k.expiresAt
+                      ? (new Date(k.expiresAt) < new Date()
+                          ? <span className="text-aurora-rose"> · Süresi doldu</span>
+                          : ` · Son geçerlilik: ${new Date(k.expiresAt).toLocaleDateString('tr-TR')}`)
+                      : ' · Süresiz'}
+                  </p>
                 </div>
                 <button
                   onClick={() => void handleRevoke(k.id)}

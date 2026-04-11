@@ -17,9 +17,8 @@ import {
   User,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { io } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
-import { SOCKET_URL } from '../../lib/config';
+import { getSocket, releaseSocket } from '../../lib/socket';
 import { apiGet } from '../../api/client';
 
 const NAV_ITEMS = [
@@ -49,10 +48,16 @@ function useRunningCount() {
       .catch(() => {});
 
     // Socket: update on execution start/complete
-    const socket = io(SOCKET_URL, { transports: ['websocket'], reconnection: true });
-    socket.on('execution:started', () => setCount((c) => c + 1));
-    socket.on('execution:completed', () => setCount((c) => Math.max(0, c - 1)));
-    return () => { socket.disconnect(); };
+    const socket = getSocket();
+    const onStarted = () => setCount((c) => c + 1);
+    const onCompleted = () => setCount((c) => Math.max(0, c - 1));
+    socket.on('execution:started', onStarted);
+    socket.on('execution:completed', onCompleted);
+    return () => {
+      socket.off('execution:started', onStarted);
+      socket.off('execution:completed', onCompleted);
+      releaseSocket();
+    };
   }, []);
 
   return count;

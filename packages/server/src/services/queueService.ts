@@ -315,6 +315,31 @@ class QueueService {
   }
 
   /**
+   * Remove all pending (waiting/delayed) jobs for a specific workflow.
+   * Called when a workflow is deactivated to prevent queued jobs from executing.
+   */
+  async removeJobsByWorkflowId(workflowId: string): Promise<number> {
+    if (!this.queue || !this._connected) return 0;
+
+    let removed = 0;
+    try {
+      const waiting = await this.queue.getJobs(['waiting', 'delayed']);
+      for (const job of waiting) {
+        if (job.data?.workflowId === workflowId) {
+          await job.remove();
+          removed++;
+        }
+      }
+      if (removed > 0) {
+        console.log(`[Queue] Removed ${removed} pending job(s) for deactivated workflow "${workflowId}".`);
+      }
+    } catch (err) {
+      console.error(`[Queue] Failed to remove jobs for workflow "${workflowId}":`, (err as Error).message);
+    }
+    return removed;
+  }
+
+  /**
    * Get queue statistics.
    */
   async getStats(): Promise<QueueStats> {

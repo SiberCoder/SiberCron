@@ -13,21 +13,23 @@ async function start(): Promise<void> {
     // Initialize cron scheduler (loads active cron workflows)
     await schedulerService.init();
 
-    // Fix stale executions from a previous server run (stuck in "running" state)
-    // Only mark executions older than 5 minutes as stale (gives time for legitimate runs)
+    // Fix stale executions from a previous server run (stuck in "running" or "pending" state)
+    // 5-minute grace window avoids touching in-flight queue jobs still dispatching at startup.
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     const staleExecs = db.listExecutions({ limit: 1000 }).data.filter(
-      (e) => e.status === 'running' && (!e.startedAt || e.startedAt < fiveMinAgo),
+      (e) =>
+        (e.status === 'running' || e.status === 'pending') &&
+        (!e.startedAt || e.startedAt < fiveMinAgo),
     );
     if (staleExecs.length > 0) {
       for (const exec of staleExecs) {
         db.updateExecution(exec.id, {
           status: 'error',
-          errorMessage: 'Execution stale - server restarted',
+          errorMessage: 'Execution interrupted — server was restarted',
           finishedAt: new Date().toISOString(),
         });
       }
-      console.log(`[Startup] Marked ${staleExecs.length} stale execution(s) as error.`);
+      console.log(`[Startup] Marked ${staleExecs.length} interrupted execution(s) as error.`);
     }
 
     const queueStatus = queueService.connected ? 'Redis connected' : 'Direct mode (no Redis)';

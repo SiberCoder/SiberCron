@@ -238,6 +238,7 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
       if (!wfId) return { error: 'Workflow bulunamadi' };
       const wf = db.getWorkflow(wfId);
       if (!wf) return { error: 'Workflow bulunamadi' };
+      if (!wf.isActive) return { error: `Workflow "${wf.name}" aktif degil. Once aktif edin.` };
       // Use queueService so credential resolver, socket events, and BullMQ retry all work correctly.
       const { queueService } = await import('./queueService.js');
       const jobId = await queueService.addWorkflowJob(wf.id, wf.name, {

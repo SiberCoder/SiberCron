@@ -258,6 +258,17 @@ await app.register(cors, {
   credentials: true,
 });
 
+// ── Security headers ───────────────────────────────────────────────────────
+// Applied to all responses except /api/docs (Swagger UI needs to embed frames).
+app.addHook('onSend', async (request, reply) => {
+  const url = request.url;
+  if (url.startsWith('/api/docs')) return;
+  void reply.header('X-Content-Type-Options', 'nosniff');
+  void reply.header('X-Frame-Options', 'DENY');
+  void reply.header('X-XSS-Protection', '1; mode=block');
+  void reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+});
+
 // ── Socket.io setup ─────────────────────────────────────────────────────
 
 const io = new SocketIOServer(app.server, {
@@ -334,6 +345,24 @@ process.on('ai:stream' as any, (data: { executionId: string; nodeId: string; nod
 
 // Expose the map so workflow route can register mappings
 (globalThis as any).__executionIdMap = executionIdMap;
+
+// ── executionIdMap TTL cleanup ─────────────────────────────────────────────
+// Remove entries older than 2 hours to prevent unbounded memory growth.
+const executionIdTimestamps = new Map<string, number>();
+const _originalSet = executionIdMap.set.bind(executionIdMap);
+executionIdMap.set = (k: string, v: string) => {
+  executionIdTimestamps.set(k, Date.now());
+  return _originalSet(k, v);
+};
+setInterval(() => {
+  const cutoff = Date.now() - 2 * 60 * 60 * 1000; // 2 hours
+  for (const [key, ts] of executionIdTimestamps) {
+    if (ts < cutoff) {
+      executionIdMap.delete(key);
+      executionIdTimestamps.delete(key);
+    }
+  }
+}, 30 * 60_000).unref(); // every 30 minutes
 
 // ── JSON Schema subset validator (for webhook payload validation) ────────
 type JsonSchemaNode = {
@@ -425,11 +454,12 @@ function validatePayloadSchema(body: Record<string, unknown>, schema: Record<str
 async function webhookHandler(request: import('fastify').FastifyRequest, reply: import('fastify').FastifyReply) {
   // Fastify wildcard captures everything after the prefix as params['*']
   const rawPath = (request.params as Record<string, string>)['*'] ?? '';
-  const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+  // Normalize: ensure leading slash and lowercase for case-insensitive matching
+  const normalizedPath = ('/' + rawPath).replace(/\/+/g, '/').toLowerCase();
 
   const { data: workflows } = db.listWorkflows({ isActive: true, triggerType: 'webhook', limit: 200 });
   const target = workflows.find(
-    (w: IWorkflow) => w.webhookPath === normalizedPath || w.webhookPath === rawPath,
+    (w: IWorkflow) => (w.webhookPath ?? '').toLowerCase() === normalizedPath,
   );
 
   if (!target) {
@@ -440,7 +470,10 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
   // ── HMAC signature verification (optional) ──────────────────────────
   // If the workflow has a webhookSecret in settings, verify the request signature.
   // Supports: X-Hub-Signature-256 (GitHub), X-Signature-256, X-Webhook-Signature headers.
-  const webhookSecret = (target.settings as Record<string, unknown> | undefined)?.webhookSecret as string | undefined;
+  const rawWebhookSecret = (target.settings as Record<string, unknown> | undefined)?.webhookSecret;
+  const webhookSecret = typeof rawWebhookSecret === 'string' && rawWebhookSecret.trim().length >= 8
+    ? rawWebhookSecret.trim()
+    : undefined;
   if (webhookSecret) {
     const crypto = await import('node:crypto');
     const rawBody = typeof request.body === 'string' ? request.body : JSON.stringify(request.body ?? '');
