@@ -4,7 +4,7 @@ import type { Redis } from 'ioredis';
 import IORedis from 'ioredis';
 import { WorkflowEngine } from '@sibercron/core';
 import { WS_EVENTS } from '@sibercron/shared';
-import type { INodeExecutionResult } from '@sibercron/shared';
+import type { INodeExecutionResult, IExecutionTrigger } from '@sibercron/shared';
 import type { Server as SocketIOServer } from 'socket.io';
 import { db } from '../db/database.js';
 import { config } from '../config/env.js';
@@ -15,6 +15,7 @@ export interface WorkflowJobData {
   workflowId: string;
   workflowName: string;
   triggerData: Record<string, unknown>;
+  triggeredBy?: IExecutionTrigger;
   addedAt: string;
 }
 
@@ -153,6 +154,7 @@ class QueueService {
     workflowName: string,
     triggerData: Record<string, unknown>,
     logPrefix: string,
+    triggeredBy?: IExecutionTrigger,
   ): Promise<void> {
     const workflow = db.getWorkflow(workflowId);
     if (!workflow) {
@@ -170,12 +172,18 @@ class QueueService {
 
     const executionId = crypto.randomUUID();
     const now = new Date().toISOString();
+    // Build triggeredBy from passed param or infer from workflow triggerType
+    const resolvedTriggeredBy: IExecutionTrigger = triggeredBy ?? {
+      method: (workflow.triggerType === 'cron' ? 'cron' : workflow.triggerType === 'webhook' ? 'webhook' : 'manual'),
+    };
+
     db.createExecution({
       id: executionId,
       workflowId,
       workflowName,
       status: 'running',
       triggerType: workflow.triggerType,
+      triggeredBy: resolvedTriggeredBy,
       nodeResults: {},
       startedAt: now,
       createdAt: now,
@@ -264,9 +272,9 @@ class QueueService {
    * Process a workflow execution job from BullMQ.
    */
   private async processJob(job: Job<WorkflowJobData>): Promise<void> {
-    const { workflowId, workflowName, triggerData } = job.data;
+    const { workflowId, workflowName, triggerData, triggeredBy } = job.data;
     console.log(`[Queue] Processing job ${job.id}: workflow "${workflowName}" (${workflowId})`);
-    await this.runWorkflowExecution(workflowId, workflowName, triggerData, 'Queue');
+    await this.runWorkflowExecution(workflowId, workflowName, triggerData, 'Queue', triggeredBy);
   }
 
   /**
@@ -277,11 +285,13 @@ class QueueService {
     workflowId: string,
     workflowName: string,
     triggerData: Record<string, unknown> = {},
+    triggeredBy?: IExecutionTrigger,
   ): Promise<string> {
     const jobData: WorkflowJobData = {
       workflowId,
       workflowName,
       triggerData,
+      triggeredBy,
       addedAt: new Date().toISOString(),
     };
 
@@ -298,7 +308,7 @@ class QueueService {
     // Fire-and-forget so callers (webhook handlers, etc.) are not blocked.
     const jobId = `direct:${Date.now()}`;
     console.log(`[Queue] Redis unavailable. Executing "${workflowName}" directly (${jobId}).`);
-    this.runWorkflowExecution(workflowId, workflowName, triggerData, 'Queue:Direct').catch((err) => {
+    this.runWorkflowExecution(workflowId, workflowName, triggerData, 'Queue:Direct', triggeredBy).catch((err) => {
       console.error(`[Queue:Direct] Workflow "${workflowName}" failed:`, (err as Error).message);
     });
     return jobId;

@@ -339,7 +339,10 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
     signatureVerified: !!webhookSecret,
   };
 
-  const jobId = await queueService.addWorkflowJob(target.id, target.name, triggerData);
+  const jobId = await queueService.addWorkflowJob(target.id, target.name, triggerData, {
+    method: 'webhook',
+    webhookPath: normalizedPath,
+  });
 
   reply.code(202);
   return { message: 'Webhook received', workflowId: target.id, workflowName: target.name, jobId };

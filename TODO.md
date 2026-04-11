@@ -98,14 +98,14 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] API anahtari yonetimi (kullanici bazli token uretimi ve iptal — scx_ prefix, SHA-256 hash, Settings UI)
 - [ ] Monitoring / metricsler
 - [ ] Auth token suresini editor settings'den yapilandirma (su an sabit 8h)
-- [ ] Workflow execution'larinda user bazli audit log (kim tetikledi)
+- [x] Workflow execution'larinda user bazli audit log (kim tetikledi)
 - [ ] LoginPage'e "sifre unut" / ilk kurulum wizard'ina admin ayarla adimi ekle
 - [x] Webhook guvenligi (HMAC-SHA256 imza dogrulama)
 - [x] Node palette arama iyilestirmesi (otomatik grup acma)
 - [x] Settings sayfasi sistem bilgisi paneli
 
 #### Oncelik 4b: Devam
-- [ ] Workflow execution'larinda user bazli audit log — her execution'a `triggeredBy: { userId, username }` ekle
+- [x] Workflow execution'larinda user bazli audit log — her execution'a `triggeredBy: { userId, username }` ekle
 - [ ] Rate limiting gelismis: endpoint bazli farkli limit (auth: 10/min, exec: 30/min, genel: 200/min)
 - [ ] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
 - [ ] Execution list sayfasinda workflow adiyla filtre + tarih aralik filtresi

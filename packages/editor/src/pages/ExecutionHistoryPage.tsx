@@ -715,6 +715,8 @@ export default function ExecutionHistoryPage() {
                       </p>
                       <p className="text-[10px] text-obsidian-500 font-body mt-0.5">
                         {formatDate(exec.startedAt)} &middot; {nodeCount} node &middot; {exec.triggerType}
+                        {exec.triggeredBy?.username && ` · ${exec.triggeredBy.username}`}
+                        {exec.triggeredBy?.method === 'api' && exec.triggeredBy.apiKeyName && ` · API: ${exec.triggeredBy.apiKeyName}`}
                       </p>
                     </div>
                     <span className={clsx('badge', statusConf.bg, statusConf.text)}>

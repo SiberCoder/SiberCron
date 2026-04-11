@@ -85,10 +85,9 @@ class SchedulerService {
       // Push to BullMQ queue for reliable execution
       try {
         await queueService.addWorkflowJob(id, name, {
-          triggeredBy: 'cron',
           cronExpression,
           scheduledAt: new Date().toISOString(),
-        });
+        }, { method: 'cron' });
       } catch (err) {
         console.error(`[Scheduler] Failed to queue workflow "${name}":`, (err as Error).message);
       }

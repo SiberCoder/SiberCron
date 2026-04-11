@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { ExecutionListQuery, ExecutionStatus } from '@sibercron/shared';
+import type { ExecutionListQuery, ExecutionStatus, IExecutionTrigger } from '@sibercron/shared';
 
 import { db } from '../db/database.js';
 import { executionLogStore } from '../services/executionLogStore.js';
@@ -185,10 +185,18 @@ export async function executionRoutes(
     }
 
     // Queue a new execution with no trigger data (manual retry)
+    const jwtUser = request.user as { sub?: string; username?: string } | undefined;
+    const retryTrigger: IExecutionTrigger = {
+      method: 'retry',
+      userId: jwtUser?.sub,
+      username: jwtUser?.username,
+      retriedFrom: id,
+    };
     const jobId = await queueService.addWorkflowJob(
       workflow.id,
       workflow.name,
-      { retriedFrom: id, triggeredBy: 'retry' },
+      { retriedFrom: id },
+      retryTrigger,
     );
 
     reply.code(202);
