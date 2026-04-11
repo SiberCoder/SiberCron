@@ -1,4 +1,5 @@
 import vm from 'node:vm';
+import crypto from 'node:crypto';
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
 
 export const CodeNode: INodeType = {
@@ -19,7 +20,7 @@ export const CodeNode: INodeType = {
         type: 'code',
         default: 'return items;',
         required: true,
-        description: 'JavaScript code to execute. Receives "items" array and "$input" (first item json). Must return an array of {json: {...}} objects.',
+        description: 'JavaScript code. Receives "items" array and "$input" (first item json). Must return [{json:{...}}] array. Available: fetch, URL, AbortController, crypto.randomUUID, console, JSON, Math, Date, Map, Set, Promise.',
       },
       {
         name: 'timeout',
@@ -58,10 +59,22 @@ export const CodeNode: INodeType = {
       structuredClone: globalThis.structuredClone,
       atob: globalThis.atob,
       btoa: globalThis.btoa,
+      // HTTP — available in Node.js 18+ (global fetch)
+      fetch: globalThis.fetch,
+      Request: globalThis.Request,
+      Response: globalThis.Response,
+      Headers: globalThis.Headers,
+      AbortController: globalThis.AbortController,
+      AbortSignal: globalThis.AbortSignal,
       URL: globalThis.URL,
       URLSearchParams: globalThis.URLSearchParams,
       TextEncoder: globalThis.TextEncoder,
       TextDecoder: globalThis.TextDecoder,
+      // Crypto utils
+      crypto: {
+        randomUUID: () => crypto.randomUUID(),
+        getRandomValues: (arr: Uint8Array) => crypto.getRandomValues(arr),
+      },
     };
     vm.createContext(sandbox);
 

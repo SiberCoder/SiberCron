@@ -203,40 +203,44 @@ export async function messagingRoutes(fastify: FastifyInstance): Promise<void> {
   // ── Telegram Webhook (POST) ──────────────────────────────────────────
 
   fastify.post('/telegram', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = request.body as {
-      message?: {
-        chat: { id: number };
-        from?: { id: number; first_name?: string; username?: string };
-        text?: string;
-      };
-    };
+    const body = request.body as Record<string, unknown>;
 
-    const message = body.message;
-    if (!message?.text) {
-      reply.code(200);
-      return { status: 'ok' };
-    }
+    // Always respond 200 quickly to Telegram to prevent retries
+    reply.code(200);
 
-    const chatId = String(message.chat.id);
-    const messageText = message.text;
+    const message = (body.message ?? body.edited_message ?? body.channel_post) as Record<string, unknown> | undefined;
+    const chatId = message ? String((message.chat as Record<string, unknown>)?.id ?? '') : '';
+    const messageText = typeof message?.text === 'string' ? message.text : '';
 
-    // Gelen mesaj istatistiklerini güncelle
-    const telegramAccounts = db
-      .listSocialAccounts()
-      .filter((a) => a.platform === 'telegram');
-    const matchingAccount = telegramAccounts[0]; // İlk eşleşen Telegram hesabı
-    if (matchingAccount) {
-      db.incrementAccountStats(matchingAccount.id, 'messagesReceived');
-    }
+    // Update stats
+    const telegramAccounts = db.listSocialAccounts().filter((a) => a.platform === 'telegram');
+    const matchingAccount = telegramAccounts[0];
+    if (matchingAccount) db.incrementAccountStats(matchingAccount.id, 'messagesReceived');
 
-    await handleCommand(
-      messageText,
-      'telegram',
-      chatId,
-      matchingAccount?.id ?? '',
+    // ── 1. Trigger active TelegramTrigger workflows ──────────────────────
+    const { data: eventWorkflows } = db.listWorkflows({ isActive: true, triggerType: 'event' as any, limit: 100 });
+    const telegramTriggerWorkflows = eventWorkflows.filter((w) =>
+      w.nodes.some((n) => n.type === 'sibercron.telegramTrigger'),
     );
 
-    reply.code(200);
+    for (const wf of telegramTriggerWorkflows) {
+      try {
+        // Pass the raw Telegram update as trigger data.
+        // TelegramTrigger node expects update fields (message, callback_query, etc.) at the top level.
+        await queueService.addWorkflowJob(wf.id, wf.name, body as Record<string, unknown>, {
+          method: 'webhook',
+          webhookPath: '/messaging/webhook/telegram',
+        });
+      } catch (err) {
+        fastify.log.error(`[TelegramTrigger] Failed to trigger workflow ${wf.id}: ${(err as Error).message}`);
+      }
+    }
+
+    // ── 2. Handle slash commands ─────────────────────────────────────────
+    if (messageText) {
+      await handleCommand(messageText, 'telegram', chatId, matchingAccount?.id ?? '');
+    }
+
     return { status: 'ok' };
   });
 
