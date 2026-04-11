@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -8,6 +8,10 @@ import {
   Zap,
   Trash2,
   AlertTriangle,
+  Download,
+  Upload,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
@@ -33,7 +37,17 @@ export default function EditorToolbar() {
   const updateMeta = useWorkflowStore((s) => s.updateMeta);
   const saveWorkflow = useWorkflowStore((s) => s.saveWorkflow);
   const executeWorkflow = useWorkflowStore((s) => s.executeWorkflow);
+  const exportWorkflow = useWorkflowStore((s) => s.exportWorkflow);
+  const importWorkflow = useWorkflowStore((s) => s.importWorkflow);
+  const undo = useWorkflowStore((s) => s.undo);
+  const redo = useWorkflowStore((s) => s.redo);
+  const canUndo = useWorkflowStore((s) => s.canUndo);
+  const canRedo = useWorkflowStore((s) => s.canRedo);
   const connectExecution = useExecutionStore((s) => s.connect);
+
+  // Stable refs so keyboard handler always calls latest version
+  const handleSaveRef = useRef<() => Promise<void>>(async () => {});
+  const handleExecuteRef = useRef<() => Promise<void>>(async () => {});
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
@@ -50,18 +64,6 @@ export default function EditorToolbar() {
     }
   }, [saveWorkflow, meta.id, navigate]);
 
-  // Ctrl+S / Cmd+S keyboard shortcut
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        if (!isSaving) handleSave();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, isSaving]);
-
   const handleExecute = useCallback(async () => {
     setIsExecuting(true);
     try {
@@ -77,6 +79,40 @@ export default function EditorToolbar() {
       setIsExecuting(false);
     }
   }, [isDirty, saveWorkflow, executeWorkflow, connectExecution]);
+
+  // Keep refs up-to-date
+  handleSaveRef.current = handleSave;
+  handleExecuteRef.current = handleExecute;
+
+  // Keyboard shortcuts: Ctrl+S save | Ctrl+Enter execute | Ctrl+Z undo | Ctrl+Shift+Z redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveRef.current();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleExecuteRef.current();
+      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]); // undo/redo are stable zustand selectors
+
+  // Auto-save: 5 seconds after a change, only for already-saved workflows
+  useEffect(() => {
+    if (!isDirty || isSaving || !meta.id) return;
+    const timer = setTimeout(() => {
+      handleSaveRef.current();
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [isDirty, isSaving, meta.id]);
 
   const handleToggleActive = useCallback(async () => {
     if (!meta.id) {
@@ -151,6 +187,75 @@ export default function EditorToolbar() {
           Unsaved
         </span>
       )}
+
+      <div className="flex items-center gap-1">
+        {/* Undo/Redo */}
+        <button
+          onClick={undo}
+          disabled={!canUndo()}
+          className="btn-ghost text-xs disabled:opacity-30"
+          title="Geri Al (Ctrl+Z)"
+        >
+          <Undo2 size={14} />
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo()}
+          className="btn-ghost text-xs disabled:opacity-30"
+          title="Ileri Al (Ctrl+Shift+Z)"
+        >
+          <Redo2 size={14} />
+        </button>
+
+        <div className="w-px h-4 bg-white/[0.06] mx-1" />
+
+        {/* Export */}
+        <button
+          onClick={() => {
+            const json = exportWorkflow();
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${meta.name.replace(/\s+/g, '_')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            setToast({ message: 'Workflow disa aktarildi', type: 'success' });
+          }}
+          className="btn-ghost text-xs"
+          title="Disa Aktar (JSON)"
+        >
+          <Download size={14} />
+        </button>
+
+        {/* Import */}
+        <button
+          onClick={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                try {
+                  importWorkflow(ev.target?.result as string);
+                  setToast({ message: 'Workflow ice aktarildi', type: 'success' });
+                } catch {
+                  setToast({ message: 'Gecersiz workflow dosyasi', type: 'error' });
+                }
+              };
+              reader.readAsText(file);
+            };
+            input.click();
+          }}
+          className="btn-ghost text-xs"
+          title="Ice Aktar (JSON)"
+        >
+          <Upload size={14} />
+        </button>
+      </div>
 
       <div className="flex-1" />
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -14,10 +14,24 @@ import {
   AlertTriangle,
   Search,
   X,
+  Copy,
+  Download,
+  Upload,
+  CheckCircle2,
+  XCircle,
+  Activity,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
+
+interface WorkflowSummary {
+  lastStatus: string;
+  lastAt: string;
+  total: number;
+  success: number;
+  error: number;
+}
 
 const TRIGGER_ICONS: Record<TriggerType, React.ComponentType<{ size?: number; className?: string }>> = {
   manual: Play,
@@ -36,12 +50,15 @@ const TRIGGER_COLORS: Record<TriggerType, string> = {
 export default function WorkflowListPage() {
   const navigate = useNavigate();
   const [workflows, setWorkflows] = useState<IWorkflow[]>([]);
+  const [summary, setSummary] = useState<Record<string, WorkflowSummary>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const pageSize = 10;
 
   // Auto-dismiss toast after 3s
@@ -61,8 +78,18 @@ export default function WorkflowListPage() {
 
   const loadWorkflows = useCallback(async () => {
     try {
-      const res = await apiGet<{ data: IWorkflow[] }>('/workflows?limit=200');
-      setWorkflows(res.data ?? []);
+      const [workflowsRes, summaryRes] = await Promise.allSettled([
+        apiGet<{ data: IWorkflow[] }>('/workflows?limit=200'),
+        apiGet<Record<string, WorkflowSummary>>('/executions/summary'),
+      ]);
+      if (workflowsRes.status === 'fulfilled') {
+        setWorkflows(workflowsRes.value.data ?? []);
+      } else {
+        setWorkflows([]);
+      }
+      if (summaryRes.status === 'fulfilled') {
+        setSummary(summaryRes.value ?? {});
+      }
     } catch {
       setWorkflows([]);
     } finally {
@@ -81,6 +108,53 @@ export default function WorkflowListPage() {
       setDeleteConfirmId(null);
     } catch (err) {
       console.error('Failed to delete workflow:', err);
+    }
+  };
+
+  const handleDuplicate = async (e: React.MouseEvent, wf: IWorkflow) => {
+    e.stopPropagation();
+    setDuplicatingId(wf.id);
+    try {
+      const copy = await apiPost<IWorkflow>(`/workflows/${wf.id}/duplicate`);
+      setWorkflows((prev) => [copy, ...prev]);
+      setToast({ message: `"${copy.name}" oluşturuldu`, type: 'success' });
+    } catch {
+      setToast({ message: 'Kopyalama başarısız', type: 'error' });
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
+  const handleExport = async (e: React.MouseEvent, wf: IWorkflow) => {
+    e.stopPropagation();
+    try {
+      const data = await apiGet<Record<string, unknown>>(`/workflows/${wf.id}/export`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${wf.name.replace(/[^a-z0-9]/gi, '_')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setToast({ message: 'Dışa aktarma başarısız', type: 'error' });
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const imported = await apiPost<IWorkflow>('/workflows/import', json);
+      setWorkflows((prev) => [imported, ...prev]);
+      setToast({ message: `"${imported.name}" içe aktarıldı`, type: 'success' });
+    } catch {
+      setToast({ message: 'İçe aktarma başarısız. Geçerli bir SiberCron workflow dosyası seçin.', type: 'error' });
+    } finally {
+      // Reset the input so the same file can be re-imported
+      if (importInputRef.current) importInputRef.current.value = '';
     }
   };
 
@@ -120,13 +194,30 @@ export default function WorkflowListPage() {
             Build and manage your automation workflows
           </p>
         </div>
-        <button
-          onClick={() => navigate('/workflows/new')}
-          className="btn-aurora"
-        >
-          <Plus size={16} />
-          New Workflow
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <button
+            onClick={() => importInputRef.current?.click()}
+            className="btn-ghost"
+            title="JSON dosyasından içe aktar"
+          >
+            <Upload size={14} />
+            İçe Aktar
+          </button>
+          <button
+            onClick={() => navigate('/workflows/new')}
+            className="btn-aurora"
+          >
+            <Plus size={16} />
+            New Workflow
+          </button>
+        </div>
       </div>
 
       {/* Search bar */}
@@ -243,6 +334,38 @@ export default function WorkflowListPage() {
                     </span>
                   </div>
 
+                  {/* Last execution badge */}
+                  {summary[wf.id] ? (
+                    <div className="flex items-center gap-2 mt-2.5 text-[10px] font-body">
+                      {summary[wf.id].lastStatus === 'success' ? (
+                        <CheckCircle2 size={10} className="text-aurora-emerald shrink-0" />
+                      ) : summary[wf.id].lastStatus === 'error' ? (
+                        <XCircle size={10} className="text-aurora-rose shrink-0" />
+                      ) : (
+                        <Activity size={10} className="text-aurora-blue shrink-0" />
+                      )}
+                      <span className={clsx(
+                        summary[wf.id].lastStatus === 'success' ? 'text-aurora-emerald' :
+                        summary[wf.id].lastStatus === 'error' ? 'text-aurora-rose' :
+                        'text-aurora-blue',
+                      )}>
+                        {summary[wf.id].total} çalıştırma
+                      </span>
+                      <span className="text-obsidian-600">·</span>
+                      <span className="text-obsidian-500">
+                        {(() => {
+                          const diff = Date.now() - new Date(summary[wf.id].lastAt).getTime();
+                          const m = Math.floor(diff / 60000);
+                          if (m < 1) return 'şimdi';
+                          if (m < 60) return `${m}dk önce`;
+                          const h = Math.floor(m / 60);
+                          if (h < 24) return `${h}sa önce`;
+                          return `${Math.floor(h / 24)}g önce`;
+                        })()}
+                      </span>
+                    </div>
+                  ) : null}
+
                   {/* Action buttons */}
                   <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/[0.04]">
                     <button
@@ -286,12 +409,26 @@ export default function WorkflowListPage() {
                     </button>
                     <div className="flex-1" />
                     <button
+                      onClick={(e) => handleDuplicate(e, wf)}
+                      disabled={duplicatingId === wf.id}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-cyan hover:bg-aurora-cyan/5 rounded-lg transition-all font-body disabled:opacity-50"
+                      title="Kopyala"
+                    >
+                      <Copy size={12} />
+                    </button>
+                    <button
+                      onClick={(e) => handleExport(e, wf)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-indigo hover:bg-aurora-indigo/5 rounded-lg transition-all font-body"
+                      title="Dışa Aktar"
+                    >
+                      <Download size={12} />
+                    </button>
+                    <button
                       onClick={() => setDeleteConfirmId(wf.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-rose hover:bg-aurora-rose/5 rounded-lg transition-all font-body"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-rose hover:bg-aurora-rose/5 rounded-lg transition-all font-body"
                       title="Sil"
                     >
                       <Trash2 size={12} />
-                      Sil
                     </button>
                   </div>
                 </div>

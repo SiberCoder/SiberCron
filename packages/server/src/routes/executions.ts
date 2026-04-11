@@ -3,6 +3,7 @@ import type { ExecutionListQuery, ExecutionStatus } from '@sibercron/shared';
 
 import { db } from '../db/database.js';
 import { executionLogStore } from '../services/executionLogStore.js';
+import { queueService } from '../services/queueService.js';
 
 export async function executionRoutes(
   fastify: FastifyInstance,
@@ -16,6 +17,41 @@ export async function executionRoutes(
       workflowId: query.workflowId,
       status: query.status as ExecutionStatus | undefined,
     });
+    return result;
+  });
+
+  // GET /summary - Per-workflow execution stats (last status, count, last run time)
+  fastify.get('/summary', async (_request: FastifyRequest, _reply: FastifyReply) => {
+    const all = db.listExecutions({ limit: 5000 });
+    const map = new Map<string, { lastStatus: string; lastAt: string; total: number; success: number; error: number }>();
+
+    for (const exec of all.data) {
+      const entry = map.get(exec.workflowId);
+      const execAt = exec.startedAt ?? exec.createdAt;
+      if (!entry) {
+        map.set(exec.workflowId, {
+          lastStatus: exec.status,
+          lastAt: execAt,
+          total: 1,
+          success: exec.status === 'success' ? 1 : 0,
+          error: exec.status === 'error' ? 1 : 0,
+        });
+      } else {
+        entry.total++;
+        if (exec.status === 'success') entry.success++;
+        if (exec.status === 'error') entry.error++;
+        // Keep most recent
+        if (execAt > entry.lastAt) {
+          entry.lastStatus = exec.status;
+          entry.lastAt = execAt;
+        }
+      }
+    }
+
+    const result: Record<string, { lastStatus: string; lastAt: string; total: number; success: number; error: number }> = {};
+    for (const [wfId, stats] of map) {
+      result[wfId] = stats;
+    }
     return result;
   });
 
@@ -71,6 +107,32 @@ export async function executionRoutes(
     }
 
     return { deleted, fixed, remaining: all.total - deleted };
+  });
+
+  // POST /:id/retry - Re-run a failed or completed execution
+  fastify.post('/:id/retry', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const execution = db.getExecution(id);
+    if (!execution) {
+      reply.code(404);
+      return { error: 'Execution not found' };
+    }
+
+    const workflow = db.getWorkflow(execution.workflowId);
+    if (!workflow) {
+      reply.code(404);
+      return { error: `Workflow "${execution.workflowId}" no longer exists` };
+    }
+
+    // Queue a new execution with no trigger data (manual retry)
+    const jobId = await queueService.addWorkflowJob(
+      workflow.id,
+      workflow.name,
+      { retriedFrom: id, triggeredBy: 'retry' },
+    );
+
+    reply.code(202);
+    return { message: 'Retry queued', workflowId: workflow.id, jobId };
   });
 
   // DELETE /:id - Delete execution

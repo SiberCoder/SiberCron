@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Brain,
   Send,
@@ -25,6 +25,8 @@ import {
   Terminal,
   FileText,
   Wrench,
+  Copy,
+  Check,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { ChatMessage, ToolCallInfo, SystemState } from '@sibercron/shared';
@@ -98,6 +100,17 @@ function ToolCallCard({ tool }: { tool: ToolCallInfo }) {
 function ChatBubble({ message, settings }: { message: ChatMessage; settings?: ChatSettings }) {
   const isUser = message.role === 'user';
   const [showTime, setShowTime] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard not available
+    }
+  }, [message.content]);
 
   const time = new Date(message.timestamp).toLocaleTimeString('tr-TR', {
     hour: '2-digit',
@@ -157,20 +170,29 @@ function ChatBubble({ message, settings }: { message: ChatMessage; settings?: Ch
           )}
         </div>
 
-        {/* Timestamp + meta */}
+        {/* Timestamp + meta + copy */}
         <div
           className={clsx(
-            'text-[10px] text-slate-500 mt-1 transition-opacity duration-200',
-            isUser ? 'text-right' : 'text-left',
+            'flex items-center gap-2 text-[10px] text-slate-500 mt-1 transition-opacity duration-200',
+            isUser ? 'justify-end' : 'justify-start',
             (showTime || settings?.showTimestamps) ? 'opacity-100' : 'opacity-0',
           )}
         >
-          {time}
+          <span>{time}</span>
           {message.metadata?.model && !isUser && (
-            <span className="ml-2 text-slate-600">{message.metadata.model}</span>
+            <span className="text-slate-600">{message.metadata.model}</span>
           )}
           {settings?.showTokenCount && message.metadata?.tokensUsed && (
-            <span className="ml-2 text-slate-600">{message.metadata.tokensUsed} token</span>
+            <span className="text-slate-600">{message.metadata.tokensUsed} token</span>
+          )}
+          {!isUser && (
+            <button
+              onClick={handleCopy}
+              className="ml-auto p-1 rounded-md hover:bg-white/[0.06] text-slate-600 hover:text-slate-300 transition-colors"
+              title="Kopyala"
+            >
+              {copied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+            </button>
           )}
         </div>
       </div>
