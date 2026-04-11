@@ -349,6 +349,7 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
 
     return () => {
       cancelled = true;
+      socket.emit('unsubscribe:execution', executionId);
       socket.off('connect', onConnect);
       socket.io.off('reconnect', onReconnect);
       socket.off('execution:log', onLog);
@@ -742,6 +743,10 @@ export default function ExecutionHistoryPage() {
     socket.on('execution:completed', onCompleted);
 
     return () => {
+      // Leave all execution rooms to prevent server-side memory leak
+      for (const execId of subscribedIds.current) {
+        socket.emit('unsubscribe:execution', execId);
+      }
       socket.off('execution:node:start', onNodeStart);
       socket.off('execution:node:done', onNodeDone);
       socket.off('execution:completed', onCompleted);

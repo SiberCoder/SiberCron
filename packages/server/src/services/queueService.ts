@@ -217,6 +217,16 @@ class QueueService {
       createdAt: now,
     });
 
+    // Broadcast globally so dashboards & live panels pick up new executions immediately
+    if (this.io) {
+      this.io.emit(WS_EVENTS.WORKFLOW_EXECUTION_STARTED, {
+        workflowId,
+        workflowName,
+        executionId,
+        startedAt: now,
+      });
+    }
+
     // Pass API execution ID so nodes (like AutonomousDev) can use it for log correlation
     triggerData._apiExecutionId = executionId;
 

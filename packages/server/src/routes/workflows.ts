@@ -335,6 +335,14 @@ export async function workflowRoutes(
     };
     db.createExecution(runningExecution);
 
+    // Broadcast globally so dashboards & live panels pick up new executions immediately
+    io.emit(WS_EVENTS.WORKFLOW_EXECUTION_STARTED, {
+      workflowId: workflow.id,
+      workflowName: workflow.name,
+      executionId,
+      startedAt: now,
+    });
+
     // Respond immediately
     reply.code(202);
 

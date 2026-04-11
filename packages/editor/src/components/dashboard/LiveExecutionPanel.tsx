@@ -3,6 +3,7 @@ import { Terminal, Minimize2, Maximize2, Circle, RefreshCcw, Brain, MessageSquar
 import clsx from 'clsx';
 import { getSocket, releaseSocket } from '../../lib/socket';
 import { apiGet } from '../../api/client';
+import { WS_EVENTS } from '@sibercron/shared';
 import type { IExecution } from '@sibercron/shared';
 
 interface LiveLogEntry {
@@ -30,28 +31,37 @@ export default function LiveExecutionPanel() {
   const [activeWorkflowName, setActiveWorkflowName] = useState<string>('');
   const [isConnected, setIsConnected] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Poll for running executions
+  // Listen for new executions via WebSocket (replaces 5-second polling)
   useEffect(() => {
-    const checkRunning = async () => {
-      try {
-        const res = await apiGet<{ data: IExecution[] }>('/executions?limit=5&status=running');
-        const running = res?.data?.filter((e) => e.status === 'running') ?? [];
-        if (running.length > 0 && !activeExecutionId) {
-          const exec = running[0];
-          setActiveExecutionId(exec.id);
-          setActiveWorkflowName(exec.workflowName ?? exec.workflowId);
-          setExpanded(true);
-        } else if (running.length === 0 && activeExecutionId) {
-          // Execution finished, keep logs visible but stop polling
-        }
-      } catch { /* ignore */ }
+    const socket = getSocket();
+
+    const onExecutionStarted = (data: { workflowId: string; workflowName: string; executionId: string; startedAt: string }) => {
+      if (activeExecutionId) return; // already tracking one
+      setActiveExecutionId(data.executionId);
+      setActiveWorkflowName(data.workflowName);
+      setLogs([]);
+      setExpanded(true);
     };
 
-    checkRunning();
-    pollRef.current = setInterval(checkRunning, 5000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    socket.on(WS_EVENTS.WORKFLOW_EXECUTION_STARTED, onExecutionStarted);
+
+    // On mount, also check for any already-running execution (page opened mid-run)
+    apiGet<{ data: IExecution[] }>('/executions?limit=5&status=running').then((res) => {
+      const running = res?.data?.filter((e) => e.status === 'running') ?? [];
+      if (running.length > 0 && !activeExecutionId) {
+        const exec = running[0];
+        setActiveExecutionId(exec.id);
+        setActiveWorkflowName(exec.workflowName ?? exec.workflowId);
+        setExpanded(true);
+      }
+    }).catch(() => { /* ignore */ });
+
+    return () => {
+      socket.off(WS_EVENTS.WORKFLOW_EXECUTION_STARTED, onExecutionStarted);
+      releaseSocket();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeExecutionId]);
 
   // Connect to Socket.io and listen for live logs
@@ -126,7 +136,6 @@ export default function LiveExecutionPanel() {
       socket.off('execution:node:start', onNodeStart);
       socket.off('execution:node:done', onNodeDone);
       socket.off('execution:completed', onCompleted);
-      releaseSocket();
       setIsConnected(false);
     };
   }, [activeExecutionId]);
