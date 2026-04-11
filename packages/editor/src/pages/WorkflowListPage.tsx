@@ -23,13 +23,14 @@ import {
   Loader2,
   CheckSquare,
   Square,
+  Tag,
 } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import 'cronstrue/locales/tr';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
 import { WS_EVENTS } from '@sibercron/shared';
-import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
+import { apiGet, apiPost, apiDelete, apiPut, ApiError } from '../api/client';
 import { toast } from '../store/toastStore';
 import { API_BASE_URL } from '../lib/config';
 import { useAuthStore } from '../store/authStore';
@@ -81,6 +82,9 @@ export default function WorkflowListPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkToggling, setBulkToggling] = useState(false);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkTagInput, setBulkTagInput] = useState('');
+  const [bulkTagging, setBulkTagging] = useState(false);
+  const [showBulkTagPopover, setShowBulkTagPopover] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [triggerFilter, setTriggerFilter] = useState<'all' | TriggerType>('all');
@@ -400,6 +404,37 @@ export default function WorkflowListPage() {
     setBulkDeleteConfirm(false);
   };
 
+  const handleBulkAddTag = async (tag: string, remove = false) => {
+    if (!tag.trim()) return;
+    setBulkTagging(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) => {
+        const wf = workflows.find((w) => w.id === id);
+        if (!wf) return Promise.reject(new Error('not found'));
+        const currentTags = wf.tags ?? [];
+        const newTags = remove
+          ? currentTags.filter((t) => t !== tag)
+          : currentTags.includes(tag) ? currentTags : [...currentTags, tag];
+        return apiPut<IWorkflow>(`/workflows/${id}`, { ...wf, tags: newTags });
+      }),
+    );
+    const updated = results
+      .map((r, i) => ({ id: ids[i], result: r }))
+      .filter((r) => r.result.status === 'fulfilled')
+      .map((r) => (r.result as PromiseFulfilledResult<IWorkflow>).value);
+    if (updated.length > 0) {
+      setWorkflows((prev) => prev.map((w) => {
+        const u = updated.find((u) => u.id === w.id);
+        return u ? { ...w, tags: u.tags } : w;
+      }));
+      toast.success(`${updated.length} workflow'a etiket ${remove ? 'kaldırıldı' : 'eklendi'}: #${tag}`);
+    }
+    setBulkTagInput('');
+    setBulkTagging(false);
+    setShowBulkTagPopover(false);
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
       {/* Header */}
@@ -486,6 +521,49 @@ export default function WorkflowListPage() {
             <Download size={12} />
             Dışa Aktar
           </button>
+          {/* Bulk tag popover */}
+          <div className="relative">
+            <button
+              onClick={() => setShowBulkTagPopover((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-violet hover:bg-aurora-violet/10 rounded-lg transition-all font-body"
+              title="Seçili workflow'lara etiket ekle/kaldır"
+            >
+              <Tag size={12} />
+              Etiket
+            </button>
+            {showBulkTagPopover && (
+              <div className="absolute bottom-full left-0 mb-2 w-64 glass-card rounded-xl p-3 shadow-2xl z-50 animate-fade-in">
+                <p className="text-[10px] text-obsidian-500 mb-2 font-body">Etiket ekle veya kaldır ({selectedIds.size} workflow)</p>
+                <div className="flex gap-1.5 mb-2">
+                  <input
+                    type="text"
+                    value={bulkTagInput}
+                    onChange={(e) => setBulkTagInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleBulkAddTag(bulkTagInput); } }}
+                    placeholder="Etiket adı..."
+                    className="glass-input text-xs flex-1 py-1.5"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => handleBulkAddTag(bulkTagInput)}
+                    disabled={bulkTagging || !bulkTagInput.trim()}
+                    className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold bg-aurora-violet/10 border border-aurora-violet/20 text-aurora-violet hover:bg-aurora-violet/20 transition-colors disabled:opacity-50 font-body"
+                  >
+                    {bulkTagging ? <Loader2 size={10} className="animate-spin mx-auto" /> : 'Ekle'}
+                  </button>
+                  <button
+                    onClick={() => handleBulkAddTag(bulkTagInput, true)}
+                    disabled={bulkTagging || !bulkTagInput.trim()}
+                    className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold bg-aurora-rose/10 border border-aurora-rose/20 text-aurora-rose hover:bg-aurora-rose/20 transition-colors disabled:opacity-50 font-body"
+                  >
+                    {bulkTagging ? <Loader2 size={10} className="animate-spin mx-auto" /> : 'Kaldır'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex-1" />
           {isAdmin && (
             <button

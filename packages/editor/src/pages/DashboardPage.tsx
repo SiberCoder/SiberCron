@@ -438,23 +438,36 @@ export default function DashboardPage() {
   // Socket.io: refresh stats + show toast when any execution completes
   useEffect(() => {
     const socket = getSocket();
-    const onCompleted = (data: { workflowName?: string; status: string; durationMs?: number }) => {
+    const onCompleted = (data: {
+      workflowName?: string;
+      executionId?: string;
+      status?: string;
+      durationMs?: number;
+    }) => {
       fetchDashboardData(true);
-      const name = data.workflowName ?? 'Workflow';
-      const dur = data.durationMs
-        ?         : '';
-      if (data.status === 'success') {
-        toast.success(, 5000);
-      } else if (data.status === 'error') {
-        toast.error(, 6000);
-      }
+      const toastId = `toast-${Date.now()}-${Math.random()}`;
+      const newToast: ExecutionToast = {
+        id: toastId,
+        workflowName: data.workflowName ?? 'Workflow',
+        executionId: data.executionId ?? '',
+        status: data.status === 'success' ? 'success' : 'error',
+        durationMs: data.durationMs,
+      };
+      setToasts((prev) => [...prev.slice(-4), newToast]);
+      const timer = setTimeout(() => dismissToast(toastId), 6000);
+      toastTimers.current.set(toastId, timer);
     };
     socket.on('workflow:execution:completed', onCompleted);
     return () => {
       socket.off('workflow:execution:completed', onCompleted);
       releaseSocket();
     };
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, dismissToast]);
+
+  useEffect(() => {
+    const timers = toastTimers.current;
+    return () => { timers.forEach(clearTimeout); timers.clear(); };
+  }, []);
 
   const STATS_CONFIG = [
     {
@@ -807,6 +820,57 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Execution completion toasts — fixed bottom-right */}
+      {toasts.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+          {toasts.map((t) => {
+            const isSuccess = t.status === 'success';
+            const dur = t.durationMs
+              ? t.durationMs < 1000
+                ? ` (${t.durationMs}ms)`
+                : ` (${(t.durationMs / 1000).toFixed(1)}s)`
+              : '';
+            return (
+              <div
+                key={t.id}
+                className={clsx(
+                  'pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-glass-lg border backdrop-blur-sm animate-slide-in-right max-w-xs',
+                  isSuccess
+                    ? 'bg-aurora-emerald/10 border-aurora-emerald/20'
+                    : 'bg-aurora-rose/10 border-aurora-rose/20',
+                )}
+              >
+                <div className={clsx('shrink-0 mt-0.5', isSuccess ? 'text-aurora-emerald' : 'text-aurora-rose')}>
+                  {isSuccess ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white font-body truncate">{t.workflowName}</p>
+                  <p className={clsx('text-[10px] font-body', isSuccess ? 'text-aurora-emerald' : 'text-aurora-rose')}>
+                    {isSuccess ? `Tamamlandı${dur}` : `Hata ile sonuçlandı${dur}`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {t.executionId && (
+                    <button
+                      onClick={() => { navigate(`/executions?id=${t.executionId}`); dismissToast(t.id); }}
+                      className="text-[10px] text-obsidian-400 hover:text-white transition-colors font-body underline underline-offset-2"
+                    >
+                      Detay
+                    </button>
+                  )}
+                  <button
+                    onClick={() => dismissToast(t.id)}
+                    className="text-obsidian-600 hover:text-white transition-colors ml-1"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

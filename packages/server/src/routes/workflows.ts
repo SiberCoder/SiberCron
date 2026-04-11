@@ -502,6 +502,7 @@ export async function workflowRoutes(
       workflow: {
         name: workflow.name,
         description: workflow.description,
+        tags: workflow.tags,
         nodes: workflow.nodes,
         edges: workflow.edges,
         settings: workflow.settings,

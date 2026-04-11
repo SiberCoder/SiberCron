@@ -14,6 +14,7 @@ import type {
   IEdge,
   TriggerType,
   INodeInstance,
+  IWorkflowSettings,
 } from '@sibercron/shared';
 import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
 
@@ -490,26 +491,32 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const state = get();
     // Use the same $schema format as the server export so files are
     // interchangeable between WorkflowList import and editor import.
+    const { workflowMeta } = state;
     const exported = {
       $schema: 'sibercron/workflow/v1',
       exportedAt: new Date().toISOString(),
       workflow: {
-        name: state.workflowMeta.name,
-        description: state.workflowMeta.description,
-        triggerType: state.workflowMeta.triggerType,
-        cronExpression: state.workflowMeta.cronExpression,
-        webhookPath: state.workflowMeta.webhookPath,
+        name: workflowMeta.name,
+        description: workflowMeta.description || undefined,
+        tags: workflowMeta.tags.length > 0 ? workflowMeta.tags : undefined,
+        triggerType: workflowMeta.triggerType,
+        cronExpression: workflowMeta.cronExpression || undefined,
+        webhookPath: workflowMeta.webhookPath || undefined,
         nodes: flowToNodeInstances(state.nodes),
         edges: state.edges.map((e) => ({
           id: e.id,
           source: e.source,
-          sourceHandle: e.sourceHandle ?? 'output',
+          sourceHandle: e.sourceHandle ?? null,
           target: e.target,
-          targetHandle: e.targetHandle ?? 'input',
+          targetHandle: e.targetHandle ?? null,
         })),
-        settings: state.workflowMeta.webhookSecret
-          ? { webhookSecret: state.workflowMeta.webhookSecret }
-          : {},
+        settings: {
+          ...(workflowMeta.webhookSecret ? { webhookSecret: workflowMeta.webhookSecret } : {}),
+          timeout: workflowMeta.timeout,
+          continueOnFail: workflowMeta.continueOnFail,
+          allowConcurrent: workflowMeta.allowConcurrent,
+          ...(workflowMeta.errorWebhookUrl ? { errorWebhookUrl: workflowMeta.errorWebhookUrl } : {}),
+        },
       },
     };
     return JSON.stringify(exported, null, 2);
@@ -538,13 +545,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       id: `imported_${Date.now()}`,
       name: (data.name as string | undefined) ?? 'Imported Workflow',
       description: (data.description as string | undefined) ?? '',
+      tags: Array.isArray(data.tags) ? (data.tags as string[]) : [],
       nodes: (data.nodes as INodeInstance[]),
       edges: (data.edges as IEdge[]),
       isActive: false,
       triggerType: ((data.triggerType as string | undefined) ?? 'manual') as IWorkflow['triggerType'],
       cronExpression: (data.cronExpression as string | undefined) ?? '',
       webhookPath: (data.webhookPath as string | undefined) ?? '',
-      settings: (data.settings as Record<string, unknown> | undefined) ?? {},
+      settings: (data.settings as IWorkflowSettings | undefined) ?? {},
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
