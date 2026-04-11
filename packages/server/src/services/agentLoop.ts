@@ -1,7 +1,5 @@
 import { spawn } from 'child_process';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { db } from '../db/database.js';
 
@@ -237,27 +235,34 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
       if (!wfId) return { error: 'Workflow bulunamadi' };
       const wf = db.getWorkflow(wfId);
       if (!wf) return { error: 'Workflow bulunamadi' };
-      // Import and use WorkflowEngine
-      const { WorkflowEngine } = await import('@sibercron/core');
-      const { NodeRegistry } = await import('@sibercron/core');
-      const { builtinNodes } = await import('@sibercron/nodes');
-      const registry = new NodeRegistry();
-      for (const node of builtinNodes) registry.register(node);
-      const engine = new WorkflowEngine(registry);
-      const execution = await engine.execute(wf);
-      db.createExecution(execution);
-      return { success: true, executionId: execution.id, status: execution.status, duration: execution.durationMs };
+      // Use queueService so credential resolver, socket events, and BullMQ retry all work correctly.
+      const { queueService } = await import('./queueService.js');
+      const jobId = await queueService.addWorkflowJob(wf.id, wf.name, {
+        triggeredBy: 'agent_loop',
+        triggeredAt: new Date().toISOString(),
+      });
+      return { success: true, jobId, workflowId: wf.id, workflowName: wf.name };
     }
     case 'workflow_delete': {
+      // Stop scheduler before deleting so cron job doesn't keep running
+      const { schedulerService } = await import('./schedulerService.js');
+      schedulerService.onWorkflowDeactivated(args.id as string);
       const deleted = db.deleteWorkflow(args.id as string);
       return { success: deleted };
     }
     case 'workflow_activate': {
-      const wfToActivate = db.getWorkflow(args.id as string);
-      if (!wfToActivate) return { error: 'Workflow bulunamadi' };
-      wfToActivate.isActive = args.active as boolean;
-      wfToActivate.updatedAt = new Date().toISOString();
-      return { success: true, active: wfToActivate.isActive };
+      const active = args.active as boolean;
+      // Use db.updateWorkflow so the change is persisted and returned through normal update path.
+      const updated = db.updateWorkflow(args.id as string, { isActive: active } as Record<string, unknown>);
+      if (!updated) return { error: 'Workflow bulunamadi' };
+      // Sync scheduler so cron jobs are started/stopped accordingly.
+      const { schedulerService } = await import('./schedulerService.js');
+      if (active) {
+        schedulerService.onWorkflowActivated(updated);
+      } else {
+        schedulerService.onWorkflowDeactivated(updated.id);
+      }
+      return { success: true, active: updated.isActive };
     }
     case 'execution_list': {
       const list = db.listExecutions({
@@ -339,12 +344,11 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
         return { error: `Command rejected: ${validation.error}` };
       }
       const cwd = args.cwd ? path.resolve(PROJECT_ROOT, args.cwd as string) : PROJECT_ROOT;
+      const isWindows = process.platform === 'win32';
       return new Promise((resolve) => {
-        const proc = spawn('bash', ['-c', commandStr], {
-          cwd,
-          timeout: 30000,
-          shell: false,
-        });
+        const proc = isWindows
+          ? spawn('powershell.exe', ['-NoProfile', '-Command', commandStr], { cwd, timeout: 30000, shell: false })
+          : spawn('bash', ['-c', commandStr], { cwd, timeout: 30000, shell: false });
         let stdout = '';
         let stderr = '';
         proc.stdout?.on('data', (d: Buffer) => {
@@ -459,14 +463,10 @@ export async function runAgentLoop(options: {
   return { response: 'Maksimum islem sayisina ulasildi.', toolCalls: allToolCalls };
 }
 
-// Call Claude CLI with prompt via stdin pipe
+// Call Claude CLI with prompt via stdin (cross-platform, no temp file needed)
 async function callClaude(prompt: string, model?: string, setupToken?: string): Promise<string> {
-  const tmpFile = path.join(os.tmpdir(), `sibercron-agent-${crypto.randomUUID()}.txt`);
-  fs.writeFileSync(tmpFile, prompt, 'utf-8');
-
-  const tmpUnix = tmpFile.replace(/\\/g, '/');
-  const modelFlag = model ? ` --model ${model}` : '';
-  const cmd = `cat "${tmpUnix}" | claude -p --output-format text${modelFlag}`;
+  const args = ['-p', '--output-format', 'text'];
+  if (model) args.push('--model', model);
 
   // Pass setup token as environment variable if provided
   const env = { ...process.env };
@@ -474,35 +474,37 @@ async function callClaude(prompt: string, model?: string, setupToken?: string): 
     env.CLAUDE_CODE_OAUTH_TOKEN = setupToken;
   }
 
+  // On Windows, .cmd scripts require shell:true to be resolved by the OS
+  const isWindows = process.platform === 'win32';
+
   return new Promise((resolve, reject) => {
-    const proc = spawn('bash', ['-c', cmd], { timeout: 120000, env });
+    const proc = spawn('claude', args, {
+      timeout: 120000,
+      env,
+      shell: isWindows,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
     let stdout = '';
     let stderr = '';
-    proc.stdout?.on('data', (d: Buffer) => {
-      stdout += d.toString();
-    });
-    proc.stderr?.on('data', (d: Buffer) => {
-      stderr += d.toString();
-    });
+
+    proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
+    proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+
+    // Write prompt to claude's stdin, then close it
+    proc.stdin?.write(prompt, 'utf-8');
+    proc.stdin?.end();
+
     proc.on('close', (code: number | null) => {
-      try {
-        fs.unlinkSync(tmpFile);
-      } catch {
-        /* ignore cleanup errors */
-      }
       if (code !== 0) {
         const errDetail = stderr.trim() || stdout.trim() || `exit code ${code}`;
         reject(new Error(`Claude CLI hata: ${errDetail}`));
-      } else resolve(stdout.trim());
-    });
-    proc.on('error', (err: Error) => {
-      try {
-        fs.unlinkSync(tmpFile);
-      } catch {
-        /* ignore cleanup errors */
+      } else {
+        resolve(stdout.trim());
       }
-      reject(err);
     });
+
+    proc.on('error', (err: Error) => { reject(err); });
   });
 }
 

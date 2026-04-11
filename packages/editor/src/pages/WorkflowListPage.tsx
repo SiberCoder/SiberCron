@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -12,6 +12,8 @@ import {
   Power,
   PowerOff,
   AlertTriangle,
+  Search,
+  X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
@@ -38,7 +40,24 @@ export default function WorkflowListPage() {
   const [page, setPage] = useState(1);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const pageSize = 10;
+
+  // Auto-dismiss toast after 3s
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return workflows;
+    const q = search.toLowerCase();
+    return workflows.filter(
+      (w) => w.name.toLowerCase().includes(q) || w.description?.toLowerCase().includes(q),
+    );
+  }, [workflows, search]);
 
   const loadWorkflows = useCallback(async () => {
     try {
@@ -110,6 +129,23 @@ export default function WorkflowListPage() {
         </button>
       </div>
 
+      {/* Search bar */}
+      <div className="relative max-w-sm">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-obsidian-500 pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          placeholder="Workflow ara..."
+          className="w-full pl-9 pr-8 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-obsidian-600 focus:outline-none focus:border-aurora-cyan/40 focus:bg-white/[0.06] transition-all font-body"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-obsidian-500 hover:text-white transition-colors">
+            <X size={12} />
+          </button>
+        )}
+      </div>
+
       {/* Content */}
       {isLoading ? (
         <div className="flex items-center justify-center py-24">
@@ -141,10 +177,20 @@ export default function WorkflowListPage() {
             Create Workflow
           </button>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <Search size={32} className="text-obsidian-600 mb-4" />
+          <p className="text-sm text-obsidian-500 font-body">
+            "<strong className="text-obsidian-300">{search}</strong>" icin sonuc bulunamadi
+          </p>
+          <button onClick={() => setSearch('')} className="mt-4 text-xs text-aurora-cyan hover:underline font-body">
+            Aramayı temizle
+          </button>
+        </div>
       ) : (
         <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {workflows.slice((page - 1) * pageSize, page * pageSize).map((wf, i) => {
+          {filtered.slice((page - 1) * pageSize, page * pageSize).map((wf, i) => {
             const TriggerIcon = TRIGGER_ICONS[wf.triggerType] ?? Play;
             const triggerColor = TRIGGER_COLORS[wf.triggerType] ?? 'text-obsidian-400';
             return (
@@ -226,9 +272,10 @@ export default function WorkflowListPage() {
                         e.stopPropagation();
                         try {
                           await apiPost(`/workflows/${wf.id}/execute`, {});
-                          navigate('/executions');
+                          setToast({ message: `"${wf.name}" baslatildi`, type: 'success' });
                         } catch (err) {
                           console.error('Execute failed:', err);
+                          setToast({ message: 'Calistirma basarisiz', type: 'error' });
                         }
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-aurora-blue hover:bg-aurora-blue/5 rounded-lg transition-all font-body"
@@ -287,7 +334,7 @@ export default function WorkflowListPage() {
           </div>
         )}
         {/* Pagination Controls */}
-        {workflows.length > pageSize && (
+        {filtered.length > pageSize && (
           <div className="flex items-center justify-center gap-4 pt-4">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -302,20 +349,32 @@ export default function WorkflowListPage() {
               Previous
             </button>
             <span className="text-xs text-obsidian-400 font-body">
-              Page {page} of {Math.ceil(workflows.length / pageSize)}
+              Page {page} of {Math.ceil(filtered.length / pageSize)}
             </span>
             <button
-              onClick={() => setPage((p) => Math.min(Math.ceil(workflows.length / pageSize), p + 1))}
-              disabled={page >= Math.ceil(workflows.length / pageSize)}
+              onClick={() => setPage((p) => Math.min(Math.ceil(filtered.length / pageSize), p + 1))}
+              disabled={page >= Math.ceil(filtered.length / pageSize)}
               className={clsx(
                 'px-4 py-2 text-xs font-semibold rounded-xl border transition-all font-body',
-                page >= Math.ceil(workflows.length / pageSize)
+                page >= Math.ceil(filtered.length / pageSize)
                   ? 'border-white/[0.04] text-obsidian-600 cursor-not-allowed'
                   : 'border-white/[0.08] text-obsidian-300 hover:text-white hover:border-white/[0.15] hover:bg-white/[0.04]',
               )}
             >
               Next
             </button>
+          </div>
+        )}
+
+        {/* Toast notification */}
+        {toast && (
+          <div
+            className={clsx(
+              'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-body font-medium shadow-lg animate-fade-in',
+              toast.type === 'error' ? 'bg-red-500/90 text-white' : 'bg-emerald-500/90 text-white',
+            )}
+          >
+            {toast.message}
           </div>
         )}
         </>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   GitBranch,
@@ -11,6 +11,7 @@ import {
   Clock,
   ArrowUpRight,
   Activity,
+  RefreshCw,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
@@ -68,6 +69,7 @@ function formatTimeAgo(dateStr?: string): string {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalWorkflows: 0,
     activeWorkflows: 0,
@@ -76,54 +78,50 @@ export default function DashboardPage() {
   });
   const [recentExecutions, setRecentExecutions] = useState<IExecution[]>([]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchDashboardData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const [workflowsRes, executionsRes] = await Promise.all([
+        apiGet<PaginatedResponse<IWorkflow>>('/workflows?limit=100'),
+        apiGet<PaginatedResponse<IExecution>>('/executions?limit=100'),
+      ]);
 
-    async function fetchDashboardData() {
-      setLoading(true);
-      try {
-        const [workflowsRes, executionsRes] = await Promise.all([
-          apiGet<PaginatedResponse<IWorkflow>>('/workflows?limit=100'),
-          apiGet<PaginatedResponse<IExecution>>('/executions?limit=100'),
-        ]);
+      const workflows = workflowsRes?.data ?? [];
+      const executions = executionsRes?.data ?? [];
 
-        if (cancelled) return;
+      const totalWorkflows = workflowsRes?.total ?? workflows.length;
+      const activeWorkflows = workflows.filter((w) => w.isActive).length;
+      const totalExecutions = executionsRes?.total ?? executions.length;
+      const successCount = executions.filter((e) => e.status === 'success').length;
+      const successRate =
+        executions.length > 0
+          ? `${((successCount / executions.length) * 100).toFixed(1)}%`
+          : '0%';
 
-        const workflows = workflowsRes?.data ?? [];
-        const executions = executionsRes?.data ?? [];
-
-        const totalWorkflows = workflowsRes?.total ?? workflows.length;
-        const activeWorkflows = workflows.filter((w) => w.isActive).length;
-        const totalExecutions = executionsRes?.total ?? executions.length;
-        const successCount = executions.filter((e) => e.status === 'success').length;
-        // Rate is computed from fetched sample only (not DB total) to avoid skewed percentages
-        const successRate =
-          executions.length > 0
-            ? `${((successCount / executions.length) * 100).toFixed(1)}%`
-            : '0%';
-
-        setStats({
-          totalWorkflows,
-          activeWorkflows,
-          totalExecutions,
-          successRate,
-        });
-
-        // Take the 5 most recent executions
-        setRecentExecutions(executions.slice(0, 5));
-      } catch (err) {
-        console.error('Failed to load dashboard data:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      setStats({ totalWorkflows, activeWorkflows, totalExecutions, successRate });
+      setRecentExecutions(executions.slice(0, 5));
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-
-    fetchDashboardData();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Socket.io: refresh stats when any execution completes
+  useEffect(() => {
+    const socket = io('/', { transports: ['websocket'] });
+    socket.on('execution:completed', () => {
+      fetchDashboardData(true);
+    });
+    return () => { socket.disconnect(); };
+  }, [fetchDashboardData]);
 
   const STATS_CONFIG = [
     {
@@ -179,19 +177,29 @@ export default function DashboardPage() {
         <div className="absolute -top-20 -left-20 w-96 h-96 bg-aurora-cyan/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -top-10 right-20 w-64 h-64 bg-aurora-indigo/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-2 h-2 rounded-full bg-aurora-cyan animate-glow-pulse" />
-            <span className="text-[11px] font-semibold text-aurora-cyan tracking-widest uppercase font-body">
-              Dashboard
-            </span>
+        <div className="relative flex items-end justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-2 h-2 rounded-full bg-aurora-cyan animate-glow-pulse" />
+              <span className="text-[11px] font-semibold text-aurora-cyan tracking-widest uppercase font-body">
+                Dashboard
+              </span>
+            </div>
+            <h1 className="text-3xl font-display font-bold text-white tracking-tight">
+              Welcome to SiberCron
+            </h1>
+            <p className="text-sm text-obsidian-400 mt-2 font-body">
+              AI-powered workflow automation at your fingertips
+            </p>
           </div>
-          <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-            Welcome to SiberCron
-          </h1>
-          <p className="text-sm text-obsidian-400 mt-2 font-body">
-            AI-powered workflow automation at your fingertips
-          </p>
+          <button
+            onClick={() => fetchDashboardData(true)}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 text-xs text-obsidian-500 hover:text-aurora-cyan transition-colors font-body disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+            Yenile
+          </button>
         </div>
       </div>
 
@@ -300,6 +308,7 @@ export default function DashboardPage() {
                   return (
                     <tr
                       key={exec.id}
+                      onClick={() => navigate('/executions')}
                       className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer group"
                     >
                       <td className="px-5 py-3.5">

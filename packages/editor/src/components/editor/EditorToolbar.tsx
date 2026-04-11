@@ -50,6 +50,18 @@ export default function EditorToolbar() {
     }
   }, [saveWorkflow, meta.id, navigate]);
 
+  // Ctrl+S / Cmd+S keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (!isSaving) handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave, isSaving]);
+
   const handleExecute = useCallback(async () => {
     setIsExecuting(true);
     try {

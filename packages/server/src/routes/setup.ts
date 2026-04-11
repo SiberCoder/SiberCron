@@ -33,7 +33,17 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
       };
     };
 
-    // Save provider configs as credentials
+    // Upsert provider credentials: update existing ones, create only if missing.
+    // This prevents stale duplicate credentials when the user re-saves setup.
+    const upsertCredential = (name: string, type: string, data: Record<string, unknown>) => {
+      const existing = db.listCredentials().find((c) => c.type === type);
+      if (existing) {
+        db.updateCredential(existing.id, { name, data });
+      } else {
+        db.createCredential({ name, type, data });
+      }
+    };
+
     if (body.ai?.providers) {
       for (const provider of body.ai.providers) {
         if (!provider.enabled) continue;
@@ -41,40 +51,40 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
           authMethod: provider.authMethod,
           ...provider.config,
         };
-        db.createCredential({
-          name: `${provider.displayName} (${provider.authMethod})`,
-          type: provider.name,
-          data: credData,
-        });
+        upsertCredential(
+          `${provider.displayName} (${provider.authMethod})`,
+          provider.name,
+          credData,
+        );
       }
     }
 
     // Backward compat: AI anahtarlarini credential olarak kaydet
     if (body.ai?.openaiKey) {
-      db.createCredential({
-        name: 'OpenAI API Key',
-        type: 'openai',
-        data: { apiKey: body.ai.openaiKey },
-      });
+      upsertCredential('OpenAI API Key', 'openai', { apiKey: body.ai.openaiKey });
     }
     if (body.ai?.anthropicKey) {
-      db.createCredential({
-        name: 'Anthropic API Key',
-        type: 'anthropic',
-        data: { apiKey: body.ai.anthropicKey },
-      });
+      upsertCredential('Anthropic API Key', 'anthropic', { apiKey: body.ai.anthropicKey });
     }
 
-    // Mesajlasma yapilandirmalarini sosyal hesap olarak kaydet
+    // Upsert social accounts: update existing platform account, create if missing.
     if (body.messaging) {
       for (const [platform, config] of Object.entries(body.messaging)) {
         if (config && Object.keys(config).length > 0) {
-          db.createSocialAccount({
-            platform,
-            name: `${platform} (setup)`,
-            identifier: (config as Record<string, unknown>).identifier as string ?? platform,
-            config: config as Record<string, unknown>,
-          });
+          const existing = db.listSocialAccounts().find((a) => a.platform === platform);
+          if (existing) {
+            db.updateSocialAccount(existing.id, {
+              config: config as Record<string, unknown>,
+              identifier: (config as Record<string, unknown>).identifier as string ?? platform,
+            });
+          } else {
+            db.createSocialAccount({
+              platform,
+              name: `${platform} (setup)`,
+              identifier: (config as Record<string, unknown>).identifier as string ?? platform,
+              config: config as Record<string, unknown>,
+            });
+          }
         }
       }
     }
@@ -174,15 +184,21 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
           if (setupToken) {
             env.CLAUDE_CODE_OAUTH_TOKEN = setupToken;
           }
+          // Cross-platform: pipe a test prompt directly to claude's stdin
+          const isWindows = process.platform === 'win32';
           const result = await new Promise<{ success: boolean; message: string }>((resolve) => {
-            const proc = spawn('bash', ['-c', 'echo "test" | claude -p --output-format text 2>&1 | head -1'], {
+            const proc = spawn('claude', ['-p', '--output-format', 'text'], {
               timeout: 30000,
               env,
+              shell: isWindows,
+              stdio: ['pipe', 'pipe', 'pipe'],
             });
             let stdout = '';
             let stderr = '';
             proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
             proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+            proc.stdin?.write('test', 'utf-8');
+            proc.stdin?.end();
             proc.on('close', (code: number | null) => {
               if (code === 0 && stdout.trim().length > 0) {
                 resolve({ success: true, message: 'Claude CLI baglantisi basarili.' });
