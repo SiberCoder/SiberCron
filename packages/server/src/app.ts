@@ -118,6 +118,38 @@ if (config.authEnabled) {
     // Only intercept /api/v1/* routes
     if (!url.startsWith('/api/v1/')) return;
 
+    // Try API key auth first (scx_ prefix)
+    const authHeader = request.headers.authorization;
+    const rawKey = authHeader?.startsWith('Bearer scx_')
+      ? authHeader.slice(7)
+      : (request.headers['x-api-key'] as string | undefined);
+
+    if (rawKey?.startsWith('scx_')) {
+      const crypto = await import('node:crypto');
+      const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
+      const apiKey = db.findApiKeyByHash(hash);
+      if (!apiKey) {
+        return reply.status(401).send({ error: 'Invalid API key' });
+      }
+      if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
+        return reply.status(401).send({ error: 'API key expired' });
+      }
+      const user = db.findUserById(apiKey.userId);
+      if (!user) {
+        return reply.status(401).send({ error: 'User not found' });
+      }
+      // Inject user into request similar to JWT (add apiKeyId/apiKeyName for audit log)
+      (request as unknown as Record<string, unknown>).user = {
+        sub: user.id,
+        username: user.username,
+        role: user.role,
+        apiKeyId: apiKey.id,
+        apiKeyName: apiKey.name,
+      };
+      db.touchApiKey(apiKey.id);
+      return;
+    }
+
     try {
       await request.jwtVerify();
     } catch {

@@ -103,6 +103,19 @@ export interface ICommandRegistration {
   updatedAt: string;
 }
 
+// ── API Key Model ──────────────────────────────────────────────────────
+
+export interface IApiKey {
+  id: string;
+  userId: string;
+  name: string;
+  keyHash: string;      // SHA-256 hex of the actual key
+  prefix: string;       // first 8 chars shown in UI (scx_xxxx)
+  lastUsedAt: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+}
+
 // ── User Model ─────────────────────────────────────────────────────────
 
 export interface IUser {
@@ -134,6 +147,54 @@ export class Database {
   /** workflow version history: workflowId → sorted array of versions (newest last) */
   private workflowVersions: Map<string, IWorkflowVersion[]> = new Map();
   private users: Map<string, IUser> = new Map();
+  private apiKeys: Map<string, IApiKey> = new Map();
+
+  // ── API Key CRUD ─────────────────────────────────────────────────────
+
+  createApiKey(data: { userId: string; name: string; expiresAt?: string | null }): { key: IApiKey; plaintext: string } {
+    const raw = `scx_${crypto.randomBytes(32).toString('hex')}`;
+    const keyHash = crypto.createHash('sha256').update(raw).digest('hex');
+    const prefix = raw.slice(0, 8);
+    const now = new Date().toISOString();
+    const apiKey: IApiKey = {
+      id: crypto.randomUUID(),
+      userId: data.userId,
+      name: data.name,
+      keyHash,
+      prefix,
+      lastUsedAt: null,
+      createdAt: now,
+      expiresAt: data.expiresAt ?? null,
+    };
+    this.apiKeys.set(apiKey.id, apiKey);
+    this.save();
+    return { key: apiKey, plaintext: raw };
+  }
+
+  findApiKeyByHash(hash: string): IApiKey | null {
+    for (const k of this.apiKeys.values()) {
+      if (k.keyHash === hash) return k;
+    }
+    return null;
+  }
+
+  listApiKeys(userId: string): IApiKey[] {
+    return Array.from(this.apiKeys.values()).filter((k) => k.userId === userId);
+  }
+
+  deleteApiKey(id: string): boolean {
+    const result = this.apiKeys.delete(id);
+    if (result) this.save();
+    return result;
+  }
+
+  touchApiKey(id: string): void {
+    const k = this.apiKeys.get(id);
+    if (k) {
+      this.apiKeys.set(id, { ...k, lastUsedAt: new Date().toISOString() });
+      this.save();
+    }
+  }
 
   // ── User CRUD ────────────────────────────────────────────────────────
 
@@ -603,6 +664,7 @@ export class Database {
         setupConfig: this.setupConfig,
         workflowVersions: Object.fromEntries(this.workflowVersions),
         users: Object.fromEntries(this.users),
+        apiKeys: Object.fromEntries(this.apiKeys),
       };
       // Write to a temp file then rename for atomic replacement.
       // Prevents a corrupt data file if the process dies mid-write.
@@ -631,6 +693,7 @@ export class Database {
         );
       }
       if (data.users) this.users = new Map(Object.entries(data.users as Record<string, IUser>));
+      if (data.apiKeys) this.apiKeys = new Map(Object.entries(data.apiKeys as Record<string, IApiKey>));
       console.log('[DB] Loaded from', DATA_FILE);
     } catch (err) {
       console.error('[DB] Load error:', (err as Error).message);

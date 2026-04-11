@@ -143,4 +143,64 @@ export async function authRoutes(app: FastifyInstance) {
     if (!ok) return reply.status(404).send({ error: 'User not found' });
     return reply.send({ success: true });
   });
+
+  // ── API Key Management ─────────────────────────────────────────────────
+
+  // GET /api/v1/auth/api-keys  — list own API keys
+  app.get('/api-keys', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const jwt = request.user as { sub: string };
+    const keys = db.listApiKeys(jwt.sub).map((k) => ({
+      id: k.id,
+      name: k.name,
+      prefix: k.prefix,
+      createdAt: k.createdAt,
+      lastUsedAt: k.lastUsedAt,
+      expiresAt: k.expiresAt,
+    }));
+    return reply.send(keys);
+  });
+
+  // POST /api/v1/auth/api-keys  — create a new API key
+  app.post<{
+    Body: { name: string; expiresAt?: string };
+  }>('/api-keys', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const jwt = request.user as { sub: string };
+    const { name, expiresAt } = request.body;
+    if (!name?.trim()) return reply.status(400).send({ error: 'name is required' });
+
+    const existing = db.listApiKeys(jwt.sub);
+    if (existing.length >= 20) {
+      return reply.status(400).send({ error: 'Maximum 20 API keys per user' });
+    }
+
+    const { key, plaintext } = db.createApiKey({
+      userId: jwt.sub,
+      name: name.trim(),
+      expiresAt: expiresAt ?? null,
+    });
+
+    return reply.status(201).send({
+      id: key.id,
+      name: key.name,
+      prefix: key.prefix,
+      createdAt: key.createdAt,
+      expiresAt: key.expiresAt,
+      // plaintext shown ONCE, never stored in plaintext
+      key: plaintext,
+    });
+  });
+
+  // DELETE /api/v1/auth/api-keys/:id  — revoke an API key
+  app.delete<{ Params: { id: string } }>('/api-keys/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const jwt = request.user as { sub: string; role: string };
+    const keys = db.listApiKeys(jwt.sub);
+    const target = keys.find((k) => k.id === request.params.id);
+    // Admin can delete any key; regular user can only delete own
+    if (!target && jwt.role !== 'admin') {
+      return reply.status(404).send({ error: 'API key not found' });
+    }
+    const ok = db.deleteApiKey(request.params.id);
+    if (!ok) return reply.status(404).send({ error: 'API key not found' });
+    return reply.send({ success: true });
+  });
 }

@@ -17,6 +17,10 @@ import {
   Shield,
   Activity,
   Lock,
+  Key,
+  Copy,
+  Plus,
+  X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiGet, apiPost } from '../api/client';
@@ -104,6 +108,154 @@ const TIMEZONES = [
 
 /* ------------------------------------------------------------------ */
 /*  Section wrapper                                                    */
+/* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/*  API Key Section                                                    */
+/* ------------------------------------------------------------------ */
+
+interface ApiKeyInfo {
+  id: string;
+  name: string;
+  prefix: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+}
+
+function ApiKeySection() {
+  const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
+  const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/api-keys', { headers: getAuthHeader() });
+      const data = await res.json() as ApiKeyInfo[];
+      setKeys(Array.isArray(data) ? data : []);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [getAuthHeader]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch('/api/v1/auth/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      const data = await res.json() as ApiKeyInfo & { key?: string };
+      if (data.key) setNewKey(data.key);
+      setNewName('');
+      void load();
+    } catch { /* ignore */ }
+    setCreating(false);
+  };
+
+  const handleRevoke = async (id: string) => {
+    if (!window.confirm('Bu API anahtarını iptal etmek istediğinizden emin misiniz?')) return;
+    await fetch(`/api/v1/auth/api-keys/${id}`, { method: 'DELETE', headers: getAuthHeader() });
+    void load();
+  };
+
+  const handleCopy = () => {
+    if (newKey) {
+      void navigator.clipboard.writeText(newKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <Section icon={Key} title="API Anahtarları" description="Programatik API erişimi için kişisel erişim anahtarları" defaultOpen={false}>
+      <div className="space-y-3">
+        {/* New key reveal */}
+        {newKey && (
+          <div className="glass-panel rounded-xl p-4 space-y-2 border border-aurora-emerald/30">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={14} className="text-aurora-emerald" />
+              <p className="text-xs font-semibold text-aurora-emerald">Anahtar oluşturuldu! Şimdi kopyalayın — bir daha gösterilmeyecek.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs font-mono bg-obsidian-800/60 border border-white/[0.06] rounded-lg px-3 py-2 text-white break-all">
+                {newKey}
+              </code>
+              <button
+                onClick={handleCopy}
+                className="shrink-0 flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs bg-white/[0.06] hover:bg-white/[0.10] text-slate-300 transition-colors"
+              >
+                {copied ? <CheckCircle2 size={12} className="text-aurora-emerald" /> : <Copy size={12} />}
+                {copied ? 'Kopyalandı' : 'Kopyala'}
+              </button>
+              <button onClick={() => setNewKey(null)} className="shrink-0 p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors">
+                <X size={12} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Create new key */}
+        <div className="flex gap-2">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void handleCreate()}
+            placeholder="Anahtar adı (örn: CI/CD pipeline)"
+            className="flex-1 bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-electric-500/40 transition-all"
+          />
+          <button
+            onClick={() => void handleCreate()}
+            disabled={creating || !newName.trim()}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-electric-600/20 text-electric-400 text-xs font-semibold hover:bg-electric-600/30 disabled:opacity-50 transition-colors"
+          >
+            {creating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+            Oluştur
+          </button>
+        </div>
+
+        {/* Key list */}
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 size={16} className="animate-spin text-obsidian-500" />
+          </div>
+        ) : keys.length === 0 ? (
+          <p className="text-xs text-obsidian-500 text-center py-4">Henüz API anahtarı yok</p>
+        ) : (
+          <div className="space-y-2">
+            {keys.map((k) => (
+              <div key={k.id} className="flex items-center gap-3 glass-panel rounded-xl px-4 py-3">
+                <Key size={13} className="text-obsidian-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white truncate">{k.name}</p>
+                  <p className="text-[10px] text-obsidian-500 font-mono">{k.prefix}… · Oluşturuldu: {new Date(k.createdAt).toLocaleDateString('tr-TR')}{k.lastUsedAt ? ` · Son kullanım: ${new Date(k.lastUsedAt).toLocaleDateString('tr-TR')}` : ' · Hiç kullanılmadı'}</p>
+                </div>
+                <button
+                  onClick={() => void handleRevoke(k.id)}
+                  title="İptal et"
+                  className="shrink-0 p-1.5 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Account Section                                                    */
 /* ------------------------------------------------------------------ */
 
 function AccountSection() {
@@ -620,6 +772,9 @@ export default function SettingsPage() {
             </Field>
           </div>
         </Section>
+
+        {/* API Key Section */}
+        <ApiKeySection />
 
         {/* Account Section */}
         <AccountSection />

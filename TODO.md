@@ -74,10 +74,10 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] GoogleSheets node (getRows/appendRows/updateRange/clearRange, service account JWT auth)
 - [x] MySQL / PostgreSQL query node (DatabaseQuery)
 - [x] Redis node (16 operasyon)
-- [ ] FTP/SFTP node
+- [x] FTP/SFTP node (list/download/upload/delete/rename/mkdir, basic-ftp + ssh2-sftp-client)
 - [x] RSS Feed node
-- [ ] GoogleDrive node (upload/download/list/delete dosyalar)
-- [ ] NotionDatabase node (query/create/update sayfa)
+- [x] GoogleDrive node (upload/download/list/delete dosyalar)
+- [x] NotionDatabase node (query/create/update sayfa)
 
 #### Oncelik 3: Editor Gelistirmeleri
 - [x] Template'den workflow olusturma (templates sayfasindan)
@@ -95,7 +95,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Workflow versiyonlama (auto-snapshot, restore)
 - [x] Execution log retention policy (otomatik, env ile ayarlanabilir)
 - [ ] Rate limiting (gelismis)
-- [ ] API anahtari yonetimi (kullanici bazli token uretimi ve iptal)
+- [x] API anahtari yonetimi (kullanici bazli token uretimi ve iptal — scx_ prefix, SHA-256 hash, Settings UI)
 - [ ] Monitoring / metricsler
 - [ ] Auth token suresini editor settings'den yapilandirma (su an sabit 8h)
 - [ ] Workflow execution'larinda user bazli audit log (kim tetikledi)
@@ -103,6 +103,14 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Webhook guvenligi (HMAC-SHA256 imza dogrulama)
 - [x] Node palette arama iyilestirmesi (otomatik grup acma)
 - [x] Settings sayfasi sistem bilgisi paneli
+
+#### Oncelik 4b: Devam
+- [ ] Workflow execution'larinda user bazli audit log — her execution'a `triggeredBy: { userId, username }` ekle
+- [ ] Rate limiting gelismis: endpoint bazli farkli limit (auth: 10/min, exec: 30/min, genel: 200/min)
+- [ ] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
+- [ ] Execution list sayfasinda workflow adiyla filtre + tarih aralik filtresi
+- [ ] Node config panelinde expression builder: `{{ }}` sözdizimine tıklayınca değişken listesi göster
+- [ ] FTP/SFTP node: büyük dosyalar için streaming download desteği (şu an tüm dosyayı belleğe çekiyor)
 
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci

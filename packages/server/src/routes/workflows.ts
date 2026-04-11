@@ -6,6 +6,7 @@ import type {
   WorkflowListQuery,
   TriggerType,
   INodeExecutionResult,
+  IExecutionTrigger,
 } from '@sibercron/shared';
 import { WS_EVENTS } from '@sibercron/shared';
 import { WorkflowEngine } from '@sibercron/core';
@@ -151,6 +152,16 @@ export async function workflowRoutes(
     const executionId = crypto.randomUUID();
     const now = new Date().toISOString();
 
+    // Build triggeredBy from JWT or API key auth
+    const jwtUser = request.user as { sub?: string; username?: string; role?: string; apiKeyId?: string; apiKeyName?: string } | undefined;
+    const triggeredBy: IExecutionTrigger = {
+      method: 'manual',
+      userId: jwtUser?.sub,
+      username: jwtUser?.username,
+      apiKeyId: jwtUser?.apiKeyId,
+      apiKeyName: jwtUser?.apiKeyName,
+    };
+
     // Create execution immediately as "running" so UI can see it
     const runningExecution = {
       id: executionId,
@@ -158,6 +169,7 @@ export async function workflowRoutes(
       workflowName: workflow.name,
       status: 'running' as const,
       triggerType: 'manual' as const,
+      triggeredBy,
       nodeResults: {} as Record<string, INodeExecutionResult>,
       startedAt: now,
       createdAt: now,

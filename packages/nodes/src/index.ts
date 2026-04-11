@@ -28,6 +28,9 @@ import { RedisNode } from './core/Redis.node.js';
 import { RSSFeedNode } from './core/RSSFeed.node.js';
 import { AIWebBrowserNode } from './ai/AIWebBrowser.node.js';
 import { GoogleSheetsNode } from './core/GoogleSheets.node.js';
+import { FtpSftpNode } from './core/FtpSftp.node.js';
+import { GoogleDriveNode } from './core/GoogleDrive.node.js';
+import { NotionDatabaseNode } from './core/NotionDatabase.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -58,6 +61,9 @@ export const builtinNodes: INodeType[] = [
   RSSFeedNode,
   AIWebBrowserNode,
   GoogleSheetsNode,
+  FtpSftpNode,
+  GoogleDriveNode,
+  NotionDatabaseNode,
 ];
 
 export {
@@ -89,4 +95,7 @@ export {
   RSSFeedNode,
   AIWebBrowserNode,
   GoogleSheetsNode,
+  FtpSftpNode,
+  GoogleDriveNode,
+  NotionDatabaseNode,
 };
