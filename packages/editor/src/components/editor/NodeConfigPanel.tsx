@@ -381,17 +381,26 @@ const EXPRESSION_VARS = [
   { label: '$env.VAR', insert: '{{ $env.VARIABLE_NAME }}', description: 'Sunucu ortam değişkeni', category: 'meta' },
 ];
 
+interface ExpressionVar {
+  label: string;
+  insert: string;
+  description: string;
+  category: string;
+}
+
 function ExpressionInput({
   value,
   onChange,
   onBlur,
   placeholder,
   hasError,
+  contextVars,
 }: {
   value: string;
   onChange: (v: string) => void;
   onBlur: () => void;
   placeholder?: string;
+  contextVars?: ExpressionVar[];
   hasError: boolean;
 }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -409,13 +418,17 @@ function ExpressionInput({
     return afterOpen;
   };
 
+  const allVars: ExpressionVar[] = contextVars && contextVars.length > 0
+    ? [...contextVars, ...EXPRESSION_VARS]
+    : EXPRESSION_VARS;
+
   const filteredVars = filterQuery.trim()
-    ? EXPRESSION_VARS.filter(
+    ? allVars.filter(
         (v) =>
           v.label.toLowerCase().includes(filterQuery.toLowerCase()) ||
           v.description.toLowerCase().includes(filterQuery.toLowerCase()),
       )
-    : EXPRESSION_VARS;
+    : allVars;
 
   const insertExpression = (expr: string) => {
     const input = inputRef.current;
@@ -460,6 +473,7 @@ function ExpressionInput({
   }, [showSuggestions]);
 
   const CATEGORY_LABELS: Record<string, string> = {
+    context: '⚡ Son Çalışma Çıktısı',
     data: 'Veri Erişimi',
     time: 'Tarih & Saat',
     meta: 'Sistem',
@@ -573,9 +587,10 @@ interface FieldProps {
   property: INodeProperty;
   value: unknown;
   onChange: (name: string, value: unknown) => void;
+  contextVars?: ExpressionVar[];
 }
 
-function PropertyField({ property, value, onChange }: FieldProps) {
+function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
   const { name, displayName, type, placeholder, options, description } = property;
   const [fieldError, setFieldError] = useState<string | null>(null);
   const touchedRef = useRef(false);
@@ -639,6 +654,7 @@ function PropertyField({ property, value, onChange }: FieldProps) {
           onBlur={() => handleBlur(value)}
           placeholder={placeholder}
           hasError={hasError}
+          contextVars={contextVars}
         />
       );
       break;
@@ -771,6 +787,7 @@ function PropertyField({ property, value, onChange }: FieldProps) {
           onBlur={() => handleBlur(value)}
           placeholder={placeholder}
           hasError={hasError}
+          contextVars={contextVars}
         />
       );
   }
