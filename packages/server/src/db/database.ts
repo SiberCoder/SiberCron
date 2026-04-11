@@ -512,6 +512,33 @@ export class Database {
     return { id: latest.id, status: latest.status, startedAt: latest.startedAt, durationMs: latest.durationMs };
   }
 
+  /**
+   * Batch version of getLastExecution — single pass through all executions.
+   * Returns a Map<workflowId, lastExecution> for the given workflow IDs.
+   * Use this instead of calling getLastExecution() in a loop (avoids O(n×m) complexity).
+   */
+  getLastExecutionsBatch(
+    workflowIds: string[],
+  ): Map<string, Pick<IExecution, 'id' | 'status' | 'startedAt' | 'durationMs'>> {
+    const idSet = new Set(workflowIds);
+    const latestMap = new Map<string, IExecution>();
+
+    for (const exec of this.executions.values()) {
+      if (!idSet.has(exec.workflowId)) continue;
+      if (exec.status === 'running' || exec.status === 'pending') continue;
+      const existing = latestMap.get(exec.workflowId);
+      if (!existing || (exec.startedAt ?? exec.createdAt) > (existing.startedAt ?? existing.createdAt)) {
+        latestMap.set(exec.workflowId, exec);
+      }
+    }
+
+    const result = new Map<string, Pick<IExecution, 'id' | 'status' | 'startedAt' | 'durationMs'>>();
+    for (const [wfId, exec] of latestMap) {
+      result.set(wfId, { id: exec.id, status: exec.status, startedAt: exec.startedAt, durationMs: exec.durationMs });
+    }
+    return result;
+  }
+
   // ── Credential CRUD ──────────────────────────────────────────────────
 
   createCredential(data: { name: string; type: string; data: Record<string, unknown> }): ICredentialWithData {

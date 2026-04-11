@@ -134,15 +134,14 @@ export const ExecuteWorkflowNode: INodeType = {
 
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE_ERRORS = 5;
+
     while (polls < maxPolls) {
       await sleep(pollIntervalMs);
       polls++;
 
-      const execResponse = await context.helpers.httpRequest({
-        method: 'GET',
-        url: `${serverUrl}/api/v1/executions/${executionId}`,
-        headers,
-      }) as {
+      let execResponse: {
         id?: string;
         status?: string;
         nodeResults?: Record<string, unknown>;
@@ -150,6 +149,26 @@ export const ExecuteWorkflowNode: INodeType = {
         durationMs?: number;
         finishedAt?: string;
       };
+
+      try {
+        execResponse = await context.helpers.httpRequest({
+          method: 'GET',
+          url: `${serverUrl}/api/v1/executions/${executionId}`,
+          headers,
+        }) as typeof execResponse;
+        consecutiveErrors = 0;
+      } catch (pollErr) {
+        consecutiveErrors++;
+        context.helpers.log(
+          `[ExecuteWorkflow] Poll ${polls} failed (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${(pollErr as Error).message}`,
+        );
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          throw new Error(
+            `Alt workflow durumu alınamadı (execution: ${executionId}): ${MAX_CONSECUTIVE_ERRORS} ardışık poll hatası. Son hata: ${(pollErr as Error).message}`,
+          );
+        }
+        continue;
+      }
 
       const status = execResponse?.status;
 

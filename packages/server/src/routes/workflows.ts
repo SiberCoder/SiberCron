@@ -106,11 +106,14 @@ export async function workflowRoutes(
       triggerType: query.triggerType as TriggerType | undefined,
       tag: query.tag,
     });
-    // Optionally annotate each workflow with its last execution status
+    // Optionally annotate each workflow with its last execution status.
+    // Uses a single-pass batch lookup to avoid O(n×m) N+1 queries.
     if (query.withLastExecution === 'true') {
+      const wfIds = result.data.map((wf) => wf.id);
+      const lastExecMap = db.getLastExecutionsBatch(wfIds);
       const annotated = result.data.map((wf) => ({
         ...wf,
-        lastExecution: db.getLastExecution(wf.id),
+        lastExecution: lastExecMap.get(wf.id) ?? null,
       }));
       return { ...result, data: annotated };
     }
