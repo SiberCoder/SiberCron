@@ -181,9 +181,11 @@ export default function WorkflowListPage() {
       );
     };
 
-    const onDeactivated = (data: { workflowId: string }) => {
+    const onDeactivated = (data: { workflowId: string; workflow?: IWorkflow }) => {
       setWorkflows((prev) =>
-        prev.map((w) => (w.id === data.workflowId ? { ...w, isActive: false } : w)),
+        prev.map((w) =>
+          w.id === data.workflowId ? { ...w, isActive: false, ...(data.workflow ?? {}) } : w,
+        ),
       );
     };
 

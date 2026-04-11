@@ -410,7 +410,7 @@ export async function workflowRoutes(
         durationMs: result.durationMs,
       });
       // Broadcast globally so WorkflowListPage execution badges update live
-      io.emit('workflow:execution:completed', {
+      io.emit(WS_EVENTS.WORKFLOW_EXECUTION_COMPLETED, {
         workflowId: workflow.id,
         workflowName: workflow.name,
         executionId,
@@ -599,7 +599,7 @@ export async function workflowRoutes(
     }
     // Schedule cron job if applicable
     schedulerService.onWorkflowActivated(workflow);
-    io.emit('workflow:activated', { workflowId: id, workflow });
+    io.emit(WS_EVENTS.WORKFLOW_ACTIVATED, { workflowId: id, workflow });
     return workflow;
   });
 
@@ -615,7 +615,7 @@ export async function workflowRoutes(
     // Remove cron job and flush pending queue jobs
     schedulerService.onWorkflowDeactivated(id);
     await queueService.removeJobsByWorkflowId(id);
-    io.emit('workflow:deactivated', { workflowId: id, workflow });
+    io.emit(WS_EVENTS.WORKFLOW_DEACTIVATED, { workflowId: id, workflow });
     return workflow;
   });
 

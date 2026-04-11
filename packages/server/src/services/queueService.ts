@@ -291,7 +291,7 @@ class QueueService {
 
       // Broadcast completion to all connected clients so workflow list badges update live
       if (this.io) {
-        this.io.emit('workflow:execution:completed', {
+        this.io.emit(WS_EVENTS.WORKFLOW_EXECUTION_COMPLETED, {
           workflowId,
           workflowName,
           executionId,

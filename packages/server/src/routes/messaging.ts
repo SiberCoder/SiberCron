@@ -218,7 +218,7 @@ export async function messagingRoutes(fastify: FastifyInstance): Promise<void> {
     if (matchingAccount) db.incrementAccountStats(matchingAccount.id, 'messagesReceived');
 
     // ── 1. Trigger active TelegramTrigger workflows ──────────────────────
-    const { data: eventWorkflows } = db.listWorkflows({ isActive: true, triggerType: 'event' as any, limit: 100 });
+    const { data: eventWorkflows } = db.listWorkflows({ isActive: true, triggerType: 'event', limit: 100 });
     const telegramTriggerWorkflows = eventWorkflows.filter((w) =>
       w.nodes.some((n) => n.type === 'sibercron.telegramTrigger'),
     );
@@ -355,7 +355,7 @@ async function handleCommand(
   // Komut değilse otomatik yanıt kontrolü
   if (!trimmed.startsWith('/')) {
     // Otomatik yanıt workflow'larını kontrol et (whatsapp_auto tipi)
-    const workflows = db.listWorkflows({ triggerType: 'webhook' as any });
+    const workflows = db.listWorkflows({ triggerType: 'webhook' });
     // Otomatik yanıt workflow'u varsa tetiklenebilir
     return;
   }

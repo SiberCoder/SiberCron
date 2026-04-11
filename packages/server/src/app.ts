@@ -375,6 +375,13 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
   }
 });
 
+// ── Scheduler auto-deactivation broadcast ─────────────────────────────────────
+// When the scheduler auto-deactivates a workflow after repeated failures,
+// broadcast to all connected clients so the UI updates without a page refresh.
+process.on('scheduler:workflow:deactivated' as any, (data: { workflowId: string; workflow?: unknown }) => {
+  io.emit(WS_EVENTS.WORKFLOW_DEACTIVATED, data);
+});
+
 // ── AI streaming token capture ──────────────────────────────────────────────
 // Forwards per-token streaming events from AIAgent nodes to the execution room.
 process.on('ai:stream' as any, (data: { executionId: string; nodeId: string; nodeName: string; token: string }) => {

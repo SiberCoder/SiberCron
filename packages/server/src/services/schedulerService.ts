@@ -107,8 +107,10 @@ class SchedulerService {
             console.error(
               `[Scheduler] Workflow "${name}" failed to queue 5 times in a row — auto-deactivating.`,
             );
-            db.updateWorkflow(id, { isActive: false });
+            const deactivated = db.updateWorkflow(id, { isActive: false });
             this.unschedule(id);
+            // Notify connected clients so their UI reflects the new state immediately
+            process.emit('scheduler:workflow:deactivated' as any, { workflowId: id, workflow: deactivated } as any);
             // Create a visible error execution so the user sees the failure in the UI
             const now = new Date().toISOString();
             db.createExecution({

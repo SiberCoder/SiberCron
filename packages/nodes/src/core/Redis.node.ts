@@ -131,13 +131,19 @@ export const RedisNode: INodeType = {
       }
     } catch { /* use parameter URL */ }
 
-    // ioredis is available as a transitive dependency via BullMQ — dynamic import
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Redis = ((await (Function('m', 'return import(m)')('ioredis') as Promise<any>)).default) as any;
-    const redis = new Redis(redisUrl, { maxRetriesPerRequest: 1, lazyConnect: true });
+    // ioredis is available as a transitive dependency via BullMQ
+    const { default: Redis } = await import('ioredis');
+    const redis = new Redis(redisUrl, {
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
+      connectTimeout: 5000,
+      enableOfflineQueue: false,
+    });
 
     try {
-      await redis.connect();
+      await redis.connect().catch((err: Error) => {
+        throw new Error(`Redis bağlantısı kurulamadı (${redisUrl.replace(/:[^:@]+@/, ':****@')}): ${err.message}`);
+      });
       context.helpers.log(`Redis: ${operation} on key "${key}"`);
 
       let result: unknown;
