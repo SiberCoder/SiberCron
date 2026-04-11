@@ -402,7 +402,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           target: e.target,
           targetHandle: e.targetHandle ?? 'input',
         })),
-        settings: {},
+        settings: state.workflowMeta.webhookSecret
+          ? { webhookSecret: state.workflowMeta.webhookSecret }
+          : {},
       },
     };
     return JSON.stringify(exported, null, 2);

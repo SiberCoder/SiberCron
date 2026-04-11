@@ -15,7 +15,6 @@ import { z } from 'zod';
 
 import { db } from '../db/database.js';
 import { schedulerService } from '../services/schedulerService.js';
-import { validate as validateCron } from 'node-cron';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 

@@ -24,6 +24,7 @@ import { io, type Socket } from 'socket.io-client';
 import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsExecutionCompleted } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
 import { SOCKET_URL } from '../lib/config';
+import { toast } from '../store/toastStore';
 
 const STATUS_CONFIG: Record<
   ExecutionStatus,
@@ -437,7 +438,6 @@ export default function ExecutionHistoryPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [page, setPage] = useState(1);
   // Filter state
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -562,16 +562,10 @@ export default function ExecutionHistoryPage() {
       setDeleteConfirmId(null);
       if (expandedId === id) setExpandedId(null);
     } catch {
-      setToast({ message: 'Silme işlemi başarısız', type: 'error' });
+      toast.error('Silme işlemi başarısız');
     }
   };
 
-  // Auto-dismiss toast
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const handleCancel = async (e: React.MouseEvent, exec: IExecution) => {
     e.stopPropagation();
@@ -585,9 +579,9 @@ export default function ExecutionHistoryPage() {
             : ex,
         ),
       );
-      setToast({ message: 'Çalıştırma iptal edildi', type: 'success' });
+      toast.success('Çalıştırma iptal edildi');
     } catch {
-      setToast({ message: 'İptal başarısız', type: 'error' });
+      toast.error('İptal başarısız');
     } finally {
       setCancellingId(null);
     }
@@ -598,10 +592,10 @@ export default function ExecutionHistoryPage() {
     setRetryingId(exec.id);
     try {
       await apiPost(`/executions/${exec.id}/retry`);
-      setToast({ message: `"${exec.workflowName ?? exec.workflowId}" yeniden başlatıldı`, type: 'success' });
+      toast.success(`"${exec.workflowName ?? exec.workflowId}" yeniden başlatıldı`);
       await load();
     } catch {
-      setToast({ message: 'Yeniden başlatma başarısız', type: 'error' });
+      toast.error('Yeniden başlatma başarısız');
     } finally {
       setRetryingId(null);
     }
@@ -614,9 +608,9 @@ export default function ExecutionHistoryPage() {
       const msg = mode === 'stale'
         ? `${result.fixed} takılı kayıt düzeltildi`
         : `${result.deleted} kayıt silindi`;
-      setToast({ message: msg, type: 'success' });
+      toast.success(msg);
     } catch {
-      setToast({ message: 'Temizleme işlemi başarısız', type: 'error' });
+      toast.error('Temizleme işlemi başarısız');
     }
   };
 
@@ -936,17 +930,6 @@ export default function ExecutionHistoryPage() {
         </>
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div
-          className={clsx(
-            'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-body font-medium shadow-lg animate-fade-in',
-            toast.type === 'error' ? 'bg-red-500/90 text-white' : 'bg-emerald-500/90 text-white',
-          )}
-        >
-          {toast.message}
-        </div>
-      )}
 
       {/* Delete confirmation modal */}
       {deleteConfirmId && (

@@ -331,12 +331,149 @@ function CreateCredentialModal({ onClose, onSaved }: ModalProps) {
   );
 }
 
+// ── Edit credential modal ─────────────────────────────────────────────────────
+
+interface EditModalProps {
+  credential: ICredential;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function EditCredentialModal({ credential, onClose, onSaved }: EditModalProps) {
+  const typeDef = CREDENTIAL_TYPES.find((ct) => ct.name === credential.type);
+  const [name, setName] = useState(credential.name);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const setField = (key: string, value: string) => {
+    setFieldValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      // Only send data fields that the user actually filled in.
+      // Empty fields are omitted so the existing stored value is preserved (server merge logic).
+      const nonEmptyData = Object.fromEntries(
+        Object.entries(fieldValues).filter(([, v]) => v.trim().length > 0),
+      );
+      const body: Record<string, unknown> = { name };
+      if (Object.keys(nonEmptyData).length > 0) body.data = nonEmptyData;
+      await apiPut(`/credentials/${credential.id}`, body);
+      onSaved();
+      onClose();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Güncelleme başarısız');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xl animate-fade-in">
+      <div className="glass-card rounded-3xl w-full max-w-md shadow-glass-lg animate-scale-in max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.04] shrink-0">
+          <div>
+            <h3 className="text-[15px] font-display font-semibold text-white">
+              Kimlik Bilgisini Düzenle
+            </h3>
+            <p className="text-[11px] text-obsidian-500 font-body mt-0.5">{typeDef?.displayName ?? credential.type}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-obsidian-500 hover:text-white hover:bg-white/[0.06] transition-all"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+          {/* Name field */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-obsidian-300 font-body">
+              Ad <span className="text-aurora-rose">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="glass-input"
+            />
+          </div>
+
+          {/* Data fields — all optional, empty = keep existing value */}
+          {typeDef && (
+            <>
+              <div className="px-3 py-2.5 rounded-xl bg-aurora-cyan/5 border border-aurora-cyan/15 text-[11px] text-obsidian-400 font-body">
+                Alanları boş bırakırsanız mevcut değer korunur.
+              </div>
+              {typeDef.fields.map((field) =>
+                field.secret ? (
+                  <SecretField
+                    key={field.key}
+                    label={field.label}
+                    value={fieldValues[field.key] ?? ''}
+                    onChange={(v) => setField(field.key, v)}
+                    placeholder="Değiştirmemek için boş bırakın"
+                  />
+                ) : (
+                  <div key={field.key} className="space-y-2">
+                    <label className="text-xs font-semibold text-obsidian-300 font-body">
+                      {field.label}
+                    </label>
+                    <input
+                      type={field.type ?? 'text'}
+                      value={fieldValues[field.key] ?? ''}
+                      onChange={(e) => setField(field.key, e.target.value)}
+                      placeholder="Değiştirmemek için boş bırakın"
+                      className="glass-input"
+                    />
+                  </div>
+                ),
+              )}
+            </>
+          )}
+
+          {saveError && (
+            <div className="px-3 py-2.5 rounded-xl bg-aurora-rose/10 border border-aurora-rose/20 text-aurora-rose text-xs font-body">
+              {saveError}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-5 border-t border-white/[0.04] shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-medium text-obsidian-400 hover:text-white transition-colors font-body"
+          >
+            İptal
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!name.trim() || isSaving}
+            className="btn-aurora disabled:opacity-40 disabled:cursor-not-allowed text-xs"
+          >
+            {isSaving && <Loader2 size={14} className="animate-spin" />}
+            Kaydet
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CredentialsPage() {
   const [credentials, setCredentials] = useState<ICredential[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editCredential, setEditCredential] = useState<ICredential | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const loadCredentials = async () => {
@@ -445,6 +582,13 @@ export default function CredentialsPage() {
                 </div>
                 <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={() => setEditCredential(cred)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-obsidian-600 hover:text-aurora-cyan hover:bg-aurora-cyan/10 transition-all"
+                    title="Düzenle"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
                     onClick={() => setDeleteConfirm(cred.id)}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-obsidian-600 hover:text-aurora-rose hover:bg-aurora-rose/10 transition-all"
                     title="Sil"
@@ -461,6 +605,14 @@ export default function CredentialsPage() {
       {showModal && (
         <CreateCredentialModal
           onClose={() => setShowModal(false)}
+          onSaved={() => loadCredentials()}
+        />
+      )}
+
+      {editCredential && (
+        <EditCredentialModal
+          credential={editCredential}
+          onClose={() => setEditCredential(null)}
           onSaved={() => loadCredentials()}
         />
       )}

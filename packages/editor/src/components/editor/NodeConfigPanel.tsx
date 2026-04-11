@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw, Eye, EyeOff, Tag, FileText, Settings2 } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import type { INodeProperty, ICredential } from '@sibercron/shared';
@@ -695,6 +695,108 @@ function PropertyField({ property, value, onChange }: FieldProps) {
   );
 }
 
+// ── Workflow Meta Panel (shown when no node is selected) ─────────────────────
+
+function WorkflowMetaPanel() {
+  const workflowMeta = useWorkflowStore((s) => s.workflowMeta);
+  const updateMeta = useWorkflowStore((s) => s.updateMeta);
+  const [tagInput, setTagInput] = useState('');
+
+  const addTag = () => {
+    const tag = tagInput.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!tag || workflowMeta.tags.includes(tag)) { setTagInput(''); return; }
+    updateMeta({ tags: [...workflowMeta.tags, tag] });
+    setTagInput('');
+  };
+
+  const removeTag = (t: string) => {
+    updateMeta({ tags: workflowMeta.tags.filter((x) => x !== t) });
+  };
+
+  return (
+    <div className="w-80 glass-panel border-l border-white/[0.04] h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.04]">
+        <div className="w-9 h-9 rounded-xl bg-aurora-violet/10 flex items-center justify-center shrink-0">
+          <Settings2 size={16} className="text-aurora-violet" />
+        </div>
+        <div>
+          <div className="text-sm font-display font-semibold text-white">Workflow Ayarları</div>
+          <div className="text-[10px] text-obsidian-500 font-body">Açıklama ve etiketler</div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        {/* Description */}
+        <div className="space-y-2">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-obsidian-400 uppercase tracking-wide font-body">
+            <FileText size={11} />
+            Açıklama
+          </label>
+          <textarea
+            value={workflowMeta.description}
+            onChange={(e) => updateMeta({ description: e.target.value })}
+            placeholder="Workflow'un ne yaptığını kısaca açıklayın..."
+            rows={3}
+            className="glass-input resize-none text-sm font-body"
+          />
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-3">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-obsidian-400 uppercase tracking-wide font-body">
+            <Tag size={11} />
+            Etiketler
+          </label>
+
+          {/* Existing tags */}
+          {workflowMeta.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {workflowMeta.tags.map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-aurora-violet/15 border border-aurora-violet/20 text-[11px] font-medium text-aurora-violet font-body"
+                >
+                  {t}
+                  <button
+                    onClick={() => removeTag(t)}
+                    className="hover:opacity-70 transition-opacity"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Tag input */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+              placeholder="etiket ekle..."
+              className="glass-input flex-1 text-xs"
+              maxLength={50}
+            />
+            <button
+              onClick={addTag}
+              disabled={!tagInput.trim()}
+              className="px-3 py-2 rounded-xl bg-aurora-violet/20 hover:bg-aurora-violet/30 text-aurora-violet text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-body"
+            >
+              Ekle
+            </button>
+          </div>
+          <p className="text-[10px] text-obsidian-600 font-body">
+            Enter tuşu ile ekle. Etiketler workflow listesinde filtreleme için kullanılır.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function NodeConfigPanel() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const nodes = useWorkflowStore((s) => s.nodes);
@@ -720,7 +822,7 @@ export default function NodeConfigPanel() {
       .catch(() => setAvailableCredentials([]));
   }, [hasCredentials]);
 
-  if (!node || !selectedNodeId || !definition) return null;
+  if (!node || !selectedNodeId || !definition) return <WorkflowMetaPanel />;
 
   const Icon = getNodeIcon(definition.icon);
   const parameters = (node.data.parameters as Record<string, unknown>) ?? {};

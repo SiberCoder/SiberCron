@@ -25,6 +25,7 @@ import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
+import { toast } from '../store/toastStore';
 
 function getNextCronRun(expr: string): string {
   try {
@@ -70,16 +71,9 @@ export default function WorkflowListPage() {
   const [triggerFilter, setTriggerFilter] = useState<'all' | TriggerType>('all');
   const [sortBy, setSortBy] = useState<'name' | 'updatedAt' | 'lastRun' | 'successRate'>('updatedAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const pageSize = 10;
-
-  // Auto-dismiss toast after 3s
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const toggleSort = (col: typeof sortBy) => {
     if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -87,15 +81,28 @@ export default function WorkflowListPage() {
     setPage(1);
   };
 
+  // All unique tags across all workflows
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    for (const w of workflows) {
+      for (const t of (w.tags ?? [])) tagSet.add(t);
+    }
+    return Array.from(tagSet).sort();
+  }, [workflows]);
+
   const filtered = useMemo(() => {
     let list = workflows;
     if (statusFilter === 'active') list = list.filter((w) => w.isActive);
     else if (statusFilter === 'inactive') list = list.filter((w) => !w.isActive);
     if (triggerFilter !== 'all') list = list.filter((w) => w.triggerType === triggerFilter);
+    if (tagFilter) list = list.filter((w) => w.tags?.includes(tagFilter));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
-        (w) => w.name.toLowerCase().includes(q) || w.description?.toLowerCase().includes(q),
+        (w) =>
+          w.name.toLowerCase().includes(q) ||
+          w.description?.toLowerCase().includes(q) ||
+          w.tags?.some((t) => t.toLowerCase().includes(q)),
       );
     }
     // Sort
@@ -119,7 +126,7 @@ export default function WorkflowListPage() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return list;
-  }, [workflows, search, statusFilter, triggerFilter, sortBy, sortDir, summary]);
+  }, [workflows, search, statusFilter, triggerFilter, tagFilter, sortBy, sortDir, summary]);
 
   const loadWorkflows = useCallback(async () => {
     try {
@@ -151,8 +158,9 @@ export default function WorkflowListPage() {
       await apiDelete(`/workflows/${id}`);
       setWorkflows((prev) => prev.filter((w) => w.id !== id));
       setDeleteConfirmId(null);
+      toast.success('Workflow silindi');
     } catch {
-      setToast({ message: 'Silme işlemi başarısız', type: 'error' });
+      toast.error('Silme işlemi başarısız');
     }
   };
 
@@ -162,9 +170,9 @@ export default function WorkflowListPage() {
     try {
       const copy = await apiPost<IWorkflow>(`/workflows/${wf.id}/duplicate`);
       setWorkflows((prev) => [copy, ...prev]);
-      setToast({ message: `"${copy.name}" oluşturuldu`, type: 'success' });
+      toast.success(`"${copy.name}" oluşturuldu`);
     } catch {
-      setToast({ message: 'Kopyalama başarısız', type: 'error' });
+      toast.error('Kopyalama başarısız');
     } finally {
       setDuplicatingId(null);
     }
@@ -182,7 +190,7 @@ export default function WorkflowListPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setToast({ message: 'Dışa aktarma başarısız', type: 'error' });
+      toast.error('Dışa aktarma başarısız');
     }
   };
 
@@ -194,9 +202,9 @@ export default function WorkflowListPage() {
       const json = JSON.parse(text);
       const imported = await apiPost<IWorkflow>('/workflows/import', json);
       setWorkflows((prev) => [imported, ...prev]);
-      setToast({ message: `"${imported.name}" içe aktarıldı`, type: 'success' });
+      toast.success(`"${imported.name}" içe aktarıldı`);
     } catch {
-      setToast({ message: 'İçe aktarma başarısız. Geçerli bir SiberCron workflow dosyası seçin.', type: 'error' });
+      toast.error('İçe aktarma başarısız. Geçerli bir SiberCron workflow dosyası seçin.');
     } finally {
       // Reset the input so the same file can be re-imported
       if (importInputRef.current) importInputRef.current.value = '';
@@ -215,7 +223,7 @@ export default function WorkflowListPage() {
         prev.map((w) => (w.id === wf.id ? { ...w, isActive: updated.isActive } : w)),
       );
     } catch {
-      setToast({ message: 'Durum değiştirme başarısız', type: 'error' });
+      toast.error('Durum değiştirme başarısız');
     } finally {
       setTogglingId(null);
     }
@@ -323,6 +331,26 @@ export default function WorkflowListPage() {
           <option value="event">Event</option>
         </select>
 
+        {/* Tag filter */}
+        {allTags.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap">
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => { setTagFilter(tagFilter === tag ? null : tag); setPage(1); }}
+                className={clsx(
+                  'px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all font-body border',
+                  tagFilter === tag
+                    ? 'bg-aurora-violet/20 border-aurora-violet/30 text-aurora-violet'
+                    : 'bg-white/[0.03] border-white/[0.08] text-obsidian-500 hover:text-white hover:border-white/20',
+                )}
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Sort control */}
         <div className="flex items-center gap-1 ml-auto">
           <span className="text-[10px] text-obsidian-500 font-body">Sırala:</span>
@@ -429,9 +457,29 @@ export default function WorkflowListPage() {
                   </div>
 
                   {wf.description && (
-                    <p className="text-xs text-obsidian-500 mb-4 line-clamp-2 font-body">
+                    <p className="text-xs text-obsidian-500 mb-3 line-clamp-2 font-body">
                       {wf.description}
                     </p>
+                  )}
+
+                  {/* Tags */}
+                  {wf.tags && wf.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {wf.tags.map((t) => (
+                        <button
+                          key={t}
+                          onClick={(e) => { e.stopPropagation(); setTagFilter(tagFilter === t ? null : t); setPage(1); }}
+                          className={clsx(
+                            'px-2 py-0.5 rounded-md text-[9px] font-semibold border transition-all font-body',
+                            tagFilter === t
+                              ? 'bg-aurora-violet/20 border-aurora-violet/30 text-aurora-violet'
+                              : 'bg-white/[0.04] border-white/[0.06] text-obsidian-500 hover:text-aurora-violet hover:border-aurora-violet/20',
+                          )}
+                        >
+                          #{t}
+                        </button>
+                      ))}
+                    </div>
                   )}
 
                   <div className="flex items-center gap-3 text-[10px] text-obsidian-500 font-body">
@@ -525,10 +573,9 @@ export default function WorkflowListPage() {
                         e.stopPropagation();
                         try {
                           await apiPost(`/workflows/${wf.id}/execute`, {});
-                          setToast({ message: `"${wf.name}" baslatildi`, type: 'success' });
-                        } catch (err) {
-                          console.error('Execute failed:', err);
-                          setToast({ message: 'Calistirma basarisiz', type: 'error' });
+                          toast.success(`"${wf.name}" başlatıldı`);
+                        } catch {
+                          toast.error('Çalıştırma başarısız');
                         }
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-aurora-blue hover:bg-aurora-blue/5 rounded-lg transition-all font-body"
@@ -633,17 +680,6 @@ export default function WorkflowListPage() {
           </div>
         )}
 
-        {/* Toast notification */}
-        {toast && (
-          <div
-            className={clsx(
-              'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-body font-medium shadow-lg animate-fade-in',
-              toast.type === 'error' ? 'bg-red-500/90 text-white' : 'bg-emerald-500/90 text-white',
-            )}
-          >
-            {toast.message}
-          </div>
-        )}
         </>
       )}
     </div>

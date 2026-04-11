@@ -494,8 +494,8 @@ export default function WorkflowEditorPage() {
             <ExecutionLogDrawer />
           </div>
 
-          {/* Config panel */}
-          {selectedNodeId && <NodeConfigPanel />}
+          {/* Config panel — shows node config when a node is selected, workflow settings otherwise */}
+          <NodeConfigPanel />
 
           {/* Node output viewer */}
           <NodeOutputViewer />
