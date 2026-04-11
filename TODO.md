@@ -243,6 +243,23 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] NodeConfigPanel: cronstrue Türkçe locale ile gösteriyor
 - [x] WsNodeStart/WsNodeDone: startedAt/finishedAt alanları shared types'a eklendi
 
+#### Oncelik 4j: Bug Fixes & Hardening (2026-04-12)
+- [x] WorkflowEngine: execution:completed event'ine finishedAt/errorMessage eklendi (WsExecutionCompleted tipi güncellendi)
+- [x] WorkflowEngine: shouldSkipNode + gatherInputData null/undefined sourceHandle güvenli kontrolü
+- [x] WS_EVENTS: EXECUTION_LOG, WORKFLOW_ACTIVATED, WORKFLOW_DEACTIVATED, WORKFLOW_EXECUTION_COMPLETED sabitleri eklendi
+- [x] app.ts: hardcoded 'execution:log' → WS_EVENTS.EXECUTION_LOG sabiti
+- [x] workflows.ts: hardcoded 'workflow:activated/deactivated' → WS_EVENTS sabitleri
+- [x] messaging.ts: `triggerType: 'event' as any` gereksiz cast kaldırıldı (iki yerde)
+- [x] Redis node: Function() constructor güvensiz dynamic import → standard import kaldırıldı
+- [x] Redis node: connectTimeout: 5000 + enableOfflineQueue: false + şifreli hata mesajı
+- [x] schedulerService: 5 ardışık hata sonrası auto-deactivation artık Socket.io broadcast yapıyor (process.emit relay)
+- [x] WorkflowListPage: onDeactivated type IWorkflow? eklendi (server ile tutarlı)
+- [x] WorkflowListPage: Socket.io event listener'lar WS_EVENTS sabitleri kullanıyor
+- [x] WorkflowListPage: Bulk export özelliği (seçili workflow'ları tek JSON bundle olarak indir)
+- [x] WorkflowListPage: workflow:execution:completed socket event ile execution badge'leri anlık güncelleniyor
+- [x] workflows.ts: POST execute sonrası WORKFLOW_EXECUTION_COMPLETED global broadcast eklendi
+- [x] cronstrue: Türkçe locale (WorkflowListPage + NodeConfigPanel)
+
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
 - [ ] Community node marketplace sayfasi

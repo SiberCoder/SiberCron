@@ -28,6 +28,7 @@ import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import 'cronstrue/locales/tr';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
+import { WS_EVENTS } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
 import { toast } from '../store/toastStore';
 import { API_BASE_URL } from '../lib/config';
@@ -207,14 +208,14 @@ export default function WorkflowListPage() {
       });
     };
 
-    socket.on('workflow:activated', onActivated);
-    socket.on('workflow:deactivated', onDeactivated);
-    socket.on('workflow:execution:completed', onExecutionCompleted);
+    socket.on(WS_EVENTS.WORKFLOW_ACTIVATED, onActivated);
+    socket.on(WS_EVENTS.WORKFLOW_DEACTIVATED, onDeactivated);
+    socket.on(WS_EVENTS.WORKFLOW_EXECUTION_COMPLETED, onExecutionCompleted);
 
     return () => {
-      socket.off('workflow:activated', onActivated);
-      socket.off('workflow:deactivated', onDeactivated);
-      socket.off('workflow:execution:completed', onExecutionCompleted);
+      socket.off(WS_EVENTS.WORKFLOW_ACTIVATED, onActivated);
+      socket.off(WS_EVENTS.WORKFLOW_DEACTIVATED, onDeactivated);
+      socket.off(WS_EVENTS.WORKFLOW_EXECUTION_COMPLETED, onExecutionCompleted);
       releaseSocket();
     };
   }, []);
