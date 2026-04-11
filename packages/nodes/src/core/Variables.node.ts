@@ -89,8 +89,8 @@ export const VariablesNode: INodeType = {
     const mergeInto = context.getParameter<boolean>('mergeInto') ?? true;
     const outputField = context.getParameter<string>('outputField') ?? 'variables';
 
-    // Get executionId from the first item (injected by WorkflowEngine)
-    const executionId = String(items[0]?.json?.executionId ?? 'default');
+    // Get executionId from context (set by WorkflowEngine / ExecutionContext)
+    const executionId = context.executionId ?? String(items[0]?.json?.executionId ?? 'default');
     const store = getStore(executionId);
 
     // Parse assignments JSON once

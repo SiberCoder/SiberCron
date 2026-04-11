@@ -281,11 +281,12 @@ export async function executionRoutes(
       return { error: 'ids array is required and must be non-empty' };
     }
     // Cap at 200 IDs per request to prevent abuse
+    const originalCount = body.ids.length;
     const ids = body.ids.slice(0, 200);
     let deleted = 0;
     for (const id of ids) {
       if (typeof id === 'string' && db.deleteExecution(id)) deleted++;
     }
-    return { deleted, requested: ids.length };
+    return { deleted, processed: ids.length, requested: originalCount };
   });
 }

@@ -1,5 +1,5 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
-import { createHash, createHmac, randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID, createCipheriv, createDecipheriv } from 'node:crypto';
 
 /**
  * Crypto node — cryptographic operations using Node.js built-in crypto.
@@ -181,13 +181,15 @@ export const CryptoNode: INodeType = {
           case 'random': {
             const randomType = context.getParameter<string>('randomType') ?? 'uuid';
             if (randomType === 'uuid') {
-              result = crypto.randomUUID();
+              result = randomUUID();
             } else if (randomType === 'hex') {
               const byteLen = Math.max(1, Math.min(context.getParameter<number>('byteLength') ?? 16, 512));
               result = randomBytes(byteLen).toString('hex');
             } else {
               const max = Math.max(1, context.getParameter<number>('maxInteger') ?? 1000000);
-              result = Math.floor(Math.random() * max);
+              // Use randomBytes for cryptographically secure integer generation
+              const buf = randomBytes(4);
+              result = buf.readUInt32BE(0) % max;
             }
             break;
           }
