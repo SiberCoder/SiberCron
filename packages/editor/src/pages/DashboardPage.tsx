@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   GitBranch,
@@ -18,8 +18,6 @@ import clsx from 'clsx';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
 import { apiGet } from '../api/client';
 import { getSocket, releaseSocket } from '../lib/socket';
-import { io } from 'socket.io-client';
-import { SOCKET_URL } from '../lib/config';
 import LiveExecutionPanel from '../components/dashboard/LiveExecutionPanel';
 
 // ── Execution Trend Chart ─────────────────────────────────────────────
