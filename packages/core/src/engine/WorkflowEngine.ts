@@ -98,6 +98,7 @@ export class WorkflowEngine {
         workflow.nodes,
         adjacency,
         inDegree,
+        triggerNode.id,
       );
 
       // ── Execute nodes in order ──────────────────────────────────────
@@ -299,13 +300,18 @@ function topologicalSort(
   nodes: INodeInstance[],
   adjacency: Map<string, string[]>,
   inDegreeSrc: Map<string, number>,
+  triggerNodeId?: string,
 ): string[] {
   // Work on a copy so we don't mutate the original
   const inDegree = new Map(inDegreeSrc);
   const queue: string[] = [];
 
+  // Add trigger node first so it always executes before other root nodes
+  if (triggerNodeId && (inDegree.get(triggerNodeId) ?? 0) === 0) {
+    queue.push(triggerNodeId);
+  }
   for (const node of nodes) {
-    if ((inDegree.get(node.id) ?? 0) === 0) {
+    if (node.id !== triggerNodeId && (inDegree.get(node.id) ?? 0) === 0) {
       queue.push(node.id);
     }
   }

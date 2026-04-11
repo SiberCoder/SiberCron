@@ -448,6 +448,8 @@ export default function ExecutionHistoryPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [page, setPage] = useState(1);
   // Filter state — workflowId from URL params pre-fills the workflow name filter
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -614,10 +616,44 @@ export default function ExecutionHistoryPage() {
     try {
       await apiDelete(`/executions/${id}`);
       setExecutions((prev) => prev.filter((e) => e.id !== id));
+      setSelectedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
       setDeleteConfirmId(null);
       if (expandedId === id) setExpandedId(null);
     } catch {
       toast.error('Silme işlemi başarısız');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const result = await apiDelete<{ deleted: number }>('/executions', { ids });
+      setExecutions((prev) => prev.filter((e) => !selectedIds.has(e.id)));
+      setSelectedIds(new Set());
+      if (expandedId && selectedIds.has(expandedId)) setExpandedId(null);
+      toast.success(`${result.deleted} kayıt silindi`);
+    } catch {
+      toast.error('Toplu silme başarısız');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id); else s.add(id);
+      return s;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedExecutions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedExecutions.map((e) => e.id)));
     }
   };
 
@@ -730,6 +766,16 @@ export default function ExecutionHistoryPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-aurora-rose/10 border border-aurora-rose/20 text-aurora-rose hover:bg-aurora-rose/20 transition-all disabled:opacity-50 font-body"
+            >
+              {isBulkDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+              {selectedIds.size} Seçiliyi Sil
+            </button>
+          )}
           <label className="flex items-center gap-2 text-xs text-obsidian-400 cursor-pointer font-body">
             <input
               type="checkbox"
@@ -939,14 +985,30 @@ export default function ExecutionHistoryPage() {
         </div>
       ) : (
         <>
+          {/* Bulk-select header */}
+          {paginatedExecutions.length > 0 && (
+            <div className="flex items-center gap-3 px-1 pb-2">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === paginatedExecutions.length && paginatedExecutions.length > 0}
+                onChange={toggleSelectAll}
+                className="accent-aurora-cyan w-3.5 h-3.5 rounded cursor-pointer"
+                title="Tümünü seç"
+              />
+              <span className="text-[11px] text-obsidian-500 font-body">
+                {selectedIds.size > 0 ? `${selectedIds.size} / ${paginatedExecutions.length} seçili` : 'Tümünü seç'}
+              </span>
+            </div>
+          )}
           <div className="space-y-3">
             {paginatedExecutions.map((exec) => {
               const statusConf = STATUS_CONFIG[exec.status];
               const isExpanded = expandedId === exec.id;
               const nodeCount = Object.keys(exec.nodeResults).length;
+              const isSelected = selectedIds.has(exec.id);
 
               return (
-                <div key={exec.id} className="glass-card rounded-2xl overflow-hidden">
+                <div key={exec.id} className={clsx('glass-card rounded-2xl overflow-hidden transition-all', isSelected && 'ring-1 ring-aurora-cyan/20')}>
                   {/* Header row */}
                   <div
                     onClick={() => setExpandedId(isExpanded ? null : exec.id)}
@@ -954,6 +1016,16 @@ export default function ExecutionHistoryPage() {
                     role="button"
                     tabIndex={0}
                   >
+                    {/* Checkbox — stop propagation so clicking it doesn't expand row */}
+                    <span onClick={(e) => { e.stopPropagation(); toggleSelect(exec.id); }} className="shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(exec.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="accent-aurora-cyan w-3.5 h-3.5 rounded cursor-pointer"
+                      />
+                    </span>
                     <span className="text-obsidian-500">
                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </span>

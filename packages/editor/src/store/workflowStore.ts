@@ -44,6 +44,7 @@ interface WorkflowState {
   selectedNodeId: string | null;
   workflowMeta: WorkflowMeta;
   isDirty: boolean;
+  isSaving: boolean;
 
   // Undo/Redo
   history: HistoryEntry[];
@@ -153,6 +154,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   selectedNodeId: null,
   workflowMeta: { ...defaultMeta },
   isDirty: false,
+  isSaving: false,
   history: [],
   historyIndex: -1,
 
@@ -340,6 +342,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   saveWorkflow: async () => {
     const state = get();
+    // Prevent concurrent save requests
+    if (state.isSaving) return state.workflowMeta.id ?? '';
+    set({ isSaving: true });
     const { workflowMeta, nodes, edges } = state;
     const nodeInstances = flowToNodeInstances(nodes);
 
@@ -392,13 +397,17 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     };
 
     let saved: IWorkflow;
-    if (workflowMeta.id) {
-      saved = await apiPut<IWorkflow>(
-        `/workflows/${workflowMeta.id}`,
-        payload,
-      );
-    } else {
-      saved = await apiPost<IWorkflow>('/workflows', payload);
+    try {
+      if (workflowMeta.id) {
+        saved = await apiPut<IWorkflow>(
+          `/workflows/${workflowMeta.id}`,
+          payload,
+        );
+      } else {
+        saved = await apiPost<IWorkflow>('/workflows', payload);
+      }
+    } finally {
+      set({ isSaving: false });
     }
 
     set({
@@ -559,6 +568,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedNodeId: null,
       workflowMeta: { ...defaultMeta },
       isDirty: false,
+      isSaving: false,
       history: [],
       historyIndex: -1,
     });

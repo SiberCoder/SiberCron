@@ -261,4 +261,20 @@ export async function executionRoutes(
     reply.code(204);
     return;
   });
+
+  // DELETE / - Bulk delete executions by ID list
+  fastify.delete('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as { ids?: string[] } | undefined;
+    if (!body?.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
+      reply.code(400);
+      return { error: 'ids array is required and must be non-empty' };
+    }
+    // Cap at 200 IDs per request to prevent abuse
+    const ids = body.ids.slice(0, 200);
+    let deleted = 0;
+    for (const id of ids) {
+      if (typeof id === 'string' && db.deleteExecution(id)) deleted++;
+    }
+    return { deleted, requested: ids.length };
+  });
 }

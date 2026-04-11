@@ -24,35 +24,59 @@ function getAccessToken(): string | null {
   }
 }
 
-async function tryRefreshToken(): Promise<string | null> {
-  try {
-    const refresh = localStorage.getItem(LS_REFRESH);
-    if (!refresh) return null;
-    const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: refresh }),
-    });
-    if (!res.ok) {
-      // Refresh failed — clear all tokens and force re-login
-      localStorage.removeItem(LS_ACCESS);
-      localStorage.removeItem(LS_REFRESH);
-      localStorage.removeItem('sibercron_user');
-      // Hard redirect resets Zustand state so AuthGuard sends user to /login
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        window.location.replace('/login');
-      }
-      return null;
-    }
-    const data = await res.json() as { accessToken: string };
-    localStorage.setItem(LS_ACCESS, data.accessToken);
-    return data.accessToken;
-  } catch {
-    return null;
-  }
-}
-
 const REQUEST_TIMEOUT_MS = 30_000;
+
+// Singleton refresh promise — prevents multiple concurrent 401s from each
+// triggering their own token refresh request (race condition).
+let _refreshInFlight: Promise<string | null> | null = null;
+
+async function tryRefreshToken(): Promise<string | null> {
+  if (_refreshInFlight) return _refreshInFlight;
+
+  _refreshInFlight = (async () => {
+    try {
+      const refresh = localStorage.getItem(LS_REFRESH);
+      if (!refresh) return null;
+
+      // Include an explicit timeout so the refresh request cannot hang forever
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+      let res: Response;
+      try {
+        res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: refresh }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (!res.ok) {
+        // Refresh failed — clear all tokens and force re-login
+        localStorage.removeItem(LS_ACCESS);
+        localStorage.removeItem(LS_REFRESH);
+        localStorage.removeItem('sibercron_user');
+        // Hard redirect resets Zustand state so AuthGuard sends user to /login
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          window.location.replace('/login');
+        }
+        return null;
+      }
+      const data = await res.json() as { accessToken: string };
+      localStorage.setItem(LS_ACCESS, data.accessToken);
+      return data.accessToken;
+    } catch {
+      return null;
+    } finally {
+      _refreshInFlight = null;
+    }
+  })();
+
+  return _refreshInFlight;
+}
 
 async function request<T>(
   path: string,
@@ -141,8 +165,11 @@ export async function apiPut<T>(path: string, body?: unknown): Promise<T> {
   });
 }
 
-export async function apiDelete(path: string): Promise<void> {
-  return request<void>(path, { method: 'DELETE' });
+export async function apiDelete<T = void>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
+    method: 'DELETE',
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
 }
 
 export { ApiError };

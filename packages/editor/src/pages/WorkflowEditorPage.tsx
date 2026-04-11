@@ -7,6 +7,7 @@ import type { Node, Edge } from '@xyflow/react';
 import { useWorkflowStore } from '../store/workflowStore';
 import { useNodeRegistryStore } from '../store/nodeRegistryStore';
 import { useExecutionStore } from '../store/executionStore';
+import { toast } from '../store/toastStore';
 import EditorToolbar from '../components/editor/EditorToolbar';
 import NodePalette from '../components/editor/NodePalette';
 import WorkflowCanvas from '../components/editor/WorkflowCanvas';
@@ -132,6 +133,17 @@ function ExecutionStatusBar() {
       setDismissed(false);
     }
   }, [execution?.id, execution?.status]);
+
+  // Auto-dismiss after 4 s on success, 8 s on error
+  useEffect(() => {
+    if (!execution || execution.status === 'running') return;
+    const delay = execution.status === 'success' ? 4_000 : 8_000;
+    const timer = setTimeout(() => {
+      setDismissed(true);
+      if (execution.status !== 'running') disconnect();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [execution?.id, execution?.status, disconnect]);
 
   if (!execution || dismissed) return null;
 
@@ -385,7 +397,11 @@ export default function WorkflowEditorPage() {
             if (store.isDirty) await store.saveWorkflow();
             const executionId = await store.executeWorkflow();
             useExecutionStore.getState().connect(executionId);
-          })().catch(console.error);
+          })().catch((err: unknown) => {
+            toast.error(err instanceof Error ? err.message : 'Çalıştırma başlatılamadı');
+          });
+        } else {
+          toast.warning('Çalıştırmadan önce workflow\'u kaydedin');
         }
       }
 
@@ -484,7 +500,7 @@ export default function WorkflowEditorPage() {
         {showVersionHistory && id && id !== 'new' && (
           <VersionHistoryPanel
             workflowId={id}
-            onRestored={() => { loadWorkflow(id).catch(console.error); }}
+            onRestored={() => { loadWorkflow(id).catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Workflow yüklenemedi')); }}
             onClose={() => setShowVersionHistory(false)}
           />
         )}
