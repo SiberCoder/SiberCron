@@ -995,14 +995,19 @@ export default function NodeConfigPanel() {
               Kimlik Bilgileri
             </div>
             {definition.credentials!.map((cred) => {
-              // Try to filter by matching credential type to the credential definition name.
-              // Fall back to showing all credentials if no type match is found.
-              const typeFiltered = availableCredentials.filter(
-                (c) =>
-                  c.type.toLowerCase().includes(cred.name.toLowerCase()) ||
-                  cred.name.toLowerCase().includes(c.type.toLowerCase()),
-              );
-              const credOptions = typeFiltered.length > 0 ? typeFiltered : availableCredentials;
+              // Exact type match first; fall back to fuzzy; finally show all.
+              const exactMatch = availableCredentials.filter((c) => c.type === cred.name);
+              const fuzzyMatch = exactMatch.length === 0
+                ? availableCredentials.filter(
+                    (c) =>
+                      c.type.toLowerCase().includes(cred.name.toLowerCase()) ||
+                      cred.name.toLowerCase().includes(c.type.toLowerCase()),
+                  )
+                : [];
+              const credOptions =
+                exactMatch.length > 0 ? exactMatch
+                : fuzzyMatch.length > 0 ? fuzzyMatch
+                : availableCredentials;
               return (
                 <div key={cred.name} className="space-y-2">
                   <label className="flex items-center gap-1 text-xs font-semibold text-obsidian-300 font-body">

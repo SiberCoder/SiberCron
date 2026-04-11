@@ -28,6 +28,7 @@ const STATUS_STYLES: Record<string, string> = {
   running: 'bg-aurora-blue animate-pulse shadow-neon-blue',
   success: 'bg-aurora-emerald shadow-neon-green',
   error: 'bg-aurora-rose',
+  skipped: 'bg-obsidian-500 opacity-60',
   pending: 'bg-obsidian-600',
 };
 

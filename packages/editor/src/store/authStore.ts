@@ -12,11 +12,14 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isLoading: boolean;
+  /** null = not yet checked; true/false = server response */
+  authRequired: boolean | null;
 
   login(username: string, password: string): Promise<void>;
   logout(): void;
   refreshAccessToken(): Promise<boolean>;
   getAuthHeader(): Record<string, string>;
+  checkAuthRequired(): Promise<void>;
 }
 
 const LS_ACCESS = 'sibercron_access_token';
@@ -38,6 +41,7 @@ function loadFromStorage(): Pick<AuthState, 'accessToken' | 'refreshToken' | 'us
 export const useAuthStore = create<AuthState>((set, get) => ({
   ...loadFromStorage(),
   isLoading: false,
+  authRequired: null,
 
   async login(username, password) {
     set({ isLoading: true });
@@ -96,6 +100,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { accessToken } = get();
     if (!accessToken) return {};
     return { Authorization: `Bearer ${accessToken}` };
+  },
+
+  async checkAuthRequired() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/health`);
+      if (res.ok) {
+        const data = await res.json() as { authRequired?: boolean };
+        set({ authRequired: data.authRequired ?? true });
+      }
+    } catch {
+      // Network error — assume auth required (safe default)
+      set({ authRequired: true });
+    }
   },
 }));
 

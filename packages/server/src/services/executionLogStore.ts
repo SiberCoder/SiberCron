@@ -5,7 +5,7 @@
 
 export interface ExecutionLogEntry {
   timestamp: string;
-  level: 'info' | 'ai_request' | 'ai_response' | 'auto_answer' | 'system' | 'error' | 'iteration';
+  level: 'info' | 'ai_request' | 'ai_response' | 'ai_streaming' | 'auto_answer' | 'system' | 'error' | 'iteration';
   message: string;
   data?: Record<string, unknown>;
 }

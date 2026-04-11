@@ -4,6 +4,22 @@ import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercro
 /*  Response classification                                            */
 /* ------------------------------------------------------------------ */
 
+const DONE_PATTERNS = [
+  /\btask (is |has been )?(complete|done|finished|accomplished)\b/i,
+  /\ball (tasks?|steps?|items?) (are |have been )?(complete|done|finished)\b/i,
+  /\bsuccessfully (implement|complet|finish|creat)/i,
+  /\bI (have |'ve )?(complete|finish|implement|done)/i,
+  /\bgörev tamamlandı\b/i,
+  /\btüm (adımlar|görevler|işlemler) tamamlandı\b/i,
+  /\başarıyla tamamlandı\b/i,
+  /\büretim hazır\b/i,
+];
+
+function isDone(response: string): boolean {
+  const lastParagraph = response.trim().split('\n').filter(Boolean).slice(-5).join('\n');
+  return DONE_PATTERNS.some((p) => p.test(lastParagraph));
+}
+
 const QUESTION_PATTERNS = [
   /\?\s*$/m,
   /\bshould I\b/i,
@@ -29,17 +45,30 @@ function isQuestion(response: string): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Claude CLI call                                                    */
+/*  Claude CLI call — session-aware with live streaming                 */
 /* ------------------------------------------------------------------ */
 
-async function callClaude(
-  prompt: string,
-  model: string,
-  cwd: string,
-  timeoutMs: number,
-  setupToken?: string,
-  signal?: AbortSignal,
-): Promise<string> {
+interface ClaudeCallOptions {
+  prompt: string;
+  model: string;
+  cwd: string;
+  timeoutMs: number;
+  setupToken?: string;
+  signal?: AbortSignal;
+  /** If provided, resume this session instead of starting a new one */
+  sessionId?: string;
+  /** Called with each chunk of stdout as it arrives */
+  onChunk?: (chunk: string) => void;
+}
+
+interface ClaudeCallResult {
+  response: string;
+  /** Session ID extracted from stderr for --continue */
+  sessionId?: string;
+}
+
+async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult> {
+  const { prompt, model, cwd, timeoutMs, setupToken, signal, sessionId, onChunk } = options;
   const { spawn, execSync } = await import('child_process');
 
   const env = { ...process.env };
@@ -47,7 +76,13 @@ async function callClaude(
     env.CLAUDE_CODE_OAUTH_TOKEN = setupToken;
   }
 
-  const args = ['-p', '--output-format', 'text'];
+  // Build args: use stream-json + verbose for real-time output
+  const args: string[] = [];
+  if (sessionId) {
+    args.push('--continue', '--resume', sessionId, '-p', '--verbose', '--output-format', 'stream-json', '--include-partial-messages');
+  } else {
+    args.push('-p', '--verbose', '--output-format', 'stream-json', '--include-partial-messages');
+  }
   if (model) args.push('--model', model);
 
   return new Promise((resolve, reject) => {
@@ -59,10 +94,71 @@ async function callClaude(
       env,
       shell: true,
     });
-    let stdout = '';
+
+    let rawStdout = '';
     let stderr = '';
-    proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
-    proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+    let fullResponse = '';
+    let detectedSessionId: string | undefined;
+
+    // Parse stream-json: each line is a JSON object
+    // Types: "system" (init), "assistant" (partial/final text), "result" (final summary)
+    let lineBuf = '';
+    proc.stdout?.on('data', (d: Buffer) => {
+      const text = d.toString();
+      rawStdout += text;
+      lineBuf += text;
+
+      // Process complete lines
+      const lines = lineBuf.split('\n');
+      lineBuf = lines.pop() ?? ''; // keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const event = JSON.parse(line);
+
+          // Extract session ID from system message
+          if (event.type === 'system' && event.sessionId) {
+            detectedSessionId = event.sessionId;
+          }
+
+          // Partial assistant message — stream to UI
+          if (event.type === 'assistant' && event.message?.content) {
+            const content = event.message.content;
+            if (typeof content === 'string') {
+              onChunk?.(content);
+            } else if (Array.isArray(content)) {
+              for (const block of content) {
+                if (block.type === 'text' && block.text) {
+                  onChunk?.(block.text);
+                } else if (block.type === 'tool_use') {
+                  onChunk?.(`[Tool: ${block.name}(${JSON.stringify(block.input).slice(0, 100)}...)]\n`);
+                } else if (block.type === 'tool_result') {
+                  onChunk?.(`[Tool Result: ${String(block.content).slice(0, 200)}]\n`);
+                }
+              }
+            }
+          }
+
+          // Result message — final summary
+          if (event.type === 'result') {
+            fullResponse = event.result ?? event.content ?? '';
+            if (event.sessionId) detectedSessionId = event.sessionId;
+            if (event.session_id) detectedSessionId = event.session_id;
+          }
+        } catch {
+          // Not JSON — treat as raw text output (fallback)
+          if (line.trim()) {
+            onChunk?.(line + '\n');
+            fullResponse += line + '\n';
+          }
+        }
+      }
+    });
+
+    proc.stderr?.on('data', (d: Buffer) => {
+      stderr += d.toString();
+    });
 
     // Kill entire process tree on Windows, single process on Unix
     const killProc = () => {
@@ -75,18 +171,13 @@ async function callClaude(
       } catch { /* process may already be dead */ }
     };
 
-    // Per-iteration timeout
     const timer = setTimeout(() => {
       timedOut = true;
       killProc();
     }, timeoutMs);
 
-    // External abort signal (NodeExecutor timeout)
     if (signal) {
-      const onAbort = () => {
-        aborted = true;
-        killProc();
-      };
+      const onAbort = () => { aborted = true; killProc(); };
       signal.addEventListener('abort', onAbort, { once: true });
       proc.on('close', () => signal.removeEventListener('abort', onAbort));
     }
@@ -103,21 +194,30 @@ async function callClaude(
         return;
       }
 
-      // code === null on Windows when process exits via stdin close - treat as success if we have output
-      if (code !== 0 && code !== null && !stdout.trim()) {
-        reject(new Error(`Claude CLI hata (${code}): ${stderr.trim() || stdout.trim()}`));
-      } else if (!stdout.trim() && stderr.trim()) {
+      // Use fullResponse from stream-json parsing; fall back to rawStdout
+      const responseText = fullResponse.trim() || rawStdout.trim();
+
+      if (code !== 0 && code !== null && !responseText) {
+        reject(new Error(`Claude CLI hata (${code}): ${stderr.trim() || rawStdout.trim()}`));
+      } else if (!responseText && stderr.trim()) {
         reject(new Error(`Claude CLI hata: ${stderr.trim()}`));
       } else {
-        resolve(stdout.trim());
+        // Use session ID from stream-json events, or try to extract from stderr
+        const sid = detectedSessionId
+          ?? stderr.match(/session[:\s]+([a-f0-9-]+)/i)?.[1]
+          ?? stderr.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/)?.[1];
+        resolve({
+          response: responseText,
+          sessionId: sid,
+        });
       }
     });
+
     proc.on('error', (err: Error) => {
       clearTimeout(timer);
       reject(err);
     });
 
-    // Write prompt to stdin and close
     proc.stdin?.write(prompt);
     proc.stdin?.end();
   });
@@ -247,7 +347,7 @@ export const AutonomousDevNode: INodeType = {
       setupToken = (cred?.setupToken as string) || (cred?.apiKey as string) || undefined;
     } catch { /* */ }
 
-    // Live log emitter - sends logs via process events so server can capture
+    // Live log emitter
     const emitLog = (level: string, message: string, data?: Record<string, unknown>) => {
       context.helpers.log(`[AutonomousDev] ${message}`);
       try {
@@ -259,38 +359,96 @@ export const AutonomousDevNode: INodeType = {
     let iterationCount = 0;
     let lastResponse = '';
     let exitReason: 'completed' | 'maxIterations' | 'error' | 'stopped' = 'maxIterations';
+    let currentSessionId: string | undefined;
 
     emitLog('system', `Baslatiliyor: "${dynamicInstruction.slice(0, 120)}..."`, { maxIterations: maxLoopIterations, model });
 
     while (iterationCount < maxLoopIterations) {
       iterationCount++;
 
+      // Build prompt
       let prompt = '';
-      if (systemContext) prompt += `${systemContext}\n\n---\n\n`;
-      prompt += `TALIMAT: ${dynamicInstruction}\n`;
-
-      const recentHistory = conversationHistory.slice(-20);
-      if (recentHistory.length > 0) {
-        prompt += '\n--- ONCEKI ISLEMLER ---\n';
-        for (const entry of recentHistory) {
-          const prefix = entry.role === 'instruction' ? 'TALIMAT' : entry.role === 'response' ? 'AI' : 'KULLANICI';
-          prompt += `\n${prefix}: ${entry.content}\n`;
+      if (iterationCount === 1) {
+        // First iteration: full instruction + context
+        if (systemContext) prompt += `${systemContext}\n\n---\n\n`;
+        prompt += dynamicInstruction;
+      } else {
+        // Subsequent iterations: continuation prompt
+        // If we have a session ID, Claude already has context — just nudge it
+        if (currentSessionId) {
+          const lastEntry = conversationHistory[conversationHistory.length - 1];
+          if (lastEntry?.role === 'answer') {
+            prompt = lastEntry.content;
+          } else {
+            prompt = 'Devam et. Kaldığın yerden devam et, daha önce yaptıklarını tekrarlama.';
+          }
+        } else {
+          // No session continuity — rebuild context from history
+          if (systemContext) prompt += `${systemContext}\n\n---\n\n`;
+          prompt += `TALIMAT: ${dynamicInstruction}\n`;
+          const recentHistory = conversationHistory.slice(-20);
+          if (recentHistory.length > 0) {
+            prompt += '\n--- ONCEKI ISLEMLER ---\n';
+            for (const entry of recentHistory) {
+              const prefix = entry.role === 'instruction' ? 'TALIMAT' : entry.role === 'response' ? 'AI' : 'KULLANICI';
+              prompt += `\n${prefix}: ${entry.content.slice(0, 1000)}\n`;
+            }
+            prompt += '\n--- SIMDI DEVAM ET ---\n';
+            prompt += 'Yukardaki talimata devam et. Daha once yaptiklarini tekrarlama, kaldgin yerden devam et.\n';
+          }
         }
-        prompt += '\n--- SIMDI DEVAM ET ---\n';
-        prompt += `\nYukardaki talimata devam et. Daha once yaptiklarini tekrarlama, kaldgin yerden devam et.\n`;
       }
 
-      emitLog('iteration', `Iterasyon ${iterationCount}/${maxLoopIterations} basliyor`, { iteration: iterationCount });
-      emitLog('ai_request', `AI'ya gonderilen talimat (${prompt.length} karakter)`, { promptPreview: prompt.slice(0, 300) });
+      emitLog('iteration', `Iterasyon ${iterationCount}/${maxLoopIterations} basliyor${currentSessionId ? ' (session devam)' : ' (yeni session)'}`, {
+        iteration: iterationCount,
+        sessionId: currentSessionId,
+      });
+
+      // Stream buffer for live display
+      let streamBuffer = '';
+      let lastEmitTime = 0;
 
       try {
-        const response = await callClaude(prompt, model, cwd, iterationTimeoutMs, setupToken);
-        lastResponse = response;
-        conversationHistory.push({ role: 'response', content: response });
+        const result = await callClaude({
+          prompt,
+          model,
+          cwd,
+          timeoutMs: iterationTimeoutMs,
+          setupToken,
+          sessionId: currentSessionId,
+          onChunk: (chunk) => {
+            streamBuffer += chunk;
+            // Emit streaming updates every 500ms to avoid flooding
+            const now = Date.now();
+            if (now - lastEmitTime > 500) {
+              lastEmitTime = now;
+              // Show last 500 chars of the stream
+              const preview = streamBuffer.slice(-500);
+              emitLog('ai_streaming', preview, {
+                iteration: iterationCount,
+                totalLength: streamBuffer.length,
+              });
+            }
+          },
+        });
 
-        emitLog('ai_response', response.slice(0, 2000), { fullLength: response.length, iteration: iterationCount });
+        lastResponse = result.response;
+        conversationHistory.push({ role: 'response', content: result.response });
 
-        const askedQuestion = isQuestion(response);
+        // Save session ID for continuation
+        if (result.sessionId) {
+          currentSessionId = result.sessionId;
+          emitLog('system', `Session ID: ${result.sessionId.slice(0, 8)}...`, { sessionId: result.sessionId });
+        }
+
+        // Emit full response
+        emitLog('ai_response', result.response.slice(0, 3000), {
+          fullLength: result.response.length,
+          iteration: iterationCount,
+          sessionId: currentSessionId,
+        });
+
+        const askedQuestion = isQuestion(result.response);
 
         if (askedQuestion) {
           emitLog('system', `AI soru sordu, strateji: ${autoAnswerStrategy}`);
@@ -303,10 +461,17 @@ export const AutonomousDevNode: INodeType = {
 
           let answer: string;
           if (autoAnswerStrategy === 'contextual') {
-            const answerPrompt = `Bir AI gelistirici su talimati uyguluyor: "${dynamicInstruction}"\n\nAI su soruyu sordu:\n"${response.slice(-500)}"\n\nBu soruya kisa ve kararli bir cevap ver. Sadece cevabi yaz.`;
+            const answerPrompt = `Bir AI gelistirici su talimati uyguluyor: "${dynamicInstruction}"\n\nAI su soruyu sordu:\n"${result.response.slice(-500)}"\n\nBu soruya kisa ve kararli bir cevap ver. Sadece cevabi yaz.`;
             emitLog('system', 'AI ile otomatik cevap uretiliyor...');
             try {
-              answer = await callClaude(answerPrompt, model, cwd, 30000, setupToken);
+              const answerResult = await callClaude({
+                prompt: answerPrompt,
+                model,
+                cwd,
+                timeoutMs: 30000,
+                setupToken,
+              });
+              answer = answerResult.response;
             } catch {
               answer = defaultAnswer;
             }
@@ -318,10 +483,12 @@ export const AutonomousDevNode: INodeType = {
           emitLog('auto_answer', answer, { iteration: iterationCount });
         } else {
           emitLog('system', `Iterasyon ${iterationCount} tamamlandi, dongu devam ediyor`);
-          conversationHistory.push({ role: 'instruction', content: `(Iterasyon ${iterationCount} tamamlandi, tekrar calisiyor)` });
+          conversationHistory.push({ role: 'instruction', content: `(Iterasyon ${iterationCount} tamamlandi)` });
         }
       } catch (err) {
         emitLog('error', `Hata: ${(err as Error).message}`, { iteration: iterationCount });
+        // Session might be broken, reset it
+        currentSessionId = undefined;
         exitReason = 'error';
         lastResponse = (err as Error).message;
         break;
@@ -332,21 +499,24 @@ export const AutonomousDevNode: INodeType = {
       }
     }
 
-    // Natural loop exit (all iterations ran) is treated as completed
-    if (exitReason === 'maxIterations') {
+    // exitReason stays 'maxIterations' if the loop ran out of budget without
+    // a stop/error signal — this lets downstream nodes branch on that outcome.
+    // Only promote to 'completed' when the loop ended naturally (no question asked,
+    // no error, no explicit stop) AND we haven't exhausted all iterations.
+    if (exitReason === 'maxIterations' && iterationCount < maxLoopIterations) {
       exitReason = 'completed';
     }
 
-    emitLog('system', `Sonuc: ${exitReason}, toplam ${iterationCount} iterasyon`);
+    emitLog('system', `Sonuc: ${exitReason}, toplam ${iterationCount} iterasyon, session: ${currentSessionId?.slice(0, 8) ?? 'yok'}`);
 
     return [{
       json: {
-        // branch field is used by the engine for conditional output routing
         branch: exitReason,
         output: exitReason,
         instruction: dynamicInstruction,
         totalIterations: iterationCount,
         lastResponse,
+        sessionId: currentSessionId,
         conversationHistory: conversationHistory.map((h) => ({
           role: h.role,
           content: h.content.slice(0, 2000),

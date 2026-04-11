@@ -9,7 +9,7 @@ import {
   type ReactFlowInstance,
   type Node,
 } from '@xyflow/react';
-import { Trash2, Copy, X, Map } from 'lucide-react';
+import { Trash2, Copy, X, Map, Keyboard } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
@@ -65,6 +65,8 @@ export default function WorkflowCanvas() {
           animated = true;
         } else if (sourceStatus === 'error') {
           stroke = 'rgba(239, 68, 68, 0.5)'; // red
+        } else if (sourceStatus === 'skipped') {
+          stroke = 'rgba(100, 116, 139, 0.3)'; // slate — dim
         }
 
         return {
@@ -231,6 +233,42 @@ export default function WorkflowCanvas() {
           showInteractive={false}
           className="!bottom-4 !right-4 !left-auto"
         />
+        {/* Keyboard shortcuts tooltip */}
+        <div className="absolute bottom-4 right-[168px] z-10 group">
+          <button
+            title="Klavye kısayolları"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border bg-white/[0.04] border-white/[0.08] text-obsidian-400 hover:text-white transition-all"
+          >
+            <Keyboard size={14} />
+          </button>
+          {/* Tooltip panel */}
+          <div className="absolute bottom-10 right-0 w-56 glass-card rounded-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 pointer-events-none shadow-xl">
+            <p className="text-[10px] font-semibold text-obsidian-400 uppercase tracking-wider mb-2 font-body">Klavye Kısayolları</p>
+            <div className="space-y-1.5">
+              {([
+                ['Ctrl+S', 'Kaydet'],
+                ['Ctrl+Enter', 'Çalıştır'],
+                ['Ctrl+E', 'Kaydet & Çalıştır'],
+                ['Ctrl+Z', 'Geri Al'],
+                ['Ctrl+Shift+Z', 'İleri Al'],
+                ['Ctrl+Y', 'İleri Al'],
+                ['Ctrl+D', 'Node kopyala'],
+                ['Ctrl+K', 'Komut paleti'],
+                ['Delete', 'Seçili node sil'],
+                ['Shift+Sürükle', 'Çoklu seçim'],
+                ['Escape', 'Seçimi kaldır'],
+              ] as const).map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between gap-2">
+                  <kbd className="px-1.5 py-0.5 text-[9px] font-mono bg-white/[0.06] border border-white/[0.08] rounded text-obsidian-300 shrink-0">
+                    {key}
+                  </kbd>
+                  <span className="text-[10px] text-obsidian-500 font-body text-right">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Minimap toggle button */}
         <div className="absolute bottom-4 right-32 z-10">
           <button

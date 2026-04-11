@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
 import DashboardPage from './pages/DashboardPage';
@@ -92,9 +92,23 @@ function SetupGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/** Redirects to /login if user is not authenticated */
+/** Redirects to /login if user is not authenticated (skipped when server has auth disabled) */
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
+  const authRequired = useAuthStore((s) => s.authRequired);
+  const checkAuthRequired = useAuthStore((s) => s.checkAuthRequired);
+
+  useEffect(() => {
+    if (authRequired === null) {
+      checkAuthRequired();
+    }
+  }, [authRequired, checkAuthRequired]);
+
+  // Still checking — don't redirect yet
+  if (authRequired === null) return null;
+  // Auth disabled on server — let through
+  if (!authRequired) return <>{children}</>;
+  // Auth required — must be logged in
   if (!user) {
     return <Navigate to="/login" replace />;
   }

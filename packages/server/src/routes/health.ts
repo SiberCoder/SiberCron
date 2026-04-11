@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { NodeRegistry } from '@sibercron/core';
 import { schedulerService } from '../services/schedulerService.js';
 import { queueService } from '../services/queueService.js';
+import { config } from '../config/env.js';
 
 export async function healthRoutes(
   fastify: FastifyInstance,
@@ -18,6 +19,7 @@ export async function healthRoutes(
       status: 'ok',
       version: '0.1.0',
       uptime: process.uptime(),
+      authRequired: config.authEnabled,
       nodeCount: registry.getDefinitions().length,
       scheduler: {
         initialized: schedulerStatus.initialized,

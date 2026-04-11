@@ -8,14 +8,14 @@ import type {
   WsExecutionCompleted,
 } from '@sibercron/shared';
 
-type NodeStatus = 'pending' | 'running' | 'success' | 'error';
+type NodeStatus = 'pending' | 'running' | 'success' | 'error' | 'skipped';
 
 interface LogEntry {
   timestamp: string;
   nodeId?: string;
   nodeName?: string;
   message: string;
-  type: 'info' | 'success' | 'error' | 'ai_request' | 'ai_response' | 'auto_answer' | 'iteration' | 'system';
+  type: 'info' | 'success' | 'error' | 'ai_request' | 'ai_response' | 'ai_streaming' | 'auto_answer' | 'iteration' | 'system';
 }
 
 interface CurrentExecution {
@@ -98,6 +98,11 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       },
     );
 
+    const appendLog = (state: { executionLog: LogEntry[] }, entry: LogEntry): LogEntry[] => {
+      const next = [...state.executionLog, entry];
+      return next.length > 500 ? next.slice(-500) : next;
+    };
+
     socket.on('execution:node:start', (data: WsNodeStart) => {
       set((state) => ({
         currentExecution: state.currentExecution
@@ -109,16 +114,13 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
               },
             }
           : null,
-        executionLog: [
-          ...state.executionLog,
-          {
-            timestamp: new Date().toISOString(),
-            nodeId: data.nodeId,
-            nodeName: data.nodeName,
-            message: `Node "${data.nodeName}" started`,
-            type: 'info',
-          },
-        ],
+        executionLog: appendLog(state, {
+          timestamp: new Date().toISOString(),
+          nodeId: data.nodeId,
+          nodeName: data.nodeName,
+          message: `Node "${data.nodeName}" başladı`,
+          type: 'info',
+        }),
       }));
     });
 
@@ -137,36 +139,30 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
               },
             }
           : null,
-        executionLog: [
-          ...state.executionLog,
-          {
-            timestamp: new Date().toISOString(),
-            nodeId: data.nodeId,
-            nodeName: data.nodeName,
-            message: data.error
-              ? `Node "${data.nodeName}" failed: ${data.error}`
-              : `Node "${data.nodeName}" completed in ${data.durationMs}ms`,
-            type: data.status === 'error' ? 'error' : 'success',
-          },
-        ],
+        executionLog: appendLog(state, {
+          timestamp: new Date().toISOString(),
+          nodeId: data.nodeId,
+          nodeName: data.nodeName,
+          message: data.error
+            ? `Node "${data.nodeName}" hata: ${data.error}`
+            : `Node "${data.nodeName}" tamamlandı (${data.durationMs}ms)`,
+          type: data.status === 'error' ? 'error' : 'success',
+        }),
       }));
     });
 
     // ── Live execution logs (AutonomousDev, agentLoop, etc.) ──────────
-    const VALID_LOG_TYPES: LogEntry['type'][] = ['info', 'success', 'error', 'ai_request', 'ai_response', 'auto_answer', 'iteration', 'system'];
+    const VALID_LOG_TYPES: LogEntry['type'][] = ['info', 'success', 'error', 'ai_request', 'ai_response', 'ai_streaming', 'auto_answer', 'iteration', 'system'];
     socket.on('execution:log', (data: { executionId: string; level: string; message: string; data?: Record<string, unknown> }) => {
       const logType: LogEntry['type'] = VALID_LOG_TYPES.includes(data.level as LogEntry['type'])
         ? (data.level as LogEntry['type'])
         : 'info';
       set((state) => ({
-        executionLog: [
-          ...state.executionLog,
-          {
-            timestamp: new Date().toISOString(),
-            message: data.message,
-            type: logType,
-          },
-        ],
+        executionLog: appendLog(state, {
+          timestamp: new Date().toISOString(),
+          message: data.message,
+          type: logType,
+        }),
       }));
     });
 
@@ -177,14 +173,11 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
           currentExecution: state.currentExecution
             ? { ...state.currentExecution, status: data.status as CurrentExecution['status'] }
             : null,
-          executionLog: [
-            ...state.executionLog,
-            {
-              timestamp: new Date().toISOString(),
-              message: `Execution ${data.status} (${data.durationMs}ms)`,
-              type: data.status === 'success' ? 'success' : 'error',
-            },
-          ],
+          executionLog: appendLog(state, {
+            timestamp: new Date().toISOString(),
+            message: `Execution ${data.status} (${data.durationMs}ms)`,
+            type: data.status === 'success' ? 'success' : 'error',
+          }),
         }));
       },
     );

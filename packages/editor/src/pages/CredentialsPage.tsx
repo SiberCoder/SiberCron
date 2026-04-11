@@ -14,6 +14,9 @@ import {
   Globe,
   Brain,
   Pencil,
+  HardDrive,
+  FileText,
+  Server,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { ICredential } from '@sibercron/shared';
@@ -38,6 +41,18 @@ interface CredentialTypeDef {
 }
 
 const CREDENTIAL_TYPES: CredentialTypeDef[] = [
+  // ── AI Providers ─────────────────────────────────────────────────────────────
+  {
+    name: 'aiProvider',
+    displayName: 'AI Provider',
+    Icon: Brain,
+    fields: [
+      { key: 'provider', label: 'Provider', placeholder: 'openai / anthropic / ollama / gemini', required: true },
+      { key: 'apiKey', label: 'API Key', placeholder: 'sk-...', secret: true },
+      { key: 'model', label: 'Model (opsiyonel)', placeholder: 'gpt-4o / claude-opus-4-6' },
+      { key: 'baseUrl', label: 'Base URL (opsiyonel)', placeholder: 'https://api.openai.com/v1' },
+    ],
+  },
   {
     name: 'openaiApi',
     displayName: 'OpenAI API',
@@ -55,8 +70,46 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
       { key: 'apiKey', label: 'API Key', placeholder: 'sk-ant-...', secret: true, required: true },
     ],
   },
+  // ── Messaging ─────────────────────────────────────────────────────────────────
   {
-    name: 'smtpCredential',
+    name: 'telegramBot',
+    displayName: 'Telegram Bot',
+    Icon: MessageSquare,
+    fields: [
+      { key: 'botToken', label: 'Bot Token', placeholder: '123456:ABC-DEF...', secret: true, required: true },
+    ],
+  },
+  {
+    name: 'discordBot',
+    displayName: 'Discord Bot',
+    Icon: MessageSquare,
+    fields: [
+      { key: 'botToken', label: 'Bot Token', secret: true },
+      { key: 'webhookUrl', label: 'Webhook URL', placeholder: 'https://discord.com/api/webhooks/...' },
+    ],
+  },
+  {
+    name: 'slackBot',
+    displayName: 'Slack Bot',
+    Icon: MessageSquare,
+    fields: [
+      { key: 'botToken', label: 'Bot Token', placeholder: 'xoxb-...', secret: true, required: true },
+      { key: 'signingSecret', label: 'Signing Secret (opsiyonel)', secret: true },
+    ],
+  },
+  {
+    name: 'whatsappApi',
+    displayName: 'WhatsApp Business API',
+    Icon: MessageSquare,
+    fields: [
+      { key: 'accessToken', label: 'Access Token', secret: true, required: true },
+      { key: 'phoneNumberId', label: 'Phone Number ID', required: true },
+      { key: 'businessAccountId', label: 'Business Account ID' },
+    ],
+  },
+  // ── Email ─────────────────────────────────────────────────────────────────────
+  {
+    name: 'smtpAccount',
     displayName: 'SMTP / Email',
     Icon: Mail,
     fields: [
@@ -67,37 +120,13 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
       { key: 'from', label: 'Gonderen', placeholder: 'YourApp <you@example.com>' },
     ],
   },
+  // ── Database / Storage ────────────────────────────────────────────────────────
   {
-    name: 'slackApi',
-    displayName: 'Slack API',
-    Icon: MessageSquare,
-    fields: [
-      { key: 'botToken', label: 'Bot Token', placeholder: 'xoxb-...', secret: true, required: true },
-      { key: 'signingSecret', label: 'Signing Secret', placeholder: 'Opsiyonel', secret: true },
-    ],
-  },
-  {
-    name: 'telegramApi',
-    displayName: 'Telegram Bot',
-    Icon: MessageSquare,
-    fields: [
-      { key: 'botToken', label: 'Bot Token', placeholder: '123456:ABC-DEF...', secret: true, required: true },
-    ],
-  },
-  {
-    name: 'discordApi',
-    displayName: 'Discord',
-    Icon: MessageSquare,
-    fields: [
-      { key: 'botToken', label: 'Bot Token', secret: true, required: true },
-      { key: 'webhookUrl', label: 'Webhook URL (opsiyonel)', placeholder: 'https://discord.com/api/webhooks/...' },
-    ],
-  },
-  {
-    name: 'databaseCredential',
-    displayName: 'Database',
+    name: 'databaseConnection',
+    displayName: 'Database (PostgreSQL / MySQL)',
     Icon: Database,
     fields: [
+      { key: 'type', label: 'Tip', placeholder: 'postgres / mysql', required: true },
       { key: 'host', label: 'Host', placeholder: 'localhost', required: true },
       { key: 'port', label: 'Port', placeholder: '5432', type: 'number' },
       { key: 'database', label: 'Veritabani Adi', required: true },
@@ -105,6 +134,51 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
       { key: 'password', label: 'Sifre', secret: true },
     ],
   },
+  {
+    name: 'redisConnection',
+    displayName: 'Redis',
+    Icon: Server,
+    fields: [
+      { key: 'host', label: 'Host', placeholder: 'localhost', required: true },
+      { key: 'port', label: 'Port', placeholder: '6379', type: 'number' },
+      { key: 'password', label: 'Sifre (opsiyonel)', secret: true },
+      { key: 'db', label: 'DB Index (opsiyonel)', placeholder: '0', type: 'number' },
+    ],
+  },
+  {
+    name: 'ftpSftp',
+    displayName: 'FTP / SFTP',
+    Icon: HardDrive,
+    fields: [
+      { key: 'protocol', label: 'Protokol', placeholder: 'ftp / sftp', required: true },
+      { key: 'host', label: 'Host', placeholder: 'ftp.example.com', required: true },
+      { key: 'port', label: 'Port', placeholder: '21', type: 'number' },
+      { key: 'username', label: 'Kullanici Adi', required: true },
+      { key: 'password', label: 'Sifre', secret: true },
+      { key: 'privateKey', label: 'Private Key (SFTP, opsiyonel)', secret: true },
+    ],
+  },
+  // ── Google ────────────────────────────────────────────────────────────────────
+  {
+    name: 'googleServiceAccount',
+    displayName: 'Google Service Account',
+    Icon: Globe,
+    fields: [
+      { key: 'clientEmail', label: 'Client Email', placeholder: 'name@project.iam.gserviceaccount.com', required: true },
+      { key: 'privateKey', label: 'Private Key', placeholder: '-----BEGIN RSA PRIVATE KEY-----...', secret: true, required: true },
+      { key: 'projectId', label: 'Project ID (opsiyonel)' },
+    ],
+  },
+  // ── Productivity ──────────────────────────────────────────────────────────────
+  {
+    name: 'notionApi',
+    displayName: 'Notion Integration',
+    Icon: FileText,
+    fields: [
+      { key: 'integrationToken', label: 'Integration Token', placeholder: 'secret_...', secret: true, required: true },
+    ],
+  },
+  // ── Generic ──────────────────────────────────────────────────────────────────
   {
     name: 'httpHeader',
     displayName: 'HTTP Header Auth',

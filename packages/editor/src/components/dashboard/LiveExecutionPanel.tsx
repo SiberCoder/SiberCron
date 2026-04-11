@@ -17,6 +17,7 @@ const LEVEL_STYLES: Record<string, { icon: typeof Brain; color: string; bg: stri
   iteration: { icon: RefreshCcw, color: 'text-aurora-cyan', bg: 'bg-aurora-cyan/10' },
   ai_request: { icon: ChevronRight, color: 'text-aurora-indigo', bg: 'bg-aurora-indigo/10' },
   ai_response: { icon: Brain, color: 'text-aurora-violet', bg: 'bg-aurora-violet/10' },
+  ai_streaming: { icon: Loader2, color: 'text-aurora-violet/60', bg: 'bg-aurora-violet/5' },
   auto_answer: { icon: MessageSquare, color: 'text-aurora-amber', bg: 'bg-aurora-amber/10' },
   error: { icon: AlertTriangle, color: 'text-aurora-rose', bg: 'bg-aurora-rose/10' },
   system: { icon: Terminal, color: 'text-obsidian-400', bg: 'bg-white/[0.04]' },
@@ -94,16 +95,35 @@ export default function LiveExecutionPanel() {
         level: data.status === 'success' ? 'system' : 'error',
         message: `═══ Execution ${data.status} (${data.durationMs}ms) ═══`,
       }]);
+      // After 30s, reset so the panel can pick up the next execution
+      setTimeout(() => {
+        setActiveExecutionId(null);
+        setActiveWorkflowName('');
+      }, 30000);
     });
 
-    // Also fetch existing logs via API (in case we connected late)
-    apiGet<LiveLogEntry[]>(`/executions/${activeExecutionId}/logs`).then((existingLogs) => {
-      if (Array.isArray(existingLogs) && existingLogs.length > 0) {
+    // Fetch existing logs via API (in case we connected late)
+    // API returns { logs: [...], total: N } or plain array
+    apiGet<{ logs?: LiveLogEntry[]; total?: number } | LiveLogEntry[]>(`/executions/${activeExecutionId}/logs`).then((res) => {
+      const existingLogs = Array.isArray(res) ? res : (res?.logs ?? []);
+      if (existingLogs.length > 0) {
         setLogs((prev) => prev.length === 0 ? existingLogs : prev);
       }
     }).catch(() => { /* ignore */ });
 
+    // Also poll logs every 2s as fallback (in case Socket.io isn't delivering)
+    const logPoll = setInterval(async () => {
+      try {
+        const res = await apiGet<{ logs?: LiveLogEntry[]; total?: number } | LiveLogEntry[]>(`/executions/${activeExecutionId}/logs`);
+        const freshLogs = Array.isArray(res) ? res : (res?.logs ?? []);
+        if (freshLogs.length > 0) {
+          setLogs(freshLogs);
+        }
+      } catch { /* ignore */ }
+    }, 2000);
+
     return () => {
+      clearInterval(logPoll);
       socket.disconnect();
       socketRef.current = null;
       setIsConnected(false);
@@ -185,7 +205,7 @@ export default function LiveExecutionPanel() {
 
                   {/* Level icon */}
                   <span className={clsx('shrink-0 mt-0.5', style.color)}>
-                    <Icon size={11} />
+                    <Icon size={11} className={log.level === 'ai_streaming' ? 'animate-spin' : undefined} />
                   </span>
 
                   {/* Message */}

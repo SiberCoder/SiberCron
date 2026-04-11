@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useLocation, useNavigate, useBlocker } from 'react-router-dom';
 import { PanelLeft, CheckCircle2, XCircle, Loader2, X, ArrowRight, Clock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
@@ -67,14 +67,15 @@ function ValidationBanner() {
   const warnings = useWorkflowValidation();
   const [collapsed, setCollapsed] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const prevCount = useState(warnings.length)[0];
+  const prevCountRef = useRef(warnings.length);
 
   // Re-show banner when new warnings appear
   useEffect(() => {
-    if (warnings.length > 0 && warnings.length !== prevCount) {
+    if (warnings.length > 0 && warnings.length !== prevCountRef.current) {
       setDismissed(false);
     }
-  }, [warnings.length, prevCount]);
+    prevCountRef.current = warnings.length;
+  }, [warnings.length]);
 
   if (warnings.length === 0 || dismissed) return null;
 
@@ -367,51 +368,29 @@ export default function WorkflowEditorPage() {
         useWorkflowStore.getState().removeNode(selectedNodeId);
       }
 
-      // Ctrl+S / Cmd+S — save
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        useWorkflowStore.getState().saveWorkflow().catch(console.error);
-      }
-
-      // Ctrl+Z / Cmd+Z — undo
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !isInput) {
-        e.preventDefault();
-        useWorkflowStore.getState().undo();
-      }
-
-      // Ctrl+Shift+Z / Cmd+Shift+Z — redo
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z' && !isInput) {
-        e.preventDefault();
-        useWorkflowStore.getState().redo();
-      }
-
-      // Ctrl+Y / Cmd+Y — redo (alternative)
+      // Ctrl+Y / Cmd+Y — redo (alternative; EditorToolbar handles Ctrl+Z and Ctrl+Shift+Z)
       if ((e.ctrlKey || e.metaKey) && e.key === 'y' && !isInput) {
         e.preventDefault();
         useWorkflowStore.getState().redo();
       }
 
-      // Ctrl+E / Cmd+E — execute workflow
+      // Ctrl+E / Cmd+E — save if dirty, then execute
       if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
         e.preventDefault();
-        const meta = useWorkflowStore.getState().workflowMeta;
-        if (meta.id) {
-          useWorkflowStore.getState().executeWorkflow().catch(console.error);
+        const store = useWorkflowStore.getState();
+        if (store.workflowMeta.id) {
+          (async () => {
+            if (store.isDirty) await store.saveWorkflow();
+            const executionId = await store.executeWorkflow();
+            useExecutionStore.getState().connect(executionId);
+          })().catch(console.error);
         }
       }
 
-      // Ctrl+D / Cmd+D — duplicate selected node
+      // Ctrl+D / Cmd+D — duplicate selected node (preserves config)
       if ((e.ctrlKey || e.metaKey) && e.key === 'd' && !isInput && selectedNodeId) {
         e.preventDefault();
-        const state = useWorkflowStore.getState();
-        const node = state.nodes.find((n) => n.id === selectedNodeId);
-        if (node) {
-          state.addNode(
-            node.data.nodeType as string,
-            `${node.data.label as string} (copy)`,
-            { x: node.position.x + 50, y: node.position.y + 50 },
-          );
-        }
+        useWorkflowStore.getState().duplicateNodes([selectedNodeId]);
       }
 
       // Escape — deselect node

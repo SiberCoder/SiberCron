@@ -112,7 +112,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
         e.preventDefault();
         undo();
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         redo();
       }
@@ -170,7 +170,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         className="flex items-center gap-1.5 text-obsidian-400 hover:text-aurora-cyan text-xs transition-colors font-body"
       >
         <ArrowLeft size={14} />
-        <span className="hidden sm:inline">Back</span>
+        <span className="hidden sm:inline">Geri</span>
       </button>
 
       <div className="w-px h-6 bg-white/[0.06]" />
@@ -195,7 +195,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
 
       {isDirty && (
         <span className="text-[10px] text-aurora-amber font-semibold font-body animate-fade-in">
-          Unsaved
+          Kaydedilmedi
         </span>
       )}
 
@@ -273,7 +273,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       {/* Active toggle */}
       <div className="flex items-center gap-2.5">
         <span className="text-[10px] text-obsidian-500 uppercase tracking-wider font-body font-semibold">
-          Active
+          Aktif
         </span>
         <button
           onClick={handleToggleActive}
@@ -342,7 +342,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         ) : (
           <Save size={14} />
         )}
-        Save
+        Kaydet
       </button>
 
       {/* Execute button */}
@@ -356,7 +356,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         ) : (
           <Play size={14} />
         )}
-        Execute
+        Çalıştır
       </button>
 
       {/* Delete confirmation modal */}
