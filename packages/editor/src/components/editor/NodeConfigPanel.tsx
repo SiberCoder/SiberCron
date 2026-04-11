@@ -3,6 +3,7 @@ import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw
 import JsonEditor from './JsonEditor';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
+import 'cronstrue/locales/tr';
 import { useNavigate } from 'react-router-dom';
 import type { INodeProperty, ICredential } from '@sibercron/shared';
 import { getNodeIcon } from '../../lib/iconRegistry';

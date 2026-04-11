@@ -409,6 +409,16 @@ export async function workflowRoutes(
         finishedAt: result.finishedAt,
         durationMs: result.durationMs,
       });
+      // Broadcast globally so WorkflowListPage execution badges update live
+      io.emit('workflow:execution:completed', {
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        executionId,
+        status: result.status,
+        durationMs: result.durationMs,
+        finishedAt: result.finishedAt,
+        errorMessage: result.errorMessage,
+      });
     }).catch((err) => {
       db.updateExecution(executionId, {
         status: 'error',

@@ -26,11 +26,13 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
+import 'cronstrue/locales/tr';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
 import { toast } from '../store/toastStore';
 import { API_BASE_URL } from '../lib/config';
 import { useAuthStore } from '../store/authStore';
+import { getSocket, releaseSocket } from '../lib/socket';
 
 function getNextCronRun(expr: string): string {
   try {
@@ -165,6 +167,55 @@ export default function WorkflowListPage() {
   useEffect(() => {
     loadWorkflows();
   }, [loadWorkflows]);
+
+  // ── Real-time updates via Socket.io ────────────────────────────────────
+  // Keep the workflow list in sync when another tab/user activates or deactivates.
+  useEffect(() => {
+    const socket = getSocket();
+
+    const onActivated = (data: { workflowId: string; workflow?: IWorkflow }) => {
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id === data.workflowId ? { ...w, isActive: true, ...(data.workflow ?? {}) } : w,
+        ),
+      );
+    };
+
+    const onDeactivated = (data: { workflowId: string }) => {
+      setWorkflows((prev) =>
+        prev.map((w) => (w.id === data.workflowId ? { ...w, isActive: false } : w)),
+      );
+    };
+
+    // Update execution summary badges live when any workflow finishes
+    const onExecutionCompleted = (data: { workflowId: string; status: string; finishedAt?: string }) => {
+      if (!data.workflowId) return;
+      setSummary((prev) => {
+        const existing = prev[data.workflowId] ?? { lastStatus: data.status, lastAt: data.finishedAt ?? new Date().toISOString(), total: 0, success: 0, error: 0 };
+        return {
+          ...prev,
+          [data.workflowId]: {
+            lastStatus: data.status,
+            lastAt: data.finishedAt ?? new Date().toISOString(),
+            total: existing.total + 1,
+            success: existing.success + (data.status === 'success' ? 1 : 0),
+            error: existing.error + (data.status === 'error' ? 1 : 0),
+          },
+        };
+      });
+    };
+
+    socket.on('workflow:activated', onActivated);
+    socket.on('workflow:deactivated', onDeactivated);
+    socket.on('workflow:execution:completed', onExecutionCompleted);
+
+    return () => {
+      socket.off('workflow:activated', onActivated);
+      socket.off('workflow:deactivated', onDeactivated);
+      socket.off('workflow:execution:completed', onExecutionCompleted);
+      releaseSocket();
+    };
+  }, []);
 
   const handleDelete = async (id: string) => {
     try {
@@ -307,6 +358,31 @@ export default function WorkflowListPage() {
     setBulkToggling(false);
   };
 
+  const handleBulkExport = async () => {
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) => apiGet<Record<string, unknown>>(`/workflows/${id}/export`)),
+    );
+    const exports = results
+      .filter((r): r is PromiseFulfilledResult<Record<string, unknown>> => r.status === 'fulfilled')
+      .map((r) => r.value);
+
+    if (exports.length === 0) {
+      toast.error('Dışa aktarılacak workflow bulunamadı');
+      return;
+    }
+
+    const bundle = { $schema: 'sibercron/bundle/v1', exportedAt: new Date().toISOString(), workflows: exports };
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sibercron_export_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${exports.length} workflow dışa aktarıldı`);
+  };
+
   const handleBulkDelete = async () => {
     setBulkDeleting(true);
     const ids = Array.from(selectedIds);
@@ -398,6 +474,14 @@ export default function WorkflowListPage() {
           >
             {bulkToggling ? <Loader2 size={12} className="animate-spin" /> : <PowerOff size={12} />}
             Tümünü Durdur
+          </button>
+          <button
+            onClick={handleBulkExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-obsidian-300 hover:bg-white/[0.06] rounded-lg transition-all font-body"
+            title="Seçili workflow'ları JSON olarak dışa aktar"
+          >
+            <Download size={12} />
+            Dışa Aktar
           </button>
           <div className="flex-1" />
           {isAdmin && (

@@ -289,11 +289,15 @@ class QueueService {
 
       console.log(`[${logPrefix}] Workflow "${workflowName}" execution ${engineResult.status}: ${executionId}`);
 
-      if (engineResult.status === 'error' && this.io) {
-        this.io.emit('workflow:execution:failed', {
+      // Broadcast completion to all connected clients so workflow list badges update live
+      if (this.io) {
+        this.io.emit('workflow:execution:completed', {
           workflowId,
           workflowName,
           executionId,
+          status: engineResult.status,
+          durationMs: engineResult.durationMs,
+          finishedAt: engineResult.finishedAt,
           errorMessage: engineResult.errorMessage,
         });
       }

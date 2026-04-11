@@ -371,7 +371,7 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
     }
 
     const targetId = mappedId ?? data.executionId;
-    io.to(`execution:${targetId}`).emit('execution:log', { ...data, apiExecutionId: targetId });
+    io.to(`execution:${targetId}`).emit(WS_EVENTS.EXECUTION_LOG, { ...data, apiExecutionId: targetId });
   }
 });
 
@@ -388,7 +388,7 @@ process.on('ai:stream' as any, (data: { executionId: string; nodeId: string; nod
     data: { nodeId: data.nodeId, nodeName: data.nodeName },
   });
 
-  io.to(`execution:${targetId}`).emit('execution:log', {
+  io.to(`execution:${targetId}`).emit(WS_EVENTS.EXECUTION_LOG, {
     executionId: data.executionId,
     apiExecutionId: targetId,
     level: 'ai_streaming',

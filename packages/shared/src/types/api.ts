@@ -80,4 +80,6 @@ export interface WsExecutionCompleted {
   executionId: string;
   status: ExecutionStatus;
   durationMs: number;
+  finishedAt?: string;
+  errorMessage?: string;
 }

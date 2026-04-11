@@ -301,6 +301,8 @@ export class WorkflowEngine {
       executionId,
       status: execution.status,
       durationMs: execution.durationMs ?? 0,
+      finishedAt: execution.finishedAt,
+      errorMessage: execution.errorMessage,
     });
 
     return execution;
@@ -464,8 +466,10 @@ function shouldSkipNode(
       break;
     }
 
-    // Source is conditional: only allow if the edge's sourceHandle matches
-    if (String(branch) === edge.sourceHandle) {
+    // Source is conditional: only allow if the edge's sourceHandle matches.
+    // Treat null/undefined sourceHandle as non-conditional (allow all branches).
+    const handle = edge.sourceHandle ?? undefined;
+    if (handle === undefined || String(branch) === handle) {
       allBlocked = false;
       break;
     }
@@ -501,7 +505,9 @@ function gatherInputData(
     const firstItem = sourceOutput[0];
     const branch = firstItem.json['branch'];
 
-    if (branch !== undefined && String(branch) !== edge.sourceHandle) {
+    // Only filter by sourceHandle when it is explicitly set (not null/undefined)
+    const edgeHandle = edge.sourceHandle ?? undefined;
+    if (branch !== undefined && edgeHandle !== undefined && String(branch) !== edgeHandle) {
       continue;
     }
 

@@ -729,7 +729,8 @@ export default function ExecutionHistoryPage() {
                 ...exec,
                 status: data.status as IExecution['status'],
                 durationMs: data.durationMs,
-                finishedAt: new Date().toISOString(),
+                finishedAt: data.finishedAt ?? new Date().toISOString(),
+                errorMessage: data.errorMessage ?? exec.errorMessage,
               }
             : exec,
         ),

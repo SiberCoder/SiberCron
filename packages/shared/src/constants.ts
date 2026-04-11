@@ -34,4 +34,5 @@ export const WS_EVENTS = {
   EXECUTION_COMPLETED: 'execution:completed',
   SUBSCRIBE_EXECUTION: 'subscribe:execution',
   UNSUBSCRIBE_EXECUTION: 'unsubscribe:execution',
+  EXECUTION_LOG: 'execution:log',
 } as const;
