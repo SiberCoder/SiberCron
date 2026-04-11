@@ -292,6 +292,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setShowDeleteConfirm(false);
+        setShowSettings(false);
       } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         handleSaveRef.current();
