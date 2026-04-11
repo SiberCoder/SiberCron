@@ -19,7 +19,7 @@ import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useExecutionStore } from '../../store/executionStore';
 import { toast } from '../../store/toastStore';
-import { apiPost, apiDelete, apiGet } from '../../api/client';
+import { apiPost, apiDelete, apiGet, ApiError } from '../../api/client';
 
 interface EditorToolbarProps {
   onVersionHistory?: () => void;
@@ -106,8 +106,12 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       const executionId = await executeWorkflow();
       connectExecution(executionId);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Çalıştırma başarısız. Lütfen tekrar deneyin.';
-      toast.error(msg);
+      if (err instanceof ApiError && err.status === 409) {
+        toast.warning('Workflow zaten çalışıyor. Bitmesini bekleyin veya "Eş zamanlı çalışmaya izin ver" ayarını açın.');
+      } else {
+        const msg = err instanceof Error ? err.message : 'Çalıştırma başarısız. Lütfen tekrar deneyin.';
+        toast.error(msg);
+      }
     } finally {
       setIsExecuting(false);
     }

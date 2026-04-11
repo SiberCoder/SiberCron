@@ -27,7 +27,7 @@ import {
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import type { IWorkflow, TriggerType } from '@sibercron/shared';
-import { apiGet, apiPost, apiDelete } from '../api/client';
+import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
 import { toast } from '../store/toastStore';
 
 function getNextCronRun(expr: string): string {
@@ -223,6 +223,20 @@ export default function WorkflowListPage() {
     e.stopPropagation();
     setTogglingId(wf.id);
     try {
+      // Validate before activating
+      if (!wf.isActive) {
+        const validation = await apiGet<{ valid: boolean; errors: string[]; warnings: string[] }>(
+          `/workflows/${wf.id}/validate`,
+        ).catch(() => null);
+        if (validation && !validation.valid && validation.errors.length > 0) {
+          toast.error(`Aktivasyon başarısız: ${validation.errors[0]}`);
+          setTogglingId(null);
+          return;
+        }
+        if (validation?.warnings?.length) {
+          toast.warning(validation.warnings[0], 5000);
+        }
+      }
       const endpoint = wf.isActive
         ? `/workflows/${wf.id}/deactivate`
         : `/workflows/${wf.id}/activate`;
@@ -737,8 +751,13 @@ export default function WorkflowListPage() {
                         try {
                           await apiPost(`/workflows/${wf.id}/execute`, {});
                           toast.success(`"${wf.name}" başlatıldı`);
-                        } catch {
-                          toast.error('Çalıştırma başarısız');
+                        } catch (err) {
+                          if (err instanceof ApiError && err.status === 409) {
+                            toast.warning(`"${wf.name}" zaten çalışıyor`);
+                          } else {
+                            const msg = err instanceof Error ? err.message : 'Çalıştırma başarısız';
+                            toast.error(msg);
+                          }
                         } finally {
                           setExecutingId(null);
                         }
