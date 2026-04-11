@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { io } from 'socket.io-client';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
 import { apiGet } from '../api/client';
 
