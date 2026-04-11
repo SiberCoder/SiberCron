@@ -136,6 +136,7 @@ export default function LiveExecutionPanel() {
       socket.off('execution:node:start', onNodeStart);
       socket.off('execution:node:done', onNodeDone);
       socket.off('execution:completed', onCompleted);
+      releaseSocket();
       setIsConnected(false);
     };
   }, [activeExecutionId]);

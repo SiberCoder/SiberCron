@@ -48,6 +48,7 @@ import { CSVNode } from './core/CSV.node.js';
 import { FileOperationNode } from './core/FileOperation.node.js';
 import { TextNode } from './core/Text.node.js';
 import { GraphQLNode } from './core/GraphQL.node.js';
+import { RetryNode } from './core/Retry.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -98,6 +99,7 @@ export const builtinNodes: INodeType[] = [
   FileOperationNode,
   TextNode,
   GraphQLNode,
+  RetryNode,
 ];
 
 export {
@@ -149,4 +151,5 @@ export {
   FileOperationNode,
   TextNode,
   GraphQLNode,
+  RetryNode,
 };

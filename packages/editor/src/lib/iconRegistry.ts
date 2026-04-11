@@ -9,6 +9,7 @@ import {
   // Node icons (from packages/nodes definitions)
   Brain,
   RefreshCcw,
+  RefreshCw,
   Code,
   GitBranch,
   Timer,
@@ -65,6 +66,7 @@ import {
 const ICON_MAP: Record<string, LucideIcon> = {
   Brain,
   RefreshCcw,
+  RefreshCw,
   Code,
   GitBranch,
   Timer,

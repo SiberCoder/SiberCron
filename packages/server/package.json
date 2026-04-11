@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "dev": "tsx watch --ignore '../**/dist/**' src/main.ts",
+    "dev": "node --watch-path=./src --import tsx/esm src/main.ts",
     "start": "node dist/main.js",
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run"

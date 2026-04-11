@@ -20,6 +20,7 @@ import {
 import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useExecutionStore } from '../../store/executionStore';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { apiPost, apiDelete, apiGet, ApiError } from '../../api/client';
 import { API_BASE_URL } from '../../lib/config';
@@ -48,6 +49,9 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
   const canUndo = useWorkflowStore((s) => s.canUndo);
   const canRedo = useWorkflowStore((s) => s.canRedo);
   const connectExecution = useExecutionStore((s) => s.connect);
+  const currentUser = useAuthStore((s) => s.user);
+  // Auth disabled (user=null) → treat as admin. Admin role → full access. Viewer → read-only.
+  const isAdmin = !currentUser || currentUser.role === 'admin';
 
   // Stable refs so keyboard handler always calls latest version
   const handleSaveRef = useRef<() => Promise<void>>(async () => {});
@@ -308,7 +312,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
           Aktif
         </span>
         <button
-          onClick={handleToggleActive}
+          onClick={isAdmin ? handleToggleActive : () => toast.error('Bu işlem için admin yetkisi gerekli')}
           disabled={isToggling}
           className={clsx(
             'relative w-10 h-[22px] rounded-full transition-all duration-300',
@@ -370,8 +374,8 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         </button>
       )}
 
-      {/* Delete button */}
-      {meta.id && (
+      {/* Delete button — admin only */}
+      {meta.id && isAdmin && (
         <>
           <button
             onClick={() => setShowDeleteConfirm(true)}
@@ -384,19 +388,21 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         </>
       )}
 
-      {/* Save button */}
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        className="btn-ghost text-xs disabled:opacity-50"
-      >
-        {isSaving ? (
-          <Loader2 size={14} className="animate-spin" />
-        ) : (
-          <Save size={14} />
-        )}
-        Kaydet
-      </button>
+      {/* Save button — admin only */}
+      {isAdmin && (
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="btn-ghost text-xs disabled:opacity-50"
+        >
+          {isSaving ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Save size={14} />
+          )}
+          Kaydet
+        </button>
+      )}
 
       {/* Execute button */}
       <button
