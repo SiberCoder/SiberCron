@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { X, Trash2, KeyRound, Copy, Check, Globe, Braces } from 'lucide-react';
+import { X, Trash2, KeyRound, Copy, Check, Globe, Braces, ShieldCheck, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import type { INodeProperty, ICredential } from '@sibercron/shared';
@@ -271,6 +271,79 @@ function WebhookUrlBanner({ path }: { path: string }) {
           {copied ? <Check size={12} className="text-aurora-emerald" /> : <Copy size={12} />}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── Webhook Secret Section ────────────────────────────────────────────
+
+function generateSecret(length = 32): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map((b) => chars[b % chars.length]).join('');
+}
+
+function WebhookSecretSection({ secret, onChange }: { secret: string; onChange: (v: string) => void }) {
+  const [show, setShow] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    if (!secret) return;
+    navigator.clipboard.writeText(secret).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-aurora-violet/20 bg-aurora-violet/5 p-3 space-y-2.5">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-aurora-violet uppercase tracking-wider">
+        <ShieldCheck size={11} />
+        Webhook İmza Anahtarı
+      </div>
+      <p className="text-[10px] text-obsidian-500 leading-relaxed">
+        Gelen webhook isteklerini doğrulamak için kullanılır. Boş bırakılırsa imzalama devre dışıdır.
+      </p>
+      <div className="flex items-center gap-1.5">
+        <input
+          type={show ? 'text' : 'password'}
+          value={secret}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Boş = imzalama yok"
+          className="glass-input text-xs flex-1 font-mono"
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          title={show ? 'Gizle' : 'Göster'}
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-obsidian-500 hover:text-white hover:bg-white/[0.06] transition-all"
+        >
+          {show ? <EyeOff size={12} /> : <Eye size={12} />}
+        </button>
+        <button
+          type="button"
+          onClick={copy}
+          title="Kopyala"
+          disabled={!secret}
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-obsidian-500 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-30"
+        >
+          {copied ? <Check size={12} className="text-aurora-emerald" /> : <Copy size={12} />}
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(generateSecret())}
+          title="Rastgele oluştur"
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-obsidian-500 hover:text-aurora-violet hover:bg-aurora-violet/10 transition-all"
+        >
+          <RefreshCw size={12} />
+        </button>
+      </div>
+      {secret && (
+        <p className="text-[10px] text-obsidian-600">
+          <code className="text-aurora-violet/70">X-Webhook-Signature</code> header ile SHA-256 HMAC olarak gönderilir.
+        </p>
+      )}
     </div>
   );
 }
@@ -629,6 +702,8 @@ export default function NodeConfigPanel() {
   const updateNodeCredentials = useWorkflowStore((s) => s.updateNodeCredentials);
   const removeNode = useWorkflowStore((s) => s.removeNode);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
+  const workflowMeta = useWorkflowStore((s) => s.workflowMeta);
+  const updateMeta = useWorkflowStore((s) => s.updateMeta);
   const getByName = useNodeRegistryStore((s) => s.getByName);
   const [availableCredentials, setAvailableCredentials] = useState<ICredential[]>([]);
 
@@ -695,6 +770,13 @@ export default function NodeConfigPanel() {
         {/* Webhook URL banner for webhook trigger */}
         {nodeType === 'sibercron.webhookTrigger' && (
           <WebhookUrlBanner path={(parameters['path'] as string) ?? 'webhook'} />
+        )}
+        {/* Webhook signing secret */}
+        {nodeType === 'sibercron.webhookTrigger' && (
+          <WebhookSecretSection
+            secret={workflowMeta.webhookSecret}
+            onChange={(v) => updateMeta({ webhookSecret: v })}
+          />
         )}
 
         {/* Credential selectors */}

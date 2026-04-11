@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 import type {
   IWorkflow,
+  IEdge,
   TriggerType,
   INodeInstance,
 } from '@sibercron/shared';
@@ -24,6 +25,7 @@ export interface WorkflowMeta {
   triggerType: TriggerType;
   cronExpression: string;
   webhookPath: string;
+  webhookSecret: string;
 }
 
 interface HistoryEntry {
@@ -76,6 +78,7 @@ const defaultMeta: WorkflowMeta = {
   triggerType: 'manual',
   cronExpression: '',
   webhookPath: '',
+  webhookSecret: '',
 };
 
 let nodeCounter = 0;
@@ -277,6 +280,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         triggerType: workflow.triggerType,
         cronExpression: workflow.cronExpression ?? '',
         webhookPath: workflow.webhookPath ?? '',
+        webhookSecret: (workflow.settings?.webhookSecret as string) ?? '',
       },
     });
   },
@@ -323,6 +327,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       triggerType: detectedTriggerType,
       cronExpression: detectedCronExpr || undefined,
       webhookPath: detectedWebhookPath || undefined,
+      settings: {
+        ...(workflowMeta.webhookSecret ? { webhookSecret: workflowMeta.webhookSecret } : {}),
+      },
     };
 
     let saved: IWorkflow;
@@ -343,6 +350,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         triggerType: saved.triggerType,
         cronExpression: saved.cronExpression ?? '',
         webhookPath: saved.webhookPath ?? '',
+        webhookSecret: (saved.settings?.webhookSecret as string) ?? workflowMeta.webhookSecret,
       },
     });
 
@@ -370,47 +378,61 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   exportWorkflow: () => {
     const state = get();
+    // Use the same $schema format as the server export so files are
+    // interchangeable between WorkflowList import and editor import.
     const exported = {
-      name: state.workflowMeta.name,
-      description: state.workflowMeta.description,
-      triggerType: state.workflowMeta.triggerType,
-      cronExpression: state.workflowMeta.cronExpression,
-      webhookPath: state.workflowMeta.webhookPath,
-      nodes: flowToNodeInstances(state.nodes),
-      edges: state.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        sourceHandle: e.sourceHandle ?? 'output',
-        target: e.target,
-        targetHandle: e.targetHandle ?? 'input',
-      })),
+      $schema: 'sibercron/workflow/v1',
       exportedAt: new Date().toISOString(),
-      version: '1.0',
+      workflow: {
+        name: state.workflowMeta.name,
+        description: state.workflowMeta.description,
+        triggerType: state.workflowMeta.triggerType,
+        cronExpression: state.workflowMeta.cronExpression,
+        webhookPath: state.workflowMeta.webhookPath,
+        nodes: flowToNodeInstances(state.nodes),
+        edges: state.edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          sourceHandle: e.sourceHandle ?? 'output',
+          target: e.target,
+          targetHandle: e.targetHandle ?? 'input',
+        })),
+        settings: {},
+      },
     };
     return JSON.stringify(exported, null, 2);
   },
 
   importWorkflow: (json: string) => {
-    let data: Record<string, unknown>;
+    let parsed: Record<string, unknown>;
     try {
-      data = JSON.parse(json) as Record<string, unknown>;
+      parsed = JSON.parse(json) as Record<string, unknown>;
     } catch {
       throw new Error('Invalid workflow JSON: could not parse file');
+    }
+    // Handle both formats:
+    //   1. Server export: { $schema: 'sibercron/workflow/v1', workflow: {...} }
+    //   2. Editor export: flat { name, nodes, edges, ... }
+    let data: Record<string, unknown>;
+    if (parsed['$schema'] === 'sibercron/workflow/v1' && parsed['workflow']) {
+      data = parsed['workflow'] as Record<string, unknown>;
+    } else {
+      data = parsed;
     }
     if (!data.nodes || !data.edges) {
       throw new Error('Invalid workflow JSON: missing nodes or edges');
     }
     const workflow: IWorkflow = {
       id: `imported_${Date.now()}`,
-      name: data.name ?? 'Imported Workflow',
-      description: data.description ?? '',
-      nodes: data.nodes,
-      edges: data.edges,
+      name: (data.name as string | undefined) ?? 'Imported Workflow',
+      description: (data.description as string | undefined) ?? '',
+      nodes: (data.nodes as INodeInstance[]),
+      edges: (data.edges as IEdge[]),
       isActive: false,
-      triggerType: data.triggerType ?? 'manual',
-      cronExpression: data.cronExpression ?? '',
-      webhookPath: data.webhookPath ?? '',
-      settings: data.settings ?? {},
+      triggerType: ((data.triggerType as string | undefined) ?? 'manual') as IWorkflow['triggerType'],
+      cronExpression: (data.cronExpression as string | undefined) ?? '',
+      webhookPath: (data.webhookPath as string | undefined) ?? '',
+      settings: (data.settings as Record<string, unknown> | undefined) ?? {},
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -430,6 +452,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         triggerType: workflow.triggerType,
         cronExpression: workflow.cronExpression ?? '',
         webhookPath: workflow.webhookPath ?? '',
+        webhookSecret: (workflow.settings?.webhookSecret as string) ?? '',
       },
     });
   },

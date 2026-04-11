@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { PanelLeft, CheckCircle2, XCircle, Loader2, X, ArrowRight, Clock } from 'lucide-react';
+import { PanelLeft, CheckCircle2, XCircle, Loader2, X, ArrowRight, Clock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
 import { ReactFlowProvider } from '@xyflow/react';
 import type { Node, Edge } from '@xyflow/react';
@@ -21,6 +21,98 @@ interface LocationState {
     nodes: Node[];
     edges: Edge[];
   };
+}
+
+// ── Validation banner ────────────────────────────────────────────────────────
+
+const TRIGGER_TYPES = new Set([
+  'sibercron.cronTrigger',
+  'sibercron.webhookTrigger',
+  'sibercron.manualTrigger',
+  'sibercron.telegramTrigger',
+]);
+
+function useWorkflowValidation() {
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const edges = useWorkflowStore((s) => s.edges);
+
+  return useMemo(() => {
+    const warnings: string[] = [];
+    if (nodes.length === 0) return warnings;
+
+    const hasTrigger = nodes.some((n) => TRIGGER_TYPES.has(n.data.nodeType as string));
+    if (!hasTrigger) {
+      warnings.push('Trigger node yok — workflow yalnızca manuel çalıştırılabilir');
+    }
+
+    const connectedIds = new Set<string>();
+    edges.forEach((e) => {
+      connectedIds.add(e.source);
+      connectedIds.add(e.target);
+    });
+
+    if (nodes.length > 1) {
+      const isolated = nodes.filter((n) => !connectedIds.has(n.id));
+      if (isolated.length > 0) {
+        const names = isolated.map((n) => (n.data.label as string) || n.id).join(', ');
+        warnings.push(`Bağlantısız node${isolated.length > 1 ? 'lar' : ''}: ${names}`);
+      }
+    }
+
+    return warnings;
+  }, [nodes, edges]);
+}
+
+function ValidationBanner() {
+  const warnings = useWorkflowValidation();
+  const [collapsed, setCollapsed] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const prevCount = useState(warnings.length)[0];
+
+  // Re-show banner when new warnings appear
+  useEffect(() => {
+    if (warnings.length > 0 && warnings.length !== prevCount) {
+      setDismissed(false);
+    }
+  }, [warnings.length, prevCount]);
+
+  if (warnings.length === 0 || dismissed) return null;
+
+  return (
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 animate-fade-in" style={{ minWidth: 320, maxWidth: 560 }}>
+      <div className="rounded-xl border border-aurora-amber/30 bg-aurora-amber/8 backdrop-blur-sm shadow-lg overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-2 px-3 py-2">
+          <AlertTriangle size={13} className="text-aurora-amber shrink-0" />
+          <span className="text-[11px] font-semibold text-aurora-amber flex-1">
+            {warnings.length} doğrulama uyarısı
+          </span>
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="text-obsidian-500 hover:text-white transition-colors p-0.5"
+          >
+            {collapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+          </button>
+          <button
+            onClick={() => setDismissed(true)}
+            className="text-obsidian-500 hover:text-white transition-colors p-0.5"
+          >
+            <X size={12} />
+          </button>
+        </div>
+        {/* Warning list */}
+        {!collapsed && (
+          <div className="px-3 pb-2 space-y-1 border-t border-aurora-amber/15">
+            {warnings.map((w, i) => (
+              <p key={i} className="text-[10px] text-obsidian-300 font-body py-0.5">
+                • {w}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ── Inline execution status bar ──────────────────────────────────────────────
@@ -201,9 +293,11 @@ function ExecutionLogDrawer() {
 
 export default function WorkflowEditorPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   const loadWorkflow = useWorkflowStore((s) => s.loadWorkflow);
@@ -227,13 +321,16 @@ export default function WorkflowEditorPage() {
     async function init() {
       reset();
       resetExecution();
+      setLoadError(null);
 
       if (id && id !== 'new') {
         setIsLoading(true);
         try {
           await loadWorkflow(id);
         } catch (err) {
-          console.error('Failed to load workflow:', err);
+          if (!cancelled) {
+            setLoadError(err instanceof Error ? err.message : 'Workflow yüklenemedi');
+          }
         } finally {
           if (!cancelled) setIsLoading(false);
         }
@@ -353,6 +450,22 @@ export default function WorkflowEditorPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-4 bg-obsidian-950 bg-mesh-gradient">
+        <XCircle size={40} className="text-aurora-rose" />
+        <p className="text-sm font-semibold text-white">Workflow Yüklenemedi</p>
+        <p className="text-xs text-obsidian-400 max-w-xs text-center">{loadError}</p>
+        <button
+          onClick={() => navigate('/workflows')}
+          className="mt-2 px-4 py-2 rounded-xl text-xs font-semibold bg-aurora-rose/10 border border-aurora-rose/20 text-aurora-rose hover:bg-aurora-rose/20 transition-all"
+        >
+          Workflow Listesine Dön
+        </button>
+      </div>
+    );
+  }
+
   return (
     <ReactFlowProvider>
       <div className="h-screen flex flex-col bg-obsidian-950">
@@ -376,6 +489,7 @@ export default function WorkflowEditorPage() {
           {/* Canvas + execution overlays */}
           <div className="flex-1 relative">
             <WorkflowCanvas />
+            <ValidationBanner />
             <ExecutionStatusBar />
             <ExecutionLogDrawer />
           </div>
