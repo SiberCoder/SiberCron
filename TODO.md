@@ -94,9 +94,9 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Rol bazli erisim kontrolu (RBAC) — admin/viewer, route koruma
 - [x] Workflow versiyonlama (auto-snapshot, restore)
 - [x] Execution log retention policy (otomatik, env ile ayarlanabilir)
-- [ ] Rate limiting (gelismis)
+- [x] Rate limiting (gelismis): endpoint bazli limit, Settings sayfasinda gorunum
 - [x] API anahtari yonetimi (kullanici bazli token uretimi ve iptal — scx_ prefix, SHA-256 hash, Settings UI)
-- [ ] Monitoring / metricsler
+- [x] Monitoring / metricsler: /api/v1/metrics endpoint (uptime, memory, node error stats, execution trends)
 - [x] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
 - [x] Workflow execution'larinda user bazli audit log (kim tetikledi)
 - [ ] LoginPage'e "sifre unut" / ilk kurulum wizard'ina admin ayarla adimi ekle
@@ -107,9 +107,9 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 #### Oncelik 4b: Devam
 - [x] Workflow execution'larinda user bazli audit log — her execution'a `triggeredBy: { userId, username }` ekle
 - [x] Rate limiting gelismis: endpoint bazli farkli limit (auth: 10/min, chat: 20/min, workflows: 60/min, genel: 200/min)
-- [ ] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
-- [x] Execution list sayfasinda workflow adiyla filtre + tarih aralik filtresi (client-side, anlık)
-- [ ] Node config panelinde expression builder: `{{ }}` sözdizimine tıklayınca değişken listesi göster
+- [x] Auth token suresini editor settings'den yapilandirma (JWT_TTL env + settings UI)
+- [x] Execution list sayfasinda workflow adiyla filtre + tarih aralik filtresi + triggeredBy filtresi (client-side, anlık)
+- [x] Node config panelinde expression builder: kategorili, filtrelenebilir degisken listesi
 - [ ] FTP/SFTP node: büyük dosyalar için streaming download desteği (şu an tüm dosyayı belleğe çekiyor)
 - [x] Minimap iyilestirmeleri: node tipine gore renk, toggle butonu, konum duzeltme
 
@@ -118,7 +118,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Node config panelinde expression builder: `{{ $json. }}` yazinca onceki node cikti alanlarini onerir
 - [x] Execution list'te `triggeredBy` sutunu (kim tetikledi) goster
 - [x] WorkflowListPage'de workflow kategorilendirme / tag sistemi
-- [ ] Settings sayfasina rate limit degerlerini gosterme/duzenle paneli
+- [x] Settings sayfasina rate limit degerlerini gosterme paneli (Sistem Bilgisi section'inda)
 - [x] Webhook tetikleyici node'unda beklenen payload schema validation (JSON Schema subset)
 - [x] Dashboard: en cok hata veren node istatistigi (node-level error chart)
 - [x] WebhookTrigger: respondWith HTTP kodu secenegi (200/202/204)
