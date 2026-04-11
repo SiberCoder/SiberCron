@@ -25,6 +25,7 @@ import { SplitNode } from './core/Split.node.js';
 import { EmailSMTPNode } from './messaging/EmailSMTP.node.js';
 import { DatabaseQueryNode } from './core/DatabaseQuery.node.js';
 import { RedisNode } from './core/Redis.node.js';
+import { RSSFeedNode } from './core/RSSFeed.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -52,6 +53,7 @@ export const builtinNodes: INodeType[] = [
   EmailSMTPNode,
   DatabaseQueryNode,
   RedisNode,
+  RSSFeedNode,
 ];
 
 export {
@@ -80,4 +82,5 @@ export {
   EmailSMTPNode,
   DatabaseQueryNode,
   RedisNode,
+  RSSFeedNode,
 };

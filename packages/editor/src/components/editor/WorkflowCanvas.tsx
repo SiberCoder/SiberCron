@@ -17,6 +17,8 @@ const nodeTypes = {
   siberNode: BaseNode,
 };
 
+const EMPTY_NODE_STATUSES: Record<string, string> = {};
+
 export default function WorkflowCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,7 +32,7 @@ export default function WorkflowCanvas() {
   const addNode = useWorkflowStore((s) => s.addNode);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
   const getByName = useNodeRegistryStore((s) => s.getByName);
-  const nodeStatuses = useExecutionStore((s) => s.currentExecution?.nodeStatuses ?? {});
+  const nodeStatuses = useExecutionStore((s) => s.currentExecution?.nodeStatuses ?? EMPTY_NODE_STATUSES);
 
   const edgesWithAnimation = useMemo(
     () =>
@@ -87,11 +89,17 @@ export default function WorkflowCanvas() {
     [addNode, getByName],
   );
 
+  const setSelectedOutputNode = useExecutionStore((s) => s.setSelectedOutputNode);
+
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: { id: string }) => {
       setSelectedNode(node.id);
+      // If this node has execution output, show it in the output viewer
+      if (nodeStatuses[node.id] === 'success' || nodeStatuses[node.id] === 'error') {
+        setSelectedOutputNode(node.id);
+      }
     },
-    [setSelectedNode],
+    [setSelectedNode, setSelectedOutputNode, nodeStatuses],
   );
 
   const onPaneClick = useCallback(() => {

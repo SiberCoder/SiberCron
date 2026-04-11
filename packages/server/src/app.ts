@@ -182,6 +182,30 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
     return { error: `No active webhook workflow found for path: ${normalizedPath}` };
   }
 
+  // ── HMAC signature verification (optional) ──────────────────────────
+  // If the workflow has a webhookSecret in settings, verify the request signature.
+  // Supports: X-Hub-Signature-256 (GitHub), X-Signature-256, X-Webhook-Signature headers.
+  const webhookSecret = (target.settings as Record<string, unknown> | undefined)?.webhookSecret as string | undefined;
+  if (webhookSecret) {
+    const crypto = await import('node:crypto');
+    const rawBody = typeof request.body === 'string' ? request.body : JSON.stringify(request.body ?? '');
+    const expectedSig = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
+
+    // Check multiple common signature headers
+    const sigHeader =
+      (request.headers['x-hub-signature-256'] as string) ??
+      (request.headers['x-signature-256'] as string) ??
+      (request.headers['x-webhook-signature'] as string) ??
+      '';
+    // Strip "sha256=" prefix if present (GitHub format)
+    const receivedSig = sigHeader.replace(/^sha256=/, '');
+
+    if (!receivedSig || !crypto.timingSafeEqual(Buffer.from(expectedSig, 'hex'), Buffer.from(receivedSig, 'hex'))) {
+      reply.code(401);
+      return { error: 'Invalid webhook signature' };
+    }
+  }
+
   const triggerData: Record<string, unknown> = {
     triggeredBy: 'webhook',
     webhookPath: normalizedPath,
@@ -191,6 +215,7 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
     body: request.body ?? null,
     ip: request.ip,
     receivedAt: new Date().toISOString(),
+    signatureVerified: !!webhookSecret,
   };
 
   const jobId = await queueService.addWorkflowJob(target.id, target.name, triggerData);
@@ -214,5 +239,55 @@ await app.register(socialAccountRoutes, { prefix: '/api/v1/social-accounts' });
 await app.register(messagingRoutes, { prefix: '/api/v1/messaging/webhook' });
 await app.register(commandRoutes, { prefix: '/api/v1/commands' });
 await app.register(chatRoutes, { prefix: '/api/v1/chat' });
+
+// ── Execution retention policy ─────────────────────────────────────────
+// Automatically clean up old executions to prevent unbounded growth.
+// Runs every hour. Configurable via EXECUTION_RETENTION_DAYS env var (default: 30).
+
+const RETENTION_DAYS = parseInt(process.env.EXECUTION_RETENTION_DAYS ?? '30', 10);
+const RETENTION_MAX_COUNT = parseInt(process.env.EXECUTION_RETENTION_MAX ?? '1000', 10);
+const RETENTION_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
+function runRetentionCleanup() {
+  try {
+    const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const { data: executions } = db.listExecutions({ limit: RETENTION_MAX_COUNT + 500 });
+    let deleted = 0;
+
+    for (const exec of executions) {
+      if (exec.status === 'running') continue; // Don't touch running executions
+      const createdAt = exec.startedAt ? new Date(exec.startedAt).getTime() : 0;
+      if (createdAt < cutoff) {
+        db.deleteExecution(exec.id);
+        deleted++;
+      }
+    }
+
+    // Also enforce max count: keep only the newest RETENTION_MAX_COUNT executions
+    if (executions.length - deleted > RETENTION_MAX_COUNT) {
+      const sorted = executions
+        .filter((e) => e.status !== 'running')
+        .sort((a, b) => new Date(b.startedAt ?? 0).getTime() - new Date(a.startedAt ?? 0).getTime());
+      for (let i = RETENTION_MAX_COUNT; i < sorted.length; i++) {
+        db.deleteExecution(sorted[i].id);
+        deleted++;
+      }
+    }
+
+    if (deleted > 0) {
+      console.log(`[Retention] Cleaned up ${deleted} old executions (retention: ${RETENTION_DAYS} days, max: ${RETENTION_MAX_COUNT})`);
+    }
+  } catch (err) {
+    console.error('[Retention] Cleanup error:', err);
+  }
+}
+
+// Run once on startup and then every hour
+runRetentionCleanup();
+const retentionInterval = setInterval(runRetentionCleanup, RETENTION_INTERVAL_MS);
+
+// Clean up interval on process exit
+process.on('SIGINT', () => clearInterval(retentionInterval));
+process.on('SIGTERM', () => clearInterval(retentionInterval));
 
 export { app, io, engine, registry, schedulerService, queueService };

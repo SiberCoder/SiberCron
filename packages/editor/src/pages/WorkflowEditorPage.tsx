@@ -12,6 +12,7 @@ import NodePalette from '../components/editor/NodePalette';
 import WorkflowCanvas from '../components/editor/WorkflowCanvas';
 import NodeConfigPanel from '../components/editor/NodeConfigPanel';
 import NodeOutputViewer from '../components/editor/NodeOutputViewer';
+import CommandPalette from '../components/editor/CommandPalette';
 
 interface LocationState {
   template?: {
@@ -300,6 +301,20 @@ export default function WorkflowEditorPage() {
         }
       }
 
+      // Ctrl+D / Cmd+D — duplicate selected node
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd' && !isInput && selectedNodeId) {
+        e.preventDefault();
+        const state = useWorkflowStore.getState();
+        const node = state.nodes.find((n) => n.id === selectedNodeId);
+        if (node) {
+          state.addNode(
+            node.data.nodeType as string,
+            `${node.data.label as string} (copy)`,
+            { x: node.position.x + 50, y: node.position.y + 50 },
+          );
+        }
+      }
+
       // Escape — deselect node
       if (e.key === 'Escape') {
         useWorkflowStore.getState().setSelectedNode(null);
@@ -339,6 +354,7 @@ export default function WorkflowEditorPage() {
   return (
     <ReactFlowProvider>
       <div className="h-screen flex flex-col bg-obsidian-950">
+        <CommandPalette />
         <EditorToolbar />
         <div className="flex-1 flex overflow-hidden relative">
           {/* Palette toggle */}

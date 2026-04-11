@@ -88,10 +88,11 @@ Tümü `/api/v1/` altında:
 
 ## Node Tipleri (packages/nodes/src/)
 
-**Trigger:** ManualTrigger, CronTrigger, WebhookTrigger
-**Core:** HttpRequest (auth: bearer/basic/apiKey, query params, timeout), Code (vm sandbox: Date/JSON/Math/console/URL/Promise), Conditional (19 operatör: equals, contains, startsWith, regex, exists, isEmpty, isType...), Transform (pick/remove/rename/set/flatten/wrap, çoklu field, auto-type), Merge (append/combineByPosition/combineByField/keepFirst/keepLast/multiplex), Delay, Log (select logLevel, expression desteği), Loop (each/count/arrayField), Split (chunk/byField/splitText)
-**AI:** AIAgent (çoklu provider), AutonomousDev (Claude CLI loop)
-**Messaging:** TelegramSend (text/photo/document, parseMode, reply), DiscordSend (webhook + bot API, embeds, username/avatar override), SlackSend (blocks, attachments, thread reply, unfurl control), WhatsAppReceive, WhatsAppSend, EmailSMTP (HTML/text, CC/BCC)
+**Trigger:** ManualTrigger, CronTrigger, WebhookTrigger, TelegramTrigger (incoming messages, command/text filter)
+**Core:** HttpRequest (auth: bearer/basic/apiKey, query params, timeout), Code (vm sandbox: Date/JSON/Math/console/URL/Promise), Conditional (19 operatör), Transform (pick/remove/rename/set/flatten/wrap), Merge (6 mod), Delay, Log (select logLevel), Loop (each/count/arrayField), Split (chunk/byField/splitText)
+**AI:** AIAgent (çoklu provider), AutonomousDev (Claude CLI loop), AISummarizer (concise/paragraph/bullets/keypoints/custom, çoklu dil), AIClassifier (multi-label, confidence score, çoklu provider)
+**Data:** DatabaseQuery (PostgreSQL/MySQL, parameterized queries, CRUD), Redis (16 operasyon: get/set/del/hget/hset/lpush/lrange/sadd/publish...)
+**Messaging:** TelegramSend (text/photo/document, parseMode, reply), DiscordSend (webhook + bot API, embeds), SlackSend (blocks, thread reply), WhatsAppReceive, WhatsAppSend, EmailSMTP (HTML/text, CC/BCC)
 
 Her node `INodeType` interface'ini implemente eder: `{ definition: INodeTypeDefinition, execute(context) }`
 
@@ -158,6 +159,14 @@ Ana interface'ler:
 - **Keyboard Shortcuts**: Delete (node sil), Ctrl+S (kaydet), Ctrl+Z (geri al), Ctrl+Shift+Z/Ctrl+Y (ileri al), Ctrl+E (çalıştır), Escape (seçimi kaldır)
 - **Workflow Import/Export**: JSON olarak dışa/içe aktarma. EditorToolbar'da Download/Upload butonları.
 - **Node Output Viewer**: Execution sonrası her node'un JSON çıktısını collapsible tree olarak gösteren panel.
+- **Node Düzeltmeleri**: Code node güvenli sandbox (builtins), Conditional 19 operatör, Transform 6 operasyon, Merge 6 mod, HttpRequest auth/timeout/queryParams, Telegram photo/doc, Discord webhook+bot+embeds, Slack blocks/thread
+- **AISummarizer Node**: Metin özetleme (concise/paragraph/bullets/keypoints/custom), çoklu dil, çoklu provider
+- **AIClassifier Node**: Metin sınıflandırma, multi-label, confidence score, JSON mode
+- **TelegramTrigger Node**: Gelen mesaj tetikleyici, update type/chat/command/regex filtreler
+- **DatabaseQuery Node**: PostgreSQL/MySQL, parameterized queries, insert/update/delete/select
+- **Redis Node**: 16 operasyon (get/set/del/exists/keys/incr/hget/hset/hgetall/lpush/lrange/sadd/smembers/publish/ttl/expire)
+- **Edge Animasyonları**: Execution sırasında edge renk ve animasyon (running=blue, success=green, error=red)
+- **Command Palette (Ctrl+K)**: Arama destekli komut paneli — workflow kaydet/çalıştır/import/export, node ekle, navigasyon
 
 ## Kurallar
 

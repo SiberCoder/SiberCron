@@ -67,35 +67,35 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [ ] Temel akis testi: workflow olustur -> kaydet -> calistir
 
 #### Oncelik 2: Ek Node'lar
-- [ ] AISummarizer node (metin ozetleme)
-- [ ] AIClassifier node (metin siniflandirma)
+- [x] AISummarizer node (metin ozetleme)
+- [x] AIClassifier node (metin siniflandirma)
 - [ ] AIWebBrowser node (web scraping + AI ozet)
-- [ ] TelegramTrigger node (incoming messages)
+- [x] TelegramTrigger node (incoming messages)
 - [ ] GoogleSheets node (read/write/append)
-- [ ] MySQL / PostgreSQL query node
-- [ ] Redis node (get/set/del/publish)
+- [x] MySQL / PostgreSQL query node (DatabaseQuery)
+- [x] Redis node (16 operasyon)
 - [ ] FTP/SFTP node
-- [ ] RSS Feed node
+- [x] RSS Feed node
 
 #### Oncelik 3: Editor Gelistirmeleri
-- [ ] Template'den workflow olusturma (templates sayfasindan)
+- [x] Template'den workflow olusturma (templates sayfasindan)
 - [ ] Minimap iyilestirmeleri
-- [ ] Edge animasyonlari (calistirma sirasinda)
-- [ ] Command palette (Ctrl+K)
-- [ ] Workflow arama ve filtreleme
-- [ ] Node klonlama (Ctrl+D)
+- [x] Edge animasyonlari (calistirma sirasinda)
+- [x] Command palette (Ctrl+K)
+- [x] Workflow arama ve filtreleme
+- [x] Node klonlama (Ctrl+D)
 - [ ] Coklu node secimi + topluca silme/tasima
-- [ ] Node gruoplama / sub-workflow
+- [ ] Node gruplama / sub-workflow
 
 #### Oncelik 4: Production Ozellikleri
 - [ ] Kullanici kimlik dogrulama (auth)
 - [ ] Rol bazli erisim kontrolu (RBAC)
 - [ ] Workflow versiyonlama
-- [ ] Execution log retention policy
+- [x] Execution log retention policy (otomatik, env ile ayarlanabilir)
 - [ ] Rate limiting (gelismis)
 - [ ] API anahtari yonetimi
 - [ ] Monitoring / metricsler
-- [ ] Webhook guvenligi (HMAC imza dogrulama)
+- [x] Webhook guvenligi (HMAC-SHA256 imza dogrulama)
 
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
