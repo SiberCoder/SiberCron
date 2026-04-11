@@ -78,7 +78,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         currentProvider: aiMessage.metadata?.provider || state.currentProvider,
       }));
     } catch (err) {
-      set(() => ({
+      set((state) => ({
+        // Remove the optimistic user message so the chat doesn't show an orphaned message
+        messages: state.messages.filter((m) => m.id !== userMsg.id),
         isLoading: false,
         isSending: false,
         error: (err as Error).message,

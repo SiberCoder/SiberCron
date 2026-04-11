@@ -212,6 +212,17 @@ export async function workflowRoutes(
         errorMessage: (err as Error).message,
         finishedAt: new Date().toISOString(),
       });
+    }).finally(() => {
+      // Clean up the ID mapping to prevent memory leak
+      const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
+      if (idMap) {
+        for (const [engineId, apiId] of idMap) {
+          if (apiId === executionId) {
+            idMap.delete(engineId);
+            break;
+          }
+        }
+      }
     });
 
     return runningExecution;

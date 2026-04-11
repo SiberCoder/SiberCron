@@ -455,7 +455,24 @@ export class Database {
 
   // ── Persistence ──────────────────────────────────────────────────────
 
+  private _savePending = false;
+
+  /**
+   * Schedule a debounced save.
+   * Multiple rapid mutations (e.g. per-node execution updates) are batched
+   * into a single disk write via setImmediate, avoiding repeated synchronous
+   * blocking of the event loop.
+   */
   save(): void {
+    if (this._savePending) return;
+    this._savePending = true;
+    setImmediate(() => {
+      this._savePending = false;
+      this._flush();
+    });
+  }
+
+  private _flush(): void {
     try {
       if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
       const data = {
@@ -466,7 +483,11 @@ export class Database {
         commandRegistrations: Object.fromEntries(this.commandRegistrations),
         setupConfig: this.setupConfig,
       };
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+      // Write to a temp file then rename for atomic replacement.
+      // Prevents a corrupt data file if the process dies mid-write.
+      const tmpFile = `${DATA_FILE}.tmp`;
+      fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
+      fs.renameSync(tmpFile, DATA_FILE);
     } catch (err) {
       console.error('[DB] Save error:', (err as Error).message);
     }

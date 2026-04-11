@@ -7,6 +7,19 @@ import { db } from '../db/database.js';
 import { claudeCliService } from '../services/claudeCliService.js';
 
 /**
+ * Upsert a credential by type: update if one with the same type exists, create otherwise.
+ * Prevents duplicate credentials when the user re-saves setup or re-authenticates via OAuth.
+ */
+function upsertCredential(name: string, type: string, data: Record<string, unknown>): void {
+  const existing = db.listCredentials().find((c) => c.type === type);
+  if (existing) {
+    db.updateCredential(existing.id, { name, data });
+  } else {
+    db.createCredential({ name, type, data });
+  }
+}
+
+/**
  * Kurulum yapilandirma rotalari.
  * AI, mesajlasma ve zamanlama ayarlarini yonetir.
  */
@@ -31,17 +44,6 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
         timeout?: number;
         maxConcurrent?: number;
       };
-    };
-
-    // Upsert provider credentials: update existing ones, create only if missing.
-    // This prevents stale duplicate credentials when the user re-saves setup.
-    const upsertCredential = (name: string, type: string, data: Record<string, unknown>) => {
-      const existing = db.listCredentials().find((c) => c.type === type);
-      if (existing) {
-        db.updateCredential(existing.id, { name, data });
-      } else {
-        db.createCredential({ name, type, data });
-      }
     };
 
     if (body.ai?.providers) {
@@ -668,7 +670,7 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
           session.status = 'complete';
           session.token = data.access_token;
           session.message = 'GitHub Copilot basariyla baglandi';
-          db.createCredential({ name: 'github-copilot-oauth', type: 'github_copilot', data: { token: data.access_token, authMethod: 'oauth_session' } });
+          upsertCredential('github-copilot-oauth', 'github_copilot', { token: data.access_token, authMethod: 'oauth_session' });
           return;
         }
         if (data.error === 'expired_token') { session.status = 'failed'; session.message = 'Kod suresi doldu'; return; }
@@ -856,11 +858,7 @@ async function submitKey(){
           session.status = 'complete';
           session.token = tokenData.access_token;
           session.message = 'Google AI basariyla baglandi';
-          db.createCredential({
-            name: 'google-oauth',
-            type: 'google',
-            data: { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, authMethod: 'oauth_session' },
-          });
+          upsertCredential('google-oauth', 'google', { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, authMethod: 'oauth_session' });
           return reply.type('text/html').send(`<html><body style="background:#0a0a12;color:#22c55e;font-family:system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh"><h2>✓ Google AI Basariyla Baglandi!</h2><p style="color:#888;margin-top:8px">Bu pencere kapanacak...</p><script>setTimeout(()=>window.close(),2000)</script></body></html>`);
         }
         session.status = 'failed';
@@ -917,7 +915,7 @@ async function submitKey(){
     }
 
     if (valid) {
-      db.createCredential({ name: `${provider}-session`, type: provider, data: { apiKey: key, authMethod: 'oauth_session' } });
+      upsertCredential(`${provider}-session`, provider, { apiKey: key, authMethod: 'oauth_session' });
     }
 
     if (session) {

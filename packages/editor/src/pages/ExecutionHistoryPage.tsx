@@ -18,7 +18,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
-import type { IExecution, ExecutionStatus, INodeExecutionResult } from '@sibercron/shared';
+import { io, type Socket } from 'socket.io-client';
+import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsExecutionCompleted } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
 
 const STATUS_CONFIG: Record<
@@ -415,6 +416,8 @@ export default function ExecutionHistoryPage() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const socketRef = useRef<Socket | null>(null);
+  const subscribedIds = useRef<Set<string>>(new Set());
   const pageSize = 10;
   const totalPages = useMemo(() => Math.ceil(executions.length / pageSize), [executions.length]);
   const paginatedExecutions = useMemo(
@@ -432,6 +435,71 @@ export default function ExecutionHistoryPage() {
       setIsLoading(false);
     }
   };
+
+  // WebSocket: subscribe to running executions for live updates
+  useEffect(() => {
+    const socket = io('/', { transports: ['websocket'], reconnection: true });
+    socketRef.current = socket;
+
+    socket.on('execution:node:done', (data: WsNodeDone & { executionId?: string }) => {
+      if (!data.executionId) return;
+      setExecutions((prev) =>
+        prev.map((exec) => {
+          if (exec.id !== data.executionId) return exec;
+          const updated: IExecution = {
+            ...exec,
+            nodeResults: {
+              ...exec.nodeResults,
+              [data.nodeId]: {
+                nodeId: data.nodeId,
+                nodeName: data.nodeName,
+                status: data.status as INodeExecutionResult['status'],
+                output: data.output,
+                error: data.error,
+                durationMs: data.durationMs,
+              },
+            },
+          };
+          return updated;
+        }),
+      );
+    });
+
+    socket.on('execution:completed', (data: WsExecutionCompleted & { executionId?: string }) => {
+      if (!data.executionId) return;
+      setExecutions((prev) =>
+        prev.map((exec) =>
+          exec.id === data.executionId
+            ? {
+                ...exec,
+                status: data.status as IExecution['status'],
+                durationMs: data.durationMs,
+                finishedAt: new Date().toISOString(),
+              }
+            : exec,
+        ),
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+      subscribedIds.current.clear();
+    };
+  }, []);
+
+  // Subscribe to all currently running executions
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    for (const exec of executions) {
+      if (exec.status === 'running' && !subscribedIds.current.has(exec.id)) {
+        socket.emit('subscribe:execution', exec.id);
+        subscribedIds.current.add(exec.id);
+      }
+    }
+  }, [executions]);
 
   useEffect(() => {
     load();

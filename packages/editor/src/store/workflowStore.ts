@@ -209,6 +209,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const { workflowMeta, nodes, edges } = state;
     const nodeInstances = flowToNodeInstances(nodes);
 
+    // Sync triggerType + cronExpression/webhookPath from the trigger node's parameters.
+    // This ensures the scheduler uses the same values the user configured on the canvas.
+    const TRIGGER_TYPE_MAP: Record<string, TriggerType> = {
+      'sibercron.cronTrigger': 'cron',
+      'sibercron.webhookTrigger': 'webhook',
+      'sibercron.manualTrigger': 'manual',
+    };
+    const triggerNode = nodes.find(
+      (n) => TRIGGER_TYPE_MAP[n.data.nodeType as string] !== undefined,
+    );
+    const detectedTriggerType: TriggerType = triggerNode
+      ? (TRIGGER_TYPE_MAP[triggerNode.data.nodeType as string] ?? workflowMeta.triggerType)
+      : workflowMeta.triggerType;
+    const triggerParams = (triggerNode?.data.parameters ?? {}) as Record<string, unknown>;
+    const detectedCronExpr =
+      detectedTriggerType === 'cron'
+        ? ((triggerParams.cronExpression as string) || workflowMeta.cronExpression || '0 * * * *')
+        : (workflowMeta.cronExpression || undefined);
+    const detectedWebhookPath =
+      detectedTriggerType === 'webhook'
+        ? ((triggerParams.path as string) || workflowMeta.webhookPath || undefined)
+        : (workflowMeta.webhookPath || undefined);
+
     const payload = {
       name: workflowMeta.name,
       description: workflowMeta.description || undefined,
@@ -220,9 +243,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         target: e.target,
         targetHandle: e.targetHandle ?? 'input',
       })),
-      triggerType: workflowMeta.triggerType,
-      cronExpression: workflowMeta.cronExpression || undefined,
-      webhookPath: workflowMeta.webhookPath || undefined,
+      triggerType: detectedTriggerType,
+      cronExpression: detectedCronExpr || undefined,
+      webhookPath: detectedWebhookPath || undefined,
     };
 
     let saved: IWorkflow;
@@ -237,7 +260,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
     set({
       isDirty: false,
-      workflowMeta: { ...workflowMeta, id: saved.id },
+      workflowMeta: {
+        ...workflowMeta,
+        id: saved.id,
+        triggerType: saved.triggerType,
+        cronExpression: saved.cronExpression ?? '',
+        webhookPath: saved.webhookPath ?? '',
+      },
     });
 
     return saved.id;

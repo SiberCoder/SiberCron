@@ -51,12 +51,17 @@ export class NodeExecutor {
     const startedAt = new Date();
     try {
       const timeoutMs = node.definition.timeout ?? NODE_EXECUTION_TIMEOUT;
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
       const output = await Promise.race([
         node.execute(context),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Node execution timed out after ${timeoutMs}ms`)), timeoutMs),
-        ),
+        new Promise<never>((_, reject) => {
+          timeoutHandle = setTimeout(
+            () => reject(new Error(`Node execution timed out after ${timeoutMs}ms`)),
+            timeoutMs,
+          );
+        }),
       ]);
+      clearTimeout(timeoutHandle);
 
       const finishedAt = new Date();
       const durationMs = finishedAt.getTime() - startedAt.getTime();

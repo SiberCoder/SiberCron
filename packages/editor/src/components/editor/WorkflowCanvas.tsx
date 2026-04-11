@@ -10,6 +10,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
+import { useExecutionStore } from '../../store/executionStore';
 import BaseNode from '../nodes/BaseNode';
 
 const nodeTypes = {
@@ -29,15 +30,33 @@ export default function WorkflowCanvas() {
   const addNode = useWorkflowStore((s) => s.addNode);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
   const getByName = useNodeRegistryStore((s) => s.getByName);
+  const nodeStatuses = useExecutionStore((s) => s.currentExecution?.nodeStatuses ?? {});
 
   const edgesWithAnimation = useMemo(
     () =>
-      edges.map((e) => ({
-        ...e,
-        style: { stroke: 'rgba(255, 255, 255, 0.08)', strokeWidth: 2 },
-        type: 'smoothstep',
-      })),
-    [edges],
+      edges.map((e) => {
+        const sourceStatus = nodeStatuses[e.source];
+        let stroke = 'rgba(255, 255, 255, 0.08)';
+        let animated = false;
+
+        if (sourceStatus === 'success') {
+          stroke = 'rgba(16, 185, 129, 0.5)'; // emerald
+          animated = true;
+        } else if (sourceStatus === 'running') {
+          stroke = 'rgba(59, 130, 246, 0.6)'; // blue
+          animated = true;
+        } else if (sourceStatus === 'error') {
+          stroke = 'rgba(239, 68, 68, 0.5)'; // red
+        }
+
+        return {
+          ...e,
+          style: { stroke, strokeWidth: 2 },
+          type: 'smoothstep',
+          animated,
+        };
+      }),
+    [edges, nodeStatuses],
   );
 
   const onDragOver = useCallback((event: DragEvent) => {

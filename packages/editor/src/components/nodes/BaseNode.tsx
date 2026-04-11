@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import clsx from 'clsx';
-import * as LucideIcons from 'lucide-react';
+import { getNodeIcon } from '../../lib/iconRegistry';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
 import { useExecutionStore } from '../../store/executionStore';
 import { useWorkflowStore } from '../../store/workflowStore';
@@ -31,11 +31,6 @@ const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-obsidian-600',
 };
 
-function getIcon(iconName: string) {
-  const icons = LucideIcons as unknown as Record<string, React.ComponentType<Record<string, unknown>>>;
-  return icons[iconName] ?? LucideIcons.Box;
-}
-
 function BaseNode({ id, data, selected }: NodeProps) {
   const nodeType = data.nodeType as string;
   const label = data.label as string;
@@ -46,7 +41,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
 
   const group = definition?.group ?? 'core';
   const iconName = definition?.icon ?? 'Box';
-  const Icon = getIcon(iconName);
+  const Icon = getNodeIcon(iconName);
   const nodeStatus = execution?.nodeStatuses[id];
   const isSelected = selected || selectedNodeId === id;
   const accentColor = GROUP_ACCENT_COLORS[group] ?? '#627d98';
@@ -82,7 +77,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
       {/* Input handles */}
       {inputs.map((input, i) => (
         <Handle
-          key={`input-${input}`}
+          key={`input-${input}-${i}`}
           type="target"
           position={Position.Left}
           id={input}
@@ -120,7 +115,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
       {/* Output handles */}
       {outputs.map((output, i) => (
         <Handle
-          key={`output-${output}`}
+          key={`output-${output}-${i}`}
           type="source"
           position={Position.Right}
           id={output}

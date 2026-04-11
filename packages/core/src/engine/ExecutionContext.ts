@@ -62,10 +62,21 @@ export class ExecutionContext implements IExecutionContext {
       timeoutId = setTimeout(() => controller.abort(), timeout);
     }
 
+    // Automatically set Content-Type for JSON bodies unless already specified
+    const mergedHeaders: Record<string, string> = { ...headers };
+    if (body !== undefined) {
+      const contentTypeLower = Object.keys(mergedHeaders).find(
+        (k) => k.toLowerCase() === 'content-type',
+      );
+      if (!contentTypeLower) {
+        mergedHeaders['Content-Type'] = 'application/json';
+      }
+    }
+
     try {
       const response = await fetch(url, {
         method,
-        headers,
+        headers: mergedHeaders,
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });

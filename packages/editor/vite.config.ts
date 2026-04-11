@@ -13,4 +13,18 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'flow-vendor': ['@xyflow/react'],
+          'lucide': ['lucide-react'],
+          'state': ['zustand'],
+          'socket': ['socket.io-client'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
 });

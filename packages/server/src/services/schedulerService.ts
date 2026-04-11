@@ -183,10 +183,10 @@ class SchedulerService {
    */
   async shutdown(): Promise<void> {
     console.log('[Scheduler] Shutting down...');
-    for (const [id, job] of this.jobs) {
+    for (const job of this.jobs.values()) {
       job.task.stop();
-      this.jobs.delete(id);
     }
+    this.jobs.clear();
     this._initialized = false;
     console.log('[Scheduler] Shutdown complete.');
   }

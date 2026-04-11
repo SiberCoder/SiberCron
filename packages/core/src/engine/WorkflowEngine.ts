@@ -85,13 +85,17 @@ export class WorkflowEngine {
       // ── Execute nodes in order ──────────────────────────────────────
       // Stores the output data produced by each node, keyed by node ID.
       const nodeOutputs = new Map<string, INodeExecutionData[]>();
+      // Tracks nodes explicitly skipped due to conditional branching (not due to failure).
+      // Used by shouldSkipNode to distinguish "failed but continueOnFail" from "wrong branch".
+      const skippedNodeIds = new Set<string>();
 
       for (const nodeId of sortedNodeIds) {
         const nodeInstance = nodeMap.get(nodeId);
         if (!nodeInstance) continue;
 
         // Determine if this node should be skipped due to conditional branching
-        if (shouldSkipNode(nodeId, incomingEdges, nodeOutputs, workflow.edges)) {
+        if (shouldSkipNode(nodeId, incomingEdges, nodeOutputs, skippedNodeIds)) {
+          skippedNodeIds.add(nodeId);
           execution.nodeResults[nodeId] = {
             nodeId,
             nodeName: nodeInstance.name,
@@ -289,12 +293,17 @@ function topologicalSort(
  * field in its output JSON. Only edges whose `sourceHandle` matches the
  * branch value should propagate; downstream nodes reachable exclusively
  * through non-matching handles are skipped.
+ *
+ * NOTE: A node that failed while `continueOnFail=true` has no output but
+ * should NOT block its downstream — only explicitly skipped nodes (wrong
+ * conditional branch) should propagate the skip. We distinguish them via
+ * `skippedNodeIds`.
  */
 function shouldSkipNode(
   nodeId: string,
   incomingEdges: Map<string, IEdge[]>,
   nodeOutputs: Map<string, INodeExecutionData[]>,
-  allEdges: IEdge[],
+  skippedNodeIds: Set<string>,
 ): boolean {
   const incoming = incomingEdges.get(nodeId) ?? [];
   if (incoming.length === 0) return false;
@@ -306,10 +315,15 @@ function shouldSkipNode(
   for (const edge of incoming) {
     const sourceOutput = nodeOutputs.get(edge.source);
 
-    // If the source hasn't produced output (e.g. it was skipped), this
-    // path is blocked.
     if (!sourceOutput || sourceOutput.length === 0) {
-      continue;
+      if (skippedNodeIds.has(edge.source)) {
+        // Source was explicitly skipped (wrong conditional branch) → this path is blocked.
+        continue;
+      }
+      // Source had no output due to failure (continueOnFail) or is a trigger with no data.
+      // Treat this path as open so downstream nodes still execute.
+      allBlocked = false;
+      break;
     }
 
     // Check if the source output specifies a branch

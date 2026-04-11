@@ -1,16 +1,11 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import clsx from 'clsx';
 import cronstrue from 'cronstrue';
 import type { INodeProperty } from '@sibercron/shared';
+import { getNodeIcon } from '../../lib/iconRegistry';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
-
-function getIcon(iconName: string) {
-  const icons = LucideIcons as unknown as Record<string, React.ComponentType<Record<string, unknown>>>;
-  return icons[iconName] ?? LucideIcons.Box;
-}
 
 // ── Visual Cron Builder ──────────────────────────────────────────────
 
@@ -472,7 +467,7 @@ export default function NodeConfigPanel() {
   const definition = getByName(nodeType);
   if (!definition) return null;
 
-  const Icon = getIcon(definition.icon);
+  const Icon = getNodeIcon(definition.icon);
   const parameters = (node.data.parameters as Record<string, unknown>) ?? {};
 
   const handleChange = (name: string, value: unknown) => {

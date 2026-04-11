@@ -19,6 +19,8 @@ import { chatRoutes } from './routes/chat.js';
 import { schedulerService } from './services/schedulerService.js';
 import { queueService } from './services/queueService.js';
 import { executionLogStore } from './services/executionLogStore.js';
+import { db } from './db/database.js';
+import type { IWorkflow } from '@sibercron/shared';
 
 // ── Initialize node registry ────────────────────────────────────────────
 
@@ -57,6 +59,7 @@ app.addHook('onRequest', async (request, reply) => {
 });
 
 // Periodic cleanup of expired rate-limit entries (every 5 minutes)
+// unref() prevents these timers from keeping the process alive during graceful shutdown
 setInterval(() => {
   const now = Date.now();
   for (const [ip, entry] of rateLimitMap) {
@@ -64,12 +67,12 @@ setInterval(() => {
       rateLimitMap.delete(ip);
     }
   }
-}, 5 * 60_000);
+}, 5 * 60_000).unref();
 
 // Periodic cleanup of old execution logs (every hour, keep last 1 hour)
 setInterval(() => {
   executionLogStore.cleanup();
-}, 60 * 60_000);
+}, 60 * 60_000).unref();
 
 // CORS
 await app.register(cors, {
@@ -127,6 +130,45 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
 
 // Expose the map so workflow route can register mappings
 (globalThis as any).__executionIdMap = executionIdMap;
+
+// ── Webhook trigger endpoint ────────────────────────────────────────────
+// Handles: POST|GET /api/v1/webhook/*
+// Supports both single-segment (/my-hook) and multi-segment (/category/hook) paths.
+
+async function webhookHandler(request: import('fastify').FastifyRequest, reply: import('fastify').FastifyReply) {
+  // Fastify wildcard captures everything after the prefix as params['*']
+  const rawPath = (request.params as Record<string, string>)['*'] ?? '';
+  const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+
+  const { data: workflows } = db.listWorkflows({ isActive: true, triggerType: 'webhook', limit: 200 });
+  const target = workflows.find(
+    (w: IWorkflow) => w.webhookPath === normalizedPath || w.webhookPath === rawPath,
+  );
+
+  if (!target) {
+    reply.code(404);
+    return { error: `No active webhook workflow found for path: ${normalizedPath}` };
+  }
+
+  const triggerData: Record<string, unknown> = {
+    triggeredBy: 'webhook',
+    webhookPath: normalizedPath,
+    method: request.method,
+    headers: request.headers,
+    query: request.query,
+    body: request.body ?? null,
+    ip: request.ip,
+    receivedAt: new Date().toISOString(),
+  };
+
+  const jobId = await queueService.addWorkflowJob(target.id, target.name, triggerData);
+
+  reply.code(202);
+  return { message: 'Webhook received', workflowId: target.id, workflowName: target.name, jobId };
+}
+
+app.post('/api/v1/webhook/*', webhookHandler);
+app.get('/api/v1/webhook/*', webhookHandler);
 
 // ── Register route plugins ──────────────────────────────────────────────
 

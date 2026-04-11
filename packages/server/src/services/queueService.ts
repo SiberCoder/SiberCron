@@ -1,8 +1,10 @@
+import crypto from 'node:crypto';
 import { Queue, Worker, type Job } from 'bullmq';
 import type { Redis } from 'ioredis';
 import IORedis from 'ioredis';
 import { WorkflowEngine } from '@sibercron/core';
 import { WS_EVENTS } from '@sibercron/shared';
+import type { INodeExecutionResult } from '@sibercron/shared';
 import type { Server as SocketIOServer } from 'socket.io';
 import { db } from '../db/database.js';
 import { config } from '../config/env.js';
@@ -164,13 +166,55 @@ class QueueService {
       throw new Error('WorkflowEngine not initialized');
     }
 
-    const execution = await this.engine.execute(
+    // Create a "running" execution record immediately so the UI can show progress
+    const executionId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    db.createExecution({
+      id: executionId,
+      workflowId,
+      workflowName,
+      status: 'running',
+      triggerType: workflow.triggerType,
+      nodeResults: {},
+      startedAt: now,
+      createdAt: now,
+    });
+
+    const engineResult = await this.engine.execute(
       workflow,
       triggerData,
       (event, data) => {
         if (!this.io) return;
-        const room = `execution:${(data as { executionId?: string }).executionId ?? workflowId}`;
-        this.io.to(room).emit(event, data);
+        // Override engine's internal executionId with our pre-registered one
+        const payload = { ...(data as Record<string, unknown>), executionId };
+
+        // Persist per-node results as they arrive for live UI updates
+        if (event === WS_EVENTS.EXECUTION_NODE_DONE) {
+          const nodeData = data as {
+            nodeId?: string;
+            nodeName?: string;
+            status?: string;
+            output?: Record<string, unknown>[];
+            error?: string;
+            durationMs?: number;
+          };
+          if (nodeData.nodeId) {
+            const existing = db.getExecution(executionId);
+            if (existing) {
+              existing.nodeResults[nodeData.nodeId] = {
+                nodeId: nodeData.nodeId,
+                nodeName: nodeData.nodeName ?? nodeData.nodeId,
+                status: (nodeData.status ?? 'error') as INodeExecutionResult['status'],
+                output: nodeData.output,
+                error: nodeData.error,
+                durationMs: nodeData.durationMs,
+              };
+              db.updateExecution(executionId, { nodeResults: existing.nodeResults });
+            }
+          }
+        }
+
+        this.io.to(`execution:${executionId}`).emit(event, payload);
       },
       async (credentialId: string) => {
         const cred = db.getCredential(credentialId);
@@ -179,11 +223,17 @@ class QueueService {
       },
     );
 
-    // Save execution to database
-    db.createExecution(execution);
+    // Update the pre-created execution record with the final result
+    db.updateExecution(executionId, {
+      status: engineResult.status,
+      nodeResults: engineResult.nodeResults,
+      errorMessage: engineResult.errorMessage,
+      finishedAt: engineResult.finishedAt,
+      durationMs: engineResult.durationMs,
+    });
 
     console.log(
-      `[Queue] Workflow "${workflowName}" execution ${execution.status}: ${execution.id}`,
+      `[Queue] Workflow "${workflowName}" execution ${engineResult.status}: ${executionId}`,
     );
   }
 
@@ -212,10 +262,15 @@ class QueueService {
       return job.id!;
     }
 
-    // Fallback: direct execution without queue
-    console.log(`[Queue] Redis unavailable. Executing "${workflowName}" directly.`);
-    await this.executeDirectly(jobData);
-    return `direct:${Date.now()}`;
+    // Fallback: direct execution without queue.
+    // Fire-and-forget so callers (webhook handlers, etc.) are not blocked
+    // for the entire duration of the workflow execution.
+    const jobId = `direct:${Date.now()}`;
+    console.log(`[Queue] Redis unavailable. Executing "${workflowName}" directly (${jobId}).`);
+    this.executeDirectly(jobData).catch((err) => {
+      console.error(`[Queue:Direct] Unhandled error for "${workflowName}":`, (err as Error).message);
+    });
+    return jobId;
   }
 
   /**
@@ -235,14 +290,54 @@ class QueueService {
       return;
     }
 
+    // Create a "running" execution record immediately so the UI can show progress
+    const executionId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    db.createExecution({
+      id: executionId,
+      workflowId,
+      workflowName,
+      status: 'running',
+      triggerType: workflow.triggerType,
+      nodeResults: {},
+      startedAt: now,
+      createdAt: now,
+    });
+
     try {
-      const execution = await this.engine.execute(
+      const engineResult = await this.engine.execute(
         workflow,
         triggerData,
         (event, data) => {
           if (!this.io) return;
-          const room = `execution:${(data as { executionId?: string }).executionId ?? workflowId}`;
-          this.io.to(room).emit(event, data);
+          const payload = { ...(data as Record<string, unknown>), executionId };
+
+          if (event === WS_EVENTS.EXECUTION_NODE_DONE) {
+            const nodeData = data as {
+              nodeId?: string;
+              nodeName?: string;
+              status?: string;
+              output?: Record<string, unknown>[];
+              error?: string;
+              durationMs?: number;
+            };
+            if (nodeData.nodeId) {
+              const existing = db.getExecution(executionId);
+              if (existing) {
+                existing.nodeResults[nodeData.nodeId] = {
+                  nodeId: nodeData.nodeId,
+                  nodeName: nodeData.nodeName ?? nodeData.nodeId,
+                  status: (nodeData.status ?? 'error') as INodeExecutionResult['status'],
+                  output: nodeData.output,
+                  error: nodeData.error,
+                  durationMs: nodeData.durationMs,
+                };
+                db.updateExecution(executionId, { nodeResults: existing.nodeResults });
+              }
+            }
+          }
+
+          this.io.to(`execution:${executionId}`).emit(event, payload);
         },
         async (credentialId: string) => {
           const cred = db.getCredential(credentialId);
@@ -251,9 +346,20 @@ class QueueService {
         },
       );
 
-      db.createExecution(execution);
-      console.log(`[Queue:Direct] Workflow "${workflowName}" executed: ${execution.status}`);
+      db.updateExecution(executionId, {
+        status: engineResult.status,
+        nodeResults: engineResult.nodeResults,
+        errorMessage: engineResult.errorMessage,
+        finishedAt: engineResult.finishedAt,
+        durationMs: engineResult.durationMs,
+      });
+      console.log(`[Queue:Direct] Workflow "${workflowName}" executed: ${engineResult.status}`);
     } catch (err) {
+      db.updateExecution(executionId, {
+        status: 'error',
+        errorMessage: (err as Error).message,
+        finishedAt: new Date().toISOString(),
+      });
       console.error(`[Queue:Direct] Workflow "${workflowName}" failed:`, (err as Error).message);
     }
   }

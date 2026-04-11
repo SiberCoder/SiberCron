@@ -9,7 +9,7 @@ export const MergeNode: INodeType = {
     group: 'core',
     version: 1,
     description: 'Merge data from multiple inputs into a single output',
-    inputs: ['main', 'main'],
+    inputs: ['input1', 'input2'],
     outputs: ['main'],
     properties: [],
   },
