@@ -192,6 +192,8 @@ Ana interface'ler:
 - Node eklerken: dosya oluştur → index.ts'e import+export ekle → build kontrol
 - Her değişiklikten sonra `pnpm build` ile doğrula
 - Mevcut kodu oku, SONRA değiştir — körlemesine yazma
+- **ÖNEMLİ: `pnpm dev` çalışırken `pnpm build`, `tsc`, `npx tsc` gibi build/compile komutları çalıştırMA!** Bu komutlar `dist/` dosyalarını değiştirir ve tsx watch server'ı restart eder, çalışan workflow'lar kesilir. Sadece `pnpm dev` durdurulduktan sonra build çalıştır.
+- **Agent/subagent oluşturma yasak** — Alt agent oluşturmak yerine tüm işlemleri tek session'da yap. Alt agent'lar build komutu çalıştırarak server'ı çökertebilir.
 
 ## Otonom Geliştirme Protokolü
 

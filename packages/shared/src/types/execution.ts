@@ -48,4 +48,6 @@ export interface IExecution {
   finishedAt?: string;
   durationMs?: number;
   createdAt: string;
+  /** Arbitrary metadata persisted by nodes (e.g. AutonomousDev session ID for resume). */
+  metadata?: Record<string, unknown>;
 }

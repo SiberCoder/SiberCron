@@ -182,10 +182,13 @@ export class WorkflowEngine {
           nodeId === triggerNode.id,
         );
 
-        // Inject executionId into input data so nodes can use it for live logging.
-        // nodeExecutionId = API execution ID if available, otherwise engine's internal ID.
+        // Inject executionId and resume data into input so nodes can use them.
+        const resumeSessionId = triggerData?._resumeSessionId as string | undefined;
         for (const item of inputData) {
           item.json.executionId = nodeExecutionId;
+          if (resumeSessionId) {
+            item.json._resumeSessionId = resumeSessionId;
+          }
         }
 
         // Build a stream emitter for AI nodes: emits tokens via process events
@@ -456,20 +459,25 @@ function shouldSkipNode(
       break;
     }
 
-    // Check if the source output specifies a branch
+    // Check if the source output specifies branch routing
     const firstItem = sourceOutput[0];
-    const branch = firstItem.json['branch'];
+    const firstBranch = firstItem.json['branch'];
 
-    if (branch === undefined) {
-      // Source is not conditional, so this path is open
+    if (firstBranch === undefined) {
+      // Source is not conditional — this path is always open
       allBlocked = false;
       break;
     }
 
-    // Source is conditional: only allow if the edge's sourceHandle matches.
-    // Treat null/undefined sourceHandle as non-conditional (allow all branches).
+    // Source uses branch routing. Check if any item's branch matches this edge's handle.
     const handle = edge.sourceHandle ?? undefined;
-    if (handle === undefined || String(branch) === handle) {
+    if (handle === undefined) {
+      // Edge has no sourceHandle → accepts any branch output
+      allBlocked = false;
+      break;
+    }
+    const hasMatchingItem = sourceOutput.some((item) => String(item.json['branch']) === handle);
+    if (hasMatchingItem) {
       allBlocked = false;
       break;
     }
@@ -500,18 +508,23 @@ function gatherInputData(
     const sourceOutput = nodeOutputs.get(edge.source);
     if (!sourceOutput || sourceOutput.length === 0) continue;
 
-    // Respect conditional branching: only take data from edges whose
-    // sourceHandle matches the branch (or from non-conditional nodes).
-    const firstItem = sourceOutput[0];
-    const branch = firstItem.json['branch'];
-
-    // Only filter by sourceHandle when it is explicitly set (not null/undefined)
     const edgeHandle = edge.sourceHandle ?? undefined;
-    if (branch !== undefined && edgeHandle !== undefined && String(branch) !== edgeHandle) {
-      continue;
-    }
 
-    inputData.push(...sourceOutput);
+    if (edgeHandle !== undefined) {
+      // Per-item branch filtering: collect only items whose branch field matches
+      // this edge's sourceHandle. Items without a branch field pass through on
+      // any edge (non-conditional sources wired to a labelled port).
+      const filtered = sourceOutput.filter((item) => {
+        const itemBranch = item.json['branch'];
+        return itemBranch === undefined || String(itemBranch) === edgeHandle;
+      });
+      if (filtered.length === 0) continue;
+      inputData.push(...filtered);
+    } else {
+      // No sourceHandle on this edge: pass all items regardless of branch.
+      // This preserves backward-compat for edges that don't use labelled ports.
+      inputData.push(...sourceOutput);
+    }
   }
 
   // If no upstream data was available, provide an empty item so the node

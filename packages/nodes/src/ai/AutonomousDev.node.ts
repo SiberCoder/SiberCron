@@ -103,6 +103,8 @@ interface ClaudeCallOptions {
   sessionId?: string;
   /** Called with each chunk of stdout as it arrives */
   onChunk?: (chunk: string) => void;
+  /** Called immediately when session ID is first detected */
+  onSessionId?: (sessionId: string) => void;
 }
 
 interface ClaudeCallResult {
@@ -112,7 +114,7 @@ interface ClaudeCallResult {
 }
 
 async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult> {
-  const { prompt, model, cwd, timeoutMs, setupToken, signal, sessionId, onChunk } = options;
+  const { prompt, model, cwd, timeoutMs, setupToken, signal, sessionId, onChunk, onSessionId } = options;
   const { spawn, execSync } = await import('child_process');
 
   const env = { ...process.env };
@@ -163,8 +165,9 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
 
           // Extract session ID — CLI uses snake_case (session_id)
           const eventSessionId = event.session_id ?? event.sessionId;
-          if (eventSessionId) {
+          if (eventSessionId && eventSessionId !== detectedSessionId) {
             detectedSessionId = eventSessionId;
+            onSessionId?.(eventSessionId as string);
           }
 
           // Partial assistant message — stream to UI in human-readable format
@@ -383,6 +386,8 @@ export const AutonomousDevNode: INodeType = {
     const inputData = context.getInputData();
     const dynamicInstruction = (inputData[0]?.json?.instruction as string) || instruction;
     const executionId = (inputData[0]?.json?.executionId as string) || '';
+    // Resume support: pick up session ID from a previous interrupted execution
+    const resumeSessionId = (inputData[0]?.json?._resumeSessionId as string) || undefined;
 
     const path = await import('node:path');
     const cwd = path.resolve(workingDirectory);
@@ -405,19 +410,24 @@ export const AutonomousDevNode: INodeType = {
     let iterationCount = 0;
     let lastResponse = '';
     let exitReason: 'completed' | 'maxIterations' | 'error' | 'stopped' = 'maxIterations';
-    let currentSessionId: string | undefined;
+    let currentSessionId: string | undefined = resumeSessionId;
 
-    emitLog('system', `Baslatiliyor: "${dynamicInstruction.slice(0, 120)}..."`, { maxIterations: maxLoopIterations, model });
+    emitLog('system', `Baslatiliyor: "${dynamicInstruction.slice(0, 120)}..."${resumeSessionId ? ` (session devam: ${resumeSessionId.slice(0, 8)}...)` : ''}`, { maxIterations: maxLoopIterations, model, resumeSessionId });
 
     while (iterationCount < maxLoopIterations) {
       iterationCount++;
 
       // Build prompt
       let prompt = '';
-      if (iterationCount === 1) {
-        // First iteration: full instruction + context
+      if (iterationCount === 1 && !resumeSessionId) {
+        // First iteration (fresh start): full instruction + context + safety rules
         if (systemContext) prompt += `${systemContext}\n\n---\n\n`;
         prompt += dynamicInstruction;
+        prompt += '\n\nKRİTİK KURALLAR:\n- Alt agent/subagent OLUŞTURMA. Tüm işleri tek session\'da yap.\n- pnpm build, tsc, npx tsc gibi build komutları ÇALIŞTIRMA (dev server çalışıyor, dist değişirse server çöker).\n- Değişiklik yaptıktan sonra build doğrulaması YAPMA.';
+      } else if (iterationCount === 1 && resumeSessionId) {
+        // First iteration but resuming a previous session
+        prompt = 'Server yeniden basladi. Kaldığın yerden devam et. Daha önce yaptıklarını tekrarlama, nerede kaldıysan oradan devam et.';
+        emitLog('system', 'Onceki session\'dan devam ediliyor (resume)', { sessionId: resumeSessionId });
       } else {
         // Subsequent iterations: continuation prompt
         // If we have a session ID, Claude already has context — just nudge it
@@ -476,15 +486,36 @@ export const AutonomousDevNode: INodeType = {
               });
             }
           },
+          onSessionId: (sid) => {
+            // Save session ID IMMEDIATELY to disk so resume works even if server crashes
+            currentSessionId = sid;
+            emitLog('system', `Session ID: ${sid.slice(0, 8)}...`, { sessionId: sid });
+            // Use dynamic import for ESM compatibility, write async but don't await
+            import('node:fs').then((fs) => {
+              const sessionFile = path.join(cwd, 'data', `.autonomousDev-session-${executionId}.json`);
+              fs.writeFileSync(sessionFile, JSON.stringify({
+                sessionId: sid,
+                executionId,
+                iteration: iterationCount,
+                timestamp: new Date().toISOString(),
+              }));
+              emitLog('system', `Session dosyaya kaydedildi: ${sessionFile}`);
+            }).catch(() => { /* best-effort */ });
+            try {
+              process.emit('autonomousDev:sessionUpdate' as any, {
+                executionId, sessionId: sid, iteration: iterationCount,
+              } as any);
+            } catch { /* */ }
+          },
         });
 
         lastResponse = result.response;
         conversationHistory.push({ role: 'response', content: result.response });
 
-        // Save session ID for continuation
-        if (result.sessionId) {
+        // Session ID already saved by onSessionId callback (fires immediately).
+        // Just update currentSessionId from result as a fallback.
+        if (result.sessionId && !currentSessionId) {
           currentSessionId = result.sessionId;
-          emitLog('system', `Session ID: ${result.sessionId.slice(0, 8)}...`, { sessionId: result.sessionId });
         }
 
         // Emit full response

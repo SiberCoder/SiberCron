@@ -242,6 +242,23 @@ export async function executionRoutes(
       if (Object.keys(completedResults).length > 0) {
         triggerData._resumeNodeResults = completedResults;
       }
+      // Pass AutonomousDev session ID so it can --resume the Claude CLI conversation.
+      // Try metadata first, then fall back to session file on disk.
+      let sessionId = (execution as any).metadata?.autonomousDevSessionId as string | undefined;
+      if (!sessionId) {
+        try {
+          const fs = await import('node:fs');
+          const path = await import('node:path');
+          const sessionFile = path.join(process.cwd(), 'data', `.autonomousDev-session-${id}.json`);
+          if (fs.existsSync(sessionFile)) {
+            const data = JSON.parse(fs.readFileSync(sessionFile, 'utf-8'));
+            sessionId = data.sessionId;
+          }
+        } catch { /* best-effort */ }
+      }
+      if (sessionId) {
+        triggerData._resumeSessionId = sessionId;
+      }
     }
 
     const jwtUser = request.user as { sub?: string; username?: string } | undefined;

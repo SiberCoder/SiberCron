@@ -14,10 +14,13 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "dev": "tsc --watch",
+    "dev": "tsc",
     "test": "vitest run"
   },
   "dependencies": {
     "@sibercron/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.4"
   }
 }
