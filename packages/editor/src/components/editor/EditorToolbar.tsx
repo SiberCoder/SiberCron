@@ -14,12 +14,15 @@ import {
   Redo2,
   History,
   ListOrdered,
+  Copy,
+  Link,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useExecutionStore } from '../../store/executionStore';
 import { toast } from '../../store/toastStore';
 import { apiPost, apiDelete, apiGet, ApiError } from '../../api/client';
+import { API_BASE_URL } from '../../lib/config';
 
 interface EditorToolbarProps {
   onVersionHistory?: () => void;
@@ -315,6 +318,26 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       </div>
 
       <div className="w-px h-6 bg-white/[0.06]" />
+
+      {/* Webhook URL copy — only shown for webhook-triggered workflows with a saved path */}
+      {meta.triggerType === 'webhook' && meta.webhookPath && meta.id && (
+        <button
+          onClick={() => {
+            const base = API_BASE_URL || window.location.origin;
+            const url = `${base}/api/v1/webhook/${meta.webhookPath}`;
+            navigator.clipboard.writeText(url).then(() => {
+              toast.success('Webhook URL kopyalandı');
+            }).catch(() => {
+              toast.error('Kopyalama başarısız');
+            });
+          }}
+          className="btn-ghost text-xs text-obsidian-500 hover:text-aurora-cyan"
+          title={`Webhook URL'yi kopyala: /api/v1/webhook/${meta.webhookPath}`}
+        >
+          <Link size={14} />
+          <Copy size={12} className="-ml-1" />
+        </button>
+      )}
 
       {/* Execution history link */}
       {meta.id && (
