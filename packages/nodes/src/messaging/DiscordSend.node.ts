@@ -131,7 +131,8 @@ export const DiscordSendNode: INodeType = {
     if (sendMethod === 'bot') {
       const channelId = context.getParameter<string>('channelId');
       const credentials = await context.getCredential('discordBot');
-      const botToken = credentials['botToken'] as string;
+      const botToken = credentials['botToken'] as string | undefined;
+      if (!botToken) throw new Error('Discord credential eksik: botToken bulunamadı');
       url = `https://discord.com/api/v10/channels/${channelId}/messages`;
       headers['Authorization'] = `Bot ${botToken}`;
     } else {

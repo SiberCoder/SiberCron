@@ -60,8 +60,10 @@ export const WhatsAppSendNode: INodeType = {
     const messageType = context.getParameter<string>('messageType') ?? 'text';
     const credentials = await context.getCredential('whatsappApi');
 
-    const accessToken = credentials['accessToken'] as string;
-    const phoneNumberId = credentials['phoneNumberId'] as string;
+    const accessToken = credentials['accessToken'] as string | undefined;
+    const phoneNumberId = credentials['phoneNumberId'] as string | undefined;
+    if (!accessToken) throw new Error('WhatsApp credential eksik: accessToken bulunamadı');
+    if (!phoneNumberId) throw new Error('WhatsApp credential eksik: phoneNumberId bulunamadı');
 
     context.helpers.log(`WhatsApp: ${phoneNumber} numarasına mesaj gönderiliyor`);
 

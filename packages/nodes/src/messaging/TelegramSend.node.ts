@@ -94,7 +94,8 @@ export const TelegramSendNode: INodeType = {
     const replyToMessageId = context.getParameter<string>('replyToMessageId') ?? '';
     const credentials = await context.getCredential('telegramBot');
 
-    const botToken = credentials['botToken'] as string;
+    const botToken = credentials['botToken'] as string | undefined;
+    if (!botToken) throw new Error('Telegram credential eksik: botToken bulunamadı');
     const baseUrl = `https://api.telegram.org/bot${botToken}`;
 
     let endpoint: string;

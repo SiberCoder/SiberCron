@@ -103,7 +103,8 @@ export const SlackSendNode: INodeType = {
     const username = context.getParameter<string>('username') ?? '';
     const credentials = await context.getCredential('slackBot');
 
-    const botToken = credentials['botToken'] as string;
+    const botToken = credentials['botToken'] as string | undefined;
+    if (!botToken) throw new Error('Slack credential eksik: botToken bulunamadı');
 
     const body: Record<string, unknown> = {
       channel,
