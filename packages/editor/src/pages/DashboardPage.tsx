@@ -18,6 +18,7 @@ import { io } from 'socket.io-client';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
 import { apiGet } from '../api/client';
 import { SOCKET_URL } from '../lib/config';
+import LiveExecutionPanel from '../components/dashboard/LiveExecutionPanel';
 
 // ── Execution Trend Chart ─────────────────────────────────────────────
 
@@ -328,6 +329,9 @@ export default function DashboardPage() {
           Browse Templates
         </button>
       </div>
+
+      {/* Live execution panel — shows real-time logs from running workflows */}
+      <LiveExecutionPanel />
 
       {/* Trend chart */}
       {trendData.length > 0 && (

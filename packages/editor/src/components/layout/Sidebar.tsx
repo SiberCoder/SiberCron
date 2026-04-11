@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   GitBranch,
@@ -12,8 +12,11 @@ import {
   Sparkles,
   Brain,
   Settings,
+  LogOut,
+  User,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useAuthStore } from '../../store/authStore';
 
 const NAV_ITEMS = [
   { to: '/chat', icon: Brain, label: 'AI Sohbet', accent: true },
@@ -32,6 +35,15 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate('/login', { replace: true });
+  }
+
   return (
     <aside
       className={clsx(
@@ -140,6 +152,33 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* Bottom section */}
+      <div className="mx-3 aurora-divider" />
+
+      {/* User info + logout */}
+      {user && (
+        <div className={clsx('flex items-center gap-2 px-3 py-2', collapsed && 'justify-center px-0')}>
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-electric-600/20 shrink-0">
+            <User size={14} className="text-electric-400" />
+          </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-white truncate">{user.username}</p>
+              <p className="text-[10px] text-slate-500 truncate capitalize">{user.role}</p>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            title="Çıkış yap"
+            className={clsx(
+              'flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0',
+              collapsed && 'w-8 h-8',
+            )}
+          >
+            <LogOut size={13} />
+          </button>
+        </div>
+      )}
+
       <div className="mx-3 aurora-divider" />
 
       {/* Collapse toggle */}

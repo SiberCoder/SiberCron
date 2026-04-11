@@ -1,12 +1,15 @@
-import { useCallback, useRef, useMemo, type DragEvent } from 'react';
+import { useCallback, useRef, useMemo, useState, type DragEvent } from 'react';
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
+  useReactFlow,
   type ReactFlowInstance,
+  type Node,
 } from '@xyflow/react';
+import { Trash2, Copy, X } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
@@ -23,6 +26,7 @@ export default function WorkflowCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reactFlowInstance = useRef<ReactFlowInstance<any, any> | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
   const nodes = useWorkflowStore((s) => s.nodes);
   const edges = useWorkflowStore((s) => s.edges);
@@ -104,7 +108,15 @@ export default function WorkflowCanvas() {
 
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
+    setSelectedNodeIds([]);
   }, [setSelectedNode]);
+
+  const onSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
+      setSelectedNodeIds(selectedNodes.map((n) => n.id));
+    },
+    [],
+  );
 
   const isValidConnection = useCallback(
     (connection: { source: string | null; target: string | null }) => {
@@ -123,8 +135,63 @@ export default function WorkflowCanvas() {
     [nodes, getByName],
   );
 
+  const removeNode = useWorkflowStore((s) => s.removeNode);
+
+  // Bulk delete selected nodes
+  const handleBulkDelete = useCallback(() => {
+    for (const id of selectedNodeIds) {
+      removeNode(id);
+    }
+    setSelectedNodeIds([]);
+  }, [selectedNodeIds, removeNode]);
+
+  // Duplicate selected nodes (offset by 40px)
+  const handleBulkDuplicate = useCallback(() => {
+    const selectedNodes = nodes.filter((n) => selectedNodeIds.includes(n.id));
+    for (const node of selectedNodes) {
+      addNode(
+        node.data.nodeType as string,
+        node.data.label as string,
+        { x: (node.position?.x ?? 0) + 40, y: (node.position?.y ?? 0) + 40 },
+      );
+    }
+  }, [selectedNodeIds, nodes, addNode]);
+
   return (
-    <div ref={reactFlowWrapper} className="w-full h-full">
+    <div ref={reactFlowWrapper} className="w-full h-full relative">
+      {/* Multi-select toolbar */}
+      {selectedNodeIds.length > 1 && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-2 rounded-xl bg-obsidian-900/90 border border-white/[0.08] shadow-xl backdrop-blur-sm">
+          <span className="text-xs text-slate-400 font-medium pr-1">
+            {selectedNodeIds.length} node seçili
+          </span>
+          <div className="w-px h-4 bg-white/10" />
+          <button
+            onClick={handleBulkDuplicate}
+            title="Seçilileri çoğalt"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+          >
+            <Copy size={13} />
+            <span>Çoğalt</span>
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            title="Seçilileri sil"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+          >
+            <Trash2 size={13} />
+            <span>Sil</span>
+          </button>
+          <div className="w-px h-4 bg-white/10" />
+          <button
+            onClick={() => setSelectedNodeIds([])}
+            title="Seçimi kaldır"
+            className="flex items-center justify-center w-6 h-6 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edgesWithAnimation}
@@ -138,12 +205,15 @@ export default function WorkflowCanvas() {
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
+        onSelectionChange={onSelectionChange}
         isValidConnection={isValidConnection}
         nodeTypes={nodeTypes}
         fitView
         snapToGrid
         snapGrid={[16, 16]}
         deleteKeyCode="Delete"
+        multiSelectionKeyCode="Shift"
+        selectionOnDrag
         className="bg-obsidian-950"
       >
         <Background

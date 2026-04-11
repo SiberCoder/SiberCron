@@ -16,12 +16,14 @@ import {
   Server,
   Shield,
   Activity,
+  Lock,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiGet, apiPost } from '../api/client';
 import type { AIProviderConfig } from '@sibercron/shared';
 import AIProviderSelector from '../components/editor/AIProviderSelector';
 import { API_BASE_URL, SOCKET_URL } from '../lib/config';
+import { useAuthStore } from '../store/authStore';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -103,6 +105,102 @@ const TIMEZONES = [
 /* ------------------------------------------------------------------ */
 /*  Section wrapper                                                    */
 /* ------------------------------------------------------------------ */
+
+function AccountSection() {
+  const user = useAuthStore((s) => s.user);
+  const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPw !== confirmPw) {
+      setMsg({ type: 'error', text: 'Yeni şifreler eşleşmiyor' });
+      return;
+    }
+    if (newPw.length < 6) {
+      setMsg({ type: 'error', text: 'Yeni şifre en az 6 karakter olmalı' });
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/v1/auth/change-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      });
+      const data = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok) throw new Error(data.error ?? 'Şifre değiştirilemedi');
+      setMsg({ type: 'success', text: 'Şifre başarıyla değiştirildi' });
+      setCurrentPw(''); setNewPw(''); setConfirmPw('');
+    } catch (err) {
+      setMsg({ type: 'error', text: err instanceof Error ? err.message : 'Hata' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Section icon={Lock} title="Hesap" description="Kullanıcı hesabı ve güvenlik ayarları">
+      <div className="space-y-3">
+        <div className="glass-panel rounded-xl p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-electric-600/20 flex items-center justify-center">
+            <span className="text-sm font-bold text-electric-400">{user?.username?.[0]?.toUpperCase() ?? 'A'}</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">{user?.username}</p>
+            <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
+          </div>
+        </div>
+        <form onSubmit={handleChangePassword} className="glass-panel rounded-xl p-4 space-y-3">
+          <p className="text-xs font-semibold text-slate-300">Şifre Değiştir</p>
+          {msg && (
+            <div className={clsx(
+              'text-xs px-3 py-2 rounded-lg',
+              msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400',
+            )}>{msg.text}</div>
+          )}
+          <input
+            type="password"
+            placeholder="Mevcut şifre"
+            value={currentPw}
+            onChange={(e) => setCurrentPw(e.target.value)}
+            required
+            className="w-full bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-electric-500/40 transition-all"
+          />
+          <input
+            type="password"
+            placeholder="Yeni şifre (min 6 karakter)"
+            value={newPw}
+            onChange={(e) => setNewPw(e.target.value)}
+            required
+            className="w-full bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-electric-500/40 transition-all"
+          />
+          <input
+            type="password"
+            placeholder="Yeni şifre (tekrar)"
+            value={confirmPw}
+            onChange={(e) => setConfirmPw(e.target.value)}
+            required
+            className="w-full bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-electric-500/40 transition-all"
+          />
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-electric-600/20 text-electric-400 text-xs font-semibold hover:bg-electric-600/30 disabled:opacity-50 transition-colors"
+          >
+            {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+            Şifreyi Güncelle
+          </button>
+        </form>
+      </div>
+    </Section>
+  );
+}
 
 function Section({
   icon: Icon,
@@ -522,6 +620,9 @@ export default function SettingsPage() {
             </Field>
           </div>
         </Section>
+
+        {/* Account Section */}
+        <AccountSection />
 
         {/* System Info Section */}
         <Section

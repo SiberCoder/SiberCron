@@ -63,8 +63,8 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 #### Oncelik 1: Calisir Hale Getirme
 - [x] pnpm install + tum paketleri build etme
 - [x] TypeScript derleme hatalarini duzeltme
-- [ ] Server + Editor'u birlikte calistirma testi
-- [ ] Temel akis testi: workflow olustur -> kaydet -> calistir
+- [x] Server + Editor'u birlikte calistirma testi
+- [x] Temel akis testi: workflow olustur -> kaydet -> calistir
 
 #### Oncelik 2: Ek Node'lar
 - [x] AISummarizer node (metin ozetleme)
@@ -86,7 +86,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [x] Command palette (Ctrl+K)
 - [x] Workflow arama ve filtreleme
 - [x] Node klonlama (Ctrl+D)
-- [ ] Coklu node secimi + topluca silme/tasima
+- [x] Coklu node secimi + topluca silme/tasima (rubber-band, Shift+click, bulk toolbar)
 - [ ] Node gruplama / sub-workflow
 
 #### Oncelik 4: Production Ozellikleri
@@ -109,7 +109,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 - [ ] Community node marketplace sayfasi
 - [ ] Plugin auto-discovery (`sibercron-node-*` npm taramasi)
 - [ ] Workflow template paylasimi
-- [ ] API dokumantasyonu (OpenAPI/Swagger)
+- [x] API dokumantasyonu (OpenAPI/Swagger) — @fastify/swagger-ui, /api/docs
 
 ---
 

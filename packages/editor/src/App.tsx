@@ -11,6 +11,8 @@ import SetupWizardPage from './pages/SetupWizardPage';
 import SocialAccountsPage from './pages/SocialAccountsPage';
 import ChatPage from './pages/ChatPage';
 import SettingsPage from './pages/SettingsPage';
+import LoginPage from './pages/LoginPage';
+import { useAuthStore } from './store/authStore';
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -90,16 +92,28 @@ function SetupGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Redirects to /login if user is not authenticated */
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
     <Routes>
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/setup" element={<SetupWizardPage />} />
       <Route
         element={
-          <SetupGuard>
-            <AppShell />
-          </SetupGuard>
+          <AuthGuard>
+            <SetupGuard>
+              <AppShell />
+            </SetupGuard>
+          </AuthGuard>
         }
       >
         <Route path="/" element={<Navigate to="/chat" replace />} />
@@ -112,7 +126,7 @@ export default function App() {
         <Route path="/accounts" element={<SocialAccountsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
-      <Route path="/workflows/:id" element={<SetupGuard><WorkflowEditorPage /></SetupGuard>} />
+      <Route path="/workflows/:id" element={<AuthGuard><SetupGuard><WorkflowEditorPage /></SetupGuard></AuthGuard>} />
     </Routes>
     </ErrorBoundary>
   );

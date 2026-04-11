@@ -15,7 +15,7 @@ interface LogEntry {
   nodeId?: string;
   nodeName?: string;
   message: string;
-  type: 'info' | 'success' | 'error';
+  type: 'info' | 'success' | 'error' | 'ai_request' | 'ai_response' | 'auto_answer' | 'iteration' | 'system';
 }
 
 interface CurrentExecution {
@@ -138,6 +138,20 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
               ? `Node "${data.nodeName}" failed: ${data.error}`
               : `Node "${data.nodeName}" completed in ${data.durationMs}ms`,
             type: data.status === 'error' ? 'error' : 'success',
+          },
+        ],
+      }));
+    });
+
+    // ── Live execution logs (AutonomousDev, agentLoop, etc.) ──────────
+    socket.on('execution:log', (data: { executionId: string; level: string; message: string; data?: Record<string, unknown> }) => {
+      set((state) => ({
+        executionLog: [
+          ...state.executionLog,
+          {
+            timestamp: new Date().toISOString(),
+            message: data.message,
+            type: data.level as LogEntry['type'],
           },
         ],
       }));
