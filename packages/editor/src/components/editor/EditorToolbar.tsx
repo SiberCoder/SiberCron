@@ -134,7 +134,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
   handleSaveRef.current = handleSave;
   handleExecuteRef.current = handleExecute;
 
-  // Keyboard shortcuts: Escape close modal | Ctrl+S save | Ctrl+Enter execute | Ctrl+Z undo | Ctrl+Shift+Z redo
+  // Keyboard shortcuts: Escape | Ctrl+S save | Ctrl+Enter/Ctrl+E execute | Ctrl+Z undo | Ctrl+Shift+Z/Ctrl+Y redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -142,13 +142,16 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         handleSaveRef.current();
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'Enter' || e.key.toLowerCase() === 'e')) {
         e.preventDefault();
         handleExecuteRef.current();
       } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
         e.preventDefault();
         undo();
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z') {
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        ((e.shiftKey && e.key.toLowerCase() === 'z') || (!e.shiftKey && e.key.toLowerCase() === 'y'))
+      ) {
         e.preventDefault();
         redo();
       }
