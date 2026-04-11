@@ -289,6 +289,13 @@ function formatTimeAgo(dateStr?: string): string {
   return `${days} gün önce`;
 }
 
+interface WorkflowHealthAlert {
+  workflowId: string;
+  workflowName: string;
+  errorRate: number;
+  total: number;
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -304,6 +311,7 @@ export default function DashboardPage() {
   const [trendData, setTrendData] = useState<TrendBucket[]>([]);
   const [topWorkflows, setTopWorkflows] = useState<WorkflowSummary[]>([]);
   const [topFailingNodes, setTopFailingNodes] = useState<NodeErrorStat[]>([]);
+  const [healthAlerts, setHealthAlerts] = useState<WorkflowHealthAlert[]>([]);
 
   const fetchDashboardData = useCallback(async (silent = false, signal?: AbortSignal) => {
     if (!silent) setLoading(true);
@@ -359,6 +367,25 @@ export default function DashboardPage() {
 
       if (nodeErrorsRes?.nodes) {
         setTopFailingNodes(nodeErrorsRes.nodes);
+      }
+
+      // Health alerts: active workflows with >= 80% error rate and at least 3 runs
+      if (summaryRes) {
+        const wfMap = new Map(workflows.map((w) => [w.id, w]));
+        const alerts: WorkflowHealthAlert[] = Object.entries(summaryRes)
+          .filter(([id, s]) => {
+            const wf = wfMap.get(id);
+            return wf?.isActive && s.total >= 3 && s.error / s.total >= 0.8;
+          })
+          .map(([id, s]) => ({
+            workflowId: id,
+            workflowName: wfMap.get(id)?.name ?? id,
+            errorRate: Math.round((s.error / s.total) * 100),
+            total: s.total,
+          }))
+          .sort((a, b) => b.errorRate - a.errorRate)
+          .slice(0, 5);
+        setHealthAlerts(alerts);
       }
     } catch (err) {
       if (signal?.aborted) return;
@@ -516,6 +543,39 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Health alerts — high error-rate active workflows */}
+      {healthAlerts.length > 0 && (
+        <div className="animate-slide-up stagger-3 space-y-2" style={{ animationFillMode: 'both' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle size={13} className="text-aurora-amber" />
+            <span className="text-xs font-semibold text-aurora-amber font-body tracking-wide">
+              Dikkat: Yüksek Hata Oranlı Workflow'lar
+            </span>
+          </div>
+          {healthAlerts.map((alert) => (
+            <div
+              key={alert.workflowId}
+              onClick={() => navigate(`/workflows/${alert.workflowId}`)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-aurora-amber/5 border border-aurora-amber/15 hover:border-aurora-amber/30 hover:bg-aurora-amber/10 cursor-pointer transition-all"
+            >
+              <div className="w-8 h-8 rounded-lg bg-aurora-amber/10 flex items-center justify-center shrink-0">
+                <AlertTriangle size={14} className="text-aurora-amber" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white truncate font-body">{alert.workflowName}</p>
+                <p className="text-[10px] text-obsidian-500 font-body">
+                  Son {alert.total} çalışmanın %{alert.errorRate}'i hatalı
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <span className="text-sm font-bold text-aurora-rose font-mono">{alert.errorRate}%</span>
+                <p className="text-[9px] text-obsidian-600 font-body">hata</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Quick actions */}
       <div className="flex gap-3">

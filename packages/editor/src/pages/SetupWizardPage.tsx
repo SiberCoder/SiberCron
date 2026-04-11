@@ -329,7 +329,7 @@ function MessagingStep() {
     try {
       const res = await apiPost<{ success: boolean; message: string }>(
         '/setup/test-messaging',
-        { platform, config: (config.messaging as any)[platform] },
+        { platform, config: config.messaging[platform as keyof typeof config.messaging] },
       );
       setTestResults((r) => ({
         ...r,
@@ -357,7 +357,8 @@ function MessagingStep() {
       </div>
 
       {CHANNELS.map((ch) => {
-        const data = (config.messaging as any)[ch.key];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = config.messaging[ch.key as keyof typeof config.messaging] as any;
         return (
           <div
             key={ch.key}

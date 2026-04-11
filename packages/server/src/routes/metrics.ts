@@ -26,8 +26,9 @@ export async function metricsRoutes(fastify: FastifyInstance): Promise<void> {
       triggerBreakdown[t] = (triggerBreakdown[t] ?? 0) + 1;
     }
 
-    // ── Execution stats (all time) ─────────────────────────────────
-    const allExec = db.listExecutions({ limit: 10000 });
+    // ── Execution stats (last 90 days to keep query fast) ─────────
+    const ninetyDaysAgo = new Date(now - 90 * 86_400_000).toISOString();
+    const allExec = db.listExecutions({ limit: 5000, startDate: ninetyDaysAgo });
     const statusCounts: Record<string, number> = {
       success: 0,
       error: 0,
@@ -146,6 +147,12 @@ export async function metricsRoutes(fastify: FastifyInstance): Promise<void> {
       scheduler: {
         initialized: schedulerStatus.initialized,
         activeJobs: schedulerStatus.activeJobs,
+        unhealthyJobs: schedulerStatus.jobs.filter((j) => j.consecutiveErrors > 0).map((j) => ({
+          workflowId: j.workflowId,
+          workflowName: j.workflowName,
+          consecutiveErrors: j.consecutiveErrors,
+          lastErrorAt: j.lastErrorAt,
+        })),
       },
 
       process: {

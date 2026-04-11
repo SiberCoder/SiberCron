@@ -11,6 +11,8 @@ export interface ScheduledJob {
   scheduledAt: string;
   lastTriggeredAt: string | null;
   triggerCount: number;
+  consecutiveErrors: number;
+  lastErrorAt: string | null;
 }
 
 /**
@@ -88,8 +90,31 @@ class SchedulerService {
           cronExpression,
           scheduledAt: new Date().toISOString(),
         }, { method: 'cron' });
+        // Reset consecutive error counter on success
+        const jobEntry = this.jobs.get(id);
+        if (jobEntry && jobEntry.consecutiveErrors > 0) {
+          jobEntry.consecutiveErrors = 0;
+          jobEntry.lastErrorAt = null;
+        }
       } catch (err) {
-        console.error(`[Scheduler] Failed to queue workflow "${name}":`, (err as Error).message);
+        const jobEntry = this.jobs.get(id);
+        if (jobEntry) {
+          jobEntry.consecutiveErrors = (jobEntry.consecutiveErrors ?? 0) + 1;
+          jobEntry.lastErrorAt = new Date().toISOString();
+          // After 5 consecutive failures, deactivate the workflow to prevent spam
+          if (jobEntry.consecutiveErrors >= 5) {
+            console.error(
+              `[Scheduler] Workflow "${name}" failed to queue 5 times in a row — auto-deactivating.`,
+            );
+            db.updateWorkflow(id, { isActive: false });
+            this.unschedule(id);
+            return;
+          }
+        }
+        console.error(
+          `[Scheduler] Failed to queue workflow "${name}" (attempt ${jobEntry?.consecutiveErrors ?? '?'}):`,
+          (err as Error).message,
+        );
       }
     });
 
@@ -101,6 +126,8 @@ class SchedulerService {
       scheduledAt: new Date().toISOString(),
       lastTriggeredAt: null,
       triggerCount: 0,
+      consecutiveErrors: 0,
+      lastErrorAt: null,
     });
 
     console.log(`[Scheduler] Scheduled "${name}" with cron: ${cronExpression}`);

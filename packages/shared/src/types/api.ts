@@ -27,6 +27,7 @@ export interface WorkflowListQuery {
   isActive?: boolean;
   triggerType?: TriggerType;
   tag?: string;
+  webhookPath?: string; // exact match for uniqueness checks
 }
 
 // Execution API

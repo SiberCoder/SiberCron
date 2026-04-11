@@ -197,6 +197,27 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] Code node sandbox: fetch, Request, Response, Headers, AbortController, crypto.randomUUID eklendi
 - [x] SettingsPage: bozuk Türkçe karakterler düzeltildi (Yapılandırma, Sağlayıcı, Mesajlaşma, Sıfırla...)
 
+#### Oncelik 4i: Bug Fixes, Security & New Nodes
+- [x] SetupWizardPage: union type narrowing hatası düzeltildi (TS2339)
+- [x] executions /trend ve /node-errors: NaN DoS güvenlik açığı giderildi (`|| fallback`)
+- [x] executions GET /: page/limit parametresi validasyonu eklendi (NaN, negatif koruması)
+- [x] database.ts listExecutions: page NaN/negatif koruması eklendi
+- [x] ExecutionHistoryPage: `nodeResults` null safety eklendi
+- [x] _resumeNodeResults: tip guard ile runtime doğrulama eklendi
+- [x] workflows DELETE /:id: çalışan execution varken silmeyi engeller (?force=true ile override)
+- [x] webhook path uniqueness: limit:5000 yerine webhookPath filtresi ile O(1) sorgu
+- [x] WorkflowListQuery: webhookPath arama filtresi eklendi (shared + database)
+- [x] workflows POST /: aynı isimli workflow oluşturma engeli
+- [x] GET /workflows/stats: toplam/aktif/tetikleyici tipi breakdown endpoint
+- [x] schedulerService: art arda 5 başarısız cron tetiklemede workflow otomatik deaktive edilir
+- [x] metrics endpoint: 10000 yerine 5000 + 90 gün filtresi ile optimizasyon
+- [x] metrics endpoint: scheduler unhealthyJobs bilgisi eklendi
+- [x] XML node: XML ↔ JSON dönüşümü (built-in parser, sıfır dış bağımlılık)
+- [x] Crypto node: MD5/SHA-256/SHA-512 hash, HMAC-SHA256, Base64, UUID, AES-256-GCM
+- [x] Variables node: execution-scoped key-value store (set/get/delete/dump, 2sa TTL)
+- [x] DashboardPage: yüksek hata oranlı (≥80%) aktif workflow'lar için sağlık uyarı paneli
+- [x] iconRegistry: FileCode, Lock, Braces ikonları eklendi
+
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
 - [ ] Community node marketplace sayfasi

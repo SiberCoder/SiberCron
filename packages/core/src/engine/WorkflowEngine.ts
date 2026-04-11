@@ -32,6 +32,8 @@ export class WorkflowEngine {
     triggerData?: Record<string, unknown>,
     onEvent?: ExecutionEventHandler,
     credentialResolver?: CredentialResolver,
+    /** Pass previous nodeResults to resume from where it left off. Completed nodes will be skipped. */
+    resumeFrom?: Record<string, INodeExecutionResult>,
   ): Promise<IExecution> {
     const executionId = crypto.randomUUID();
     const startedAt = new Date();
@@ -108,9 +110,34 @@ export class WorkflowEngine {
       // Used by shouldSkipNode to distinguish "failed but continueOnFail" from "wrong branch".
       const skippedNodeIds = new Set<string>();
 
+      // ── Resume support: pre-populate outputs from previous run ─────
+      if (resumeFrom) {
+        for (const [nodeId, prevResult] of Object.entries(resumeFrom)) {
+          if (prevResult.status === 'success' && prevResult.output) {
+            nodeOutputs.set(nodeId, prevResult.output.map((json) => ({ json })));
+          } else if (prevResult.status === 'skipped') {
+            skippedNodeIds.add(nodeId);
+          }
+        }
+      }
+
       for (const nodeId of sortedNodeIds) {
         const nodeInstance = nodeMap.get(nodeId);
         if (!nodeInstance) continue;
+
+        // Skip nodes already completed in a previous run (resume mode)
+        if (resumeFrom?.[nodeId]?.status === 'success' || resumeFrom?.[nodeId]?.status === 'skipped') {
+          execution.nodeResults[nodeId] = resumeFrom[nodeId];
+          emit('execution:node:done', {
+            executionId,
+            nodeId,
+            nodeName: nodeInstance.name,
+            status: resumeFrom[nodeId].status,
+            output: resumeFrom[nodeId].output,
+            durationMs: 0,
+          });
+          continue;
+        }
 
         // Determine if this node should be skipped due to conditional branching
         if (shouldSkipNode(nodeId, incomingEdges, nodeOutputs, skippedNodeIds)) {

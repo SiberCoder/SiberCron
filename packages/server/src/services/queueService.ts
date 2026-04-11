@@ -155,6 +155,7 @@ class QueueService {
     triggerData: Record<string, unknown>,
     logPrefix: string,
     triggeredBy?: IExecutionTrigger,
+    resumeFrom?: Record<string, INodeExecutionResult>,
   ): Promise<void> {
     const workflow = db.getWorkflow(workflowId);
     if (!workflow) {
@@ -178,6 +179,23 @@ class QueueService {
 
     if (!this.engine) {
       throw new Error('WorkflowEngine not initialized');
+    }
+
+    // Extract resume data from triggerData if present (used by auto-resume on restart).
+    // Validate each entry has the minimum required fields before using it.
+    const isValidNodeResult = (v: unknown): v is INodeExecutionResult =>
+      typeof v === 'object' && v !== null && typeof (v as INodeExecutionResult).status === 'string';
+    let resolvedResumeFrom = resumeFrom;
+    if (!resolvedResumeFrom && triggerData._resumeNodeResults) {
+      const raw = triggerData._resumeNodeResults;
+      if (typeof raw === 'object' && raw !== null) {
+        const validated: Record<string, INodeExecutionResult> = {};
+        for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+          if (isValidNodeResult(v)) validated[k] = v;
+        }
+        resolvedResumeFrom = validated;
+      }
+      delete triggerData._resumeNodeResults;
     }
 
     const executionId = crypto.randomUUID();
@@ -249,6 +267,7 @@ class QueueService {
           if (!cred) throw new Error(`Credential "${credentialId}" not found`);
           return cred.data;
         },
+        resolvedResumeFrom,
       );
 
       db.updateExecution(executionId, {
@@ -293,6 +312,7 @@ class QueueService {
   private async processJob(job: Job<WorkflowJobData>): Promise<void> {
     const { workflowId, workflowName, triggerData, triggeredBy } = job.data;
     console.log(`[Queue] Processing job ${job.id}: workflow "${workflowName}" (${workflowId})`);
+    // resumeFrom is extracted from triggerData._resumeNodeResults inside runWorkflowExecution
     await this.runWorkflowExecution(workflowId, workflowName, triggerData, 'Queue', triggeredBy);
   }
 

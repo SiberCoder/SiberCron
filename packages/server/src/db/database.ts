@@ -286,10 +286,14 @@ export class Database {
   }
 
   listWorkflows(query: WorkflowListQuery = {}): PaginatedResponse<IWorkflow> {
-    const { page = 1, search, isActive, triggerType, tag } = query;
+    const { page = 1, search, isActive, triggerType, tag, webhookPath } = query;
     const limit = Math.min(query.limit ?? 20, 1000); // cap at 1000 to prevent DoS
 
     let items = Array.from(this.workflows.values());
+
+    if (webhookPath) {
+      items = items.filter((w) => w.webhookPath === webhookPath);
+    }
 
     if (search) {
       const lower = search.toLowerCase();
@@ -416,8 +420,9 @@ export class Database {
   }
 
   listExecutions(query: ExecutionListQuery = {}): PaginatedResponse<IExecution> {
-    const { page = 1, workflowId, status, workflowName, startDate, endDate, triggeredBy } = query;
-    const limit = Math.min(query.limit ?? 20, 1000); // cap at 1000 to prevent DoS
+    const { workflowId, status, workflowName, startDate, endDate, triggeredBy } = query;
+    const page = Math.max(query.page || 1, 1);
+    const limit = Math.max(Math.min(query.limit ?? 20, 1000), 1); // cap at 1000 to prevent DoS
 
     let items = Array.from(this.executions.values());
 

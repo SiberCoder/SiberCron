@@ -471,6 +471,12 @@ export default function ExecutionHistoryPage() {
     return params.get('workflowId') ?? '';
   }, [location.search]);
 
+  // ?id=<executionId> auto-expands a specific execution row (e.g. from notification links)
+  const urlExecutionId = useMemo(
+    () => new URLSearchParams(location.search).get('id') ?? '',
+    [location.search],
+  );
+
   // Client-side filtering (applied on top of server data for instant feedback)
   const filteredExecutions = useMemo(() => {
     return executions.filter((e) => {
@@ -596,21 +602,20 @@ export default function ExecutionHistoryPage() {
     load();
   }, []);
 
-  // Auto-expand a specific execution when ?id=<executionId> is in the URL
+  // Auto-expand a specific execution when ?id=<executionId> is in the URL.
+  // Runs when executions first load or when the URL changes (e.g. clicking a notification link).
+  // filteredExecutions is intentionally used without being in deps — we only want to
+  // page-jump on initial load (before filters are applied), avoiding infinite loops.
+  const didJumpRef = useRef(false);
   useEffect(() => {
-    if (executions.length === 0) return;
-    const params = new URLSearchParams(location.search);
-    const targetId = params.get('id');
-    if (targetId) {
-      setExpandedId(targetId);
-      // Jump to the page containing the target execution
-      const idx = filteredExecutions.findIndex((e) => e.id === targetId);
-      if (idx >= 0) {
-        setPage(Math.floor(idx / pageSize) + 1);
-      }
-    }
+    if (!urlExecutionId || executions.length === 0 || didJumpRef.current) return;
+    didJumpRef.current = true;
+    setExpandedId(urlExecutionId);
+    const idx = filteredExecutions.findIndex((e) => e.id === urlExecutionId);
+    if (idx >= 0) setPage(Math.floor(idx / pageSize) + 1);
+  // filteredExecutions reads current filter state without needing to be a dep
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [executions.length]);
+  }, [urlExecutionId, executions.length]);
 
   const handleDeleteExecution = async (id: string) => {
     try {
@@ -678,15 +683,19 @@ export default function ExecutionHistoryPage() {
     }
   };
 
-  const handleRetry = async (e: React.MouseEvent, exec: IExecution) => {
+  const handleRetry = async (e: React.MouseEvent, exec: IExecution, resume = false) => {
     e.stopPropagation();
     setRetryingId(exec.id);
     try {
-      await apiPost(`/executions/${exec.id}/retry`);
-      toast.success(`"${exec.workflowName ?? exec.workflowId}" yeniden başlatıldı`);
+      const query = resume ? '?resume=true' : '';
+      await apiPost(`/executions/${exec.id}/retry${query}`);
+      const hasProgress = resume && Object.values(exec.nodeResults || {}).some(nr => nr.status === 'success');
+      toast.success(hasProgress
+        ? `"${exec.workflowName ?? exec.workflowId}" kaldigi yerden devam ediyor`
+        : `"${exec.workflowName ?? exec.workflowId}" yeniden baslatildi`);
       await load();
     } catch {
-      toast.error('Yeniden başlatma başarısız');
+      toast.error('Yeniden baslatma basarisiz');
     } finally {
       setRetryingId(null);
     }
@@ -1069,10 +1078,13 @@ export default function ExecutionHistoryPage() {
                     )}
                     {(exec.status === 'error' || exec.status === 'success') && (
                       <button
-                        onClick={(e) => handleRetry(e, exec)}
+                        onClick={(e) => {
+                          const hasCompletedNodes = exec.status === 'error' && Object.values(exec.nodeResults || {}).some(nr => nr.status === 'success');
+                          handleRetry(e, exec, hasCompletedNodes);
+                        }}
                         disabled={retryingId === exec.id}
                         className="p-1.5 rounded-lg text-obsidian-600 hover:text-aurora-cyan hover:bg-aurora-cyan/5 transition-all disabled:opacity-50"
-                        title="Yeniden çalıştır"
+                        title={exec.status === 'error' && Object.values(exec.nodeResults || {}).some(nr => nr.status === 'success') ? 'Kaldigi yerden devam et' : 'Yeniden calistir'}
                       >
                         {retryingId === exec.id
                           ? <Loader2 size={12} className="animate-spin" />
@@ -1100,6 +1112,28 @@ export default function ExecutionHistoryPage() {
                       {exec.errorMessage && (
                         <div className="mb-4 p-3 bg-aurora-rose/5 border border-aurora-rose/10 rounded-xl">
                           <p className="text-xs text-aurora-rose font-body">{exec.errorMessage}</p>
+                          {(exec.errorMessage.includes('server was restarted') || exec.errorMessage.includes('timed out')) && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <button
+                                onClick={(e) => handleRetry(e, exec, true)}
+                                disabled={retryingId === exec.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-aurora-cyan/10 border border-aurora-cyan/20 text-aurora-cyan text-xs font-medium hover:bg-aurora-cyan/20 transition-all disabled:opacity-50"
+                              >
+                                {retryingId === exec.id
+                                  ? <Loader2 size={12} className="animate-spin" />
+                                  : <Play size={12} />}
+                                Kaldigi Yerden Devam Et
+                              </button>
+                              <button
+                                onClick={(e) => handleRetry(e, exec)}
+                                disabled={retryingId === exec.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-obsidian-400 text-xs hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
+                              >
+                                <RotateCcw size={10} />
+                                Sifirdan Baslat
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1116,7 +1150,7 @@ export default function ExecutionHistoryPage() {
 
                       {/* Node results */}
                       <div className="space-y-2.5">
-                        {Object.values(exec.nodeResults).map((nr) => (
+                        {Object.values(exec.nodeResults || {}).map((nr) => (
                           <NodeResultRow key={nr.nodeId} nr={nr} isRunning={exec.status === 'running'} />
                         ))}
                       </div>

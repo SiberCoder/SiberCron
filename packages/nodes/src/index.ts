@@ -41,6 +41,9 @@ import { FilterNode } from './core/Filter.node.js';
 import { AggregateNode } from './core/Aggregate.node.js';
 import { SortNode } from './core/Sort.node.js';
 import { ExecuteWorkflowNode } from './core/ExecuteWorkflow.node.js';
+import { XMLNode } from './core/XML.node.js';
+import { CryptoNode } from './core/Crypto.node.js';
+import { VariablesNode } from './core/Variables.node.js';
 
 export const builtinNodes: INodeType[] = [
   ManualTriggerNode,
@@ -84,6 +87,9 @@ export const builtinNodes: INodeType[] = [
   AggregateNode,
   SortNode,
   ExecuteWorkflowNode,
+  XMLNode,
+  CryptoNode,
+  VariablesNode,
 ];
 
 export {
@@ -128,4 +134,7 @@ export {
   AggregateNode,
   SortNode,
   ExecuteWorkflowNode,
+  XMLNode,
+  CryptoNode,
+  VariablesNode,
 };

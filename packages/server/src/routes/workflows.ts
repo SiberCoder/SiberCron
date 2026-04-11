@@ -99,6 +99,25 @@ export async function workflowRoutes(
     return result;
   });
 
+  // GET /stats - Aggregate workflow statistics
+  fastify.get('/stats', async (_request: FastifyRequest, _reply: FastifyReply) => {
+    const all = db.listWorkflows({ limit: 1000 });
+    const byTrigger: Record<string, number> = {};
+    let active = 0;
+    for (const wf of all.data) {
+      byTrigger[wf.triggerType] = (byTrigger[wf.triggerType] ?? 0) + 1;
+      if (wf.isActive) active++;
+    }
+    const { activeJobs: scheduledCronJobs } = schedulerService.getStatus();
+    return {
+      total: all.total,
+      active,
+      inactive: all.total - active,
+      byTrigger,
+      scheduledCronJobs,
+    };
+  });
+
   // POST / - Create workflow
   fastify.post('/', async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = CreateWorkflowSchema.safeParse(request.body);
@@ -107,6 +126,13 @@ export async function workflowRoutes(
       return { error: 'Validation failed', details: parsed.error.flatten().fieldErrors };
     }
     const body = parsed.data as CreateWorkflowRequest;
+
+    // Check for duplicate name
+    const nameConflict = db.listWorkflows({ search: body.name, limit: 50 });
+    if (nameConflict.data.some((w) => w.name.toLowerCase() === body.name.toLowerCase())) {
+      reply.code(409);
+      return { error: `A workflow named "${body.name}" already exists` };
+    }
 
     // Validate cron expression
     if (body.cronExpression) {
@@ -126,11 +152,10 @@ export async function workflowRoutes(
       if (pathErr) { reply.code(400); return { error: pathErr }; }
       if (!body.webhookPath.startsWith('/')) body.webhookPath = `/${body.webhookPath}`;
 
-      const existing = db.listWorkflows({ limit: 5000 });
-      const conflict = existing.data.find((w) => w.webhookPath === body.webhookPath);
-      if (conflict) {
+      const conflict = db.listWorkflows({ webhookPath: body.webhookPath, limit: 1 });
+      if (conflict.total > 0) {
         reply.code(409);
-        return { error: `Webhook path "${body.webhookPath}" is already used by workflow "${conflict.name}"` };
+        return { error: `Webhook path "${body.webhookPath}" is already used by workflow "${conflict.data[0].name}"` };
       }
     }
 
@@ -180,11 +205,10 @@ export async function workflowRoutes(
       if (pathErr) { reply.code(400); return { error: pathErr }; }
       if (!body.webhookPath.startsWith('/')) body.webhookPath = `/${body.webhookPath}`;
 
-      const existing = db.listWorkflows({ limit: 5000 });
-      const conflict = existing.data.find((w) => w.webhookPath === body.webhookPath && w.id !== id);
-      if (conflict) {
+      const conflict = db.listWorkflows({ webhookPath: body.webhookPath, limit: 1 });
+      if (conflict.total > 0 && conflict.data[0].id !== id) {
         reply.code(409);
-        return { error: `Webhook path "${body.webhookPath}" is already used by workflow "${conflict.name}"` };
+        return { error: `Webhook path "${body.webhookPath}" is already used by workflow "${conflict.data[0].name}"` };
       }
     }
 
@@ -201,6 +225,17 @@ export async function workflowRoutes(
   // DELETE /:id - Delete workflow
   fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
+    const query = request.query as { force?: string };
+
+    // Guard: prevent deleting a workflow that has active executions
+    if (query.force !== 'true') {
+      const running = db.listExecutions({ workflowId: id, status: 'running', limit: 1 });
+      if (running.total > 0) {
+        reply.code(409);
+        return { error: 'Workflow has active executions. Stop them first or pass ?force=true to override.' };
+      }
+    }
+
     // Remove from scheduler and queue before deleting
     schedulerService.onWorkflowDeactivated(id);
     await queueService.removeJobsByWorkflowId(id);

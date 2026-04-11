@@ -54,6 +54,9 @@ import {
   Filter,
   BarChart2,
   ArrowUpDown,
+  FileCode,
+  Lock,
+  Braces,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -104,6 +107,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Filter,
   BarChart2,
   ArrowUpDown,
+  FileCode,
+  Lock,
+  Braces,
 };
 
 /**

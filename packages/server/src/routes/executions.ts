@@ -17,8 +17,8 @@ export async function executionRoutes(
       triggeredBy?: string;
     };
     const result = db.listExecutions({
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
+      page: query.page ? Math.max(Number(query.page) || 1, 1) : undefined,
+      limit: query.limit ? Math.min(Math.max(Number(query.limit) || 20, 1), 1000) : undefined,
       workflowId: query.workflowId,
       status: query.status as ExecutionStatus | undefined,
       workflowName: query.workflowName,
@@ -69,21 +69,17 @@ export async function executionRoutes(
   // GET /trend - Last N days daily execution counts
   fastify.get('/trend', async (request: FastifyRequest, _reply: FastifyReply) => {
     const query = request.query as { days?: string };
-    const days = Math.min(Math.max(Number(query.days ?? 7), 1), 90);
+    const days = Math.min(Math.max(Number(query.days ?? 7) || 7, 1), 90);
 
     const now = Date.now();
     const msPerDay = 86_400_000;
 
-    // Build day buckets (UTC midnight)
-    const buckets: { date: string; success: number; error: number; total: number }[] = [];
+    // Build day buckets (UTC midnight) — use a Map for O(1) lookup during aggregation
+    type Bucket = { date: string; success: number; error: number; total: number };
+    const bucketMap = new Map<string, Bucket>();
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now - i * msPerDay);
-      buckets.push({
-        date: d.toISOString().slice(0, 10),
-        success: 0,
-        error: 0,
-        total: 0,
-      });
+      const dateStr = new Date(now - i * msPerDay).toISOString().slice(0, 10);
+      bucketMap.set(dateStr, { date: dateStr, success: 0, error: 0, total: 0 });
     }
 
     const cutoff = new Date(now - (days - 1) * msPerDay);
@@ -95,21 +91,20 @@ export async function executionRoutes(
       if (!ts) continue;
       const d = new Date(ts);
       if (d < cutoff) continue;
-      const dateStr = d.toISOString().slice(0, 10);
-      const bucket = buckets.find((b) => b.date === dateStr);
+      const bucket = bucketMap.get(d.toISOString().slice(0, 10));
       if (!bucket) continue;
       bucket.total++;
       if (exec.status === 'success') bucket.success++;
       else if (exec.status === 'error') bucket.error++;
     }
 
-    return { days, data: buckets };
+    return { days, data: Array.from(bucketMap.values()) };
   });
 
   // GET /node-errors — Top N nodes ranked by error count across recent executions
   fastify.get('/node-errors', async (request: FastifyRequest, _reply: FastifyReply) => {
     const query = request.query as { limit?: string };
-    const limit = Math.min(Math.max(Number(query.limit ?? 10), 1), 50);
+    const limit = Math.min(Math.max(Number(query.limit ?? 10) || 10, 1), 50);
 
     // Last 30 days is sufficient for node error stats
     const nodeErrorsStartDate = new Date(Date.now() - 30 * 86_400_000).toISOString();
@@ -185,7 +180,7 @@ export async function executionRoutes(
         if (Date.now() - startedAt > 30 * 60 * 1000) {
           db.updateExecution(exec.id, {
             status: 'error',
-            errorMessage: 'Execution stale - server restarted',
+            errorMessage: 'Execution timed out — stuck in running state for over 30 minutes',
             finishedAt: new Date().toISOString(),
           });
           fixed++;
@@ -217,8 +212,10 @@ export async function executionRoutes(
   });
 
   // POST /:id/retry - Re-run a failed or completed execution
+  // Query: ?resume=true to resume from where it left off (skip completed nodes)
   fastify.post('/:id/retry', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
+    const { resume } = request.query as { resume?: string };
     const execution = db.getExecution(id);
     if (!execution) {
       reply.code(404);
@@ -231,7 +228,21 @@ export async function executionRoutes(
       return { error: `Workflow "${execution.workflowId}" no longer exists` };
     }
 
-    // Queue a new execution with no trigger data (manual retry)
+    // Build trigger data - include completed node results if resuming
+    const triggerData: Record<string, unknown> = { retriedFrom: id };
+    const isResume = resume === 'true' || resume === '1';
+    if (isResume && execution.nodeResults) {
+      const completedResults: Record<string, unknown> = {};
+      for (const [nodeId, nr] of Object.entries(execution.nodeResults)) {
+        if (nr.status === 'success' || nr.status === 'skipped') {
+          completedResults[nodeId] = nr;
+        }
+      }
+      if (Object.keys(completedResults).length > 0) {
+        triggerData._resumeNodeResults = completedResults;
+      }
+    }
+
     const jwtUser = request.user as { sub?: string; username?: string } | undefined;
     const retryTrigger: IExecutionTrigger = {
       method: 'retry',
@@ -242,12 +253,12 @@ export async function executionRoutes(
     const jobId = await queueService.addWorkflowJob(
       workflow.id,
       workflow.name,
-      { retriedFrom: id },
+      triggerData,
       retryTrigger,
     );
 
     reply.code(202);
-    return { message: 'Retry queued', workflowId: workflow.id, jobId };
+    return { message: isResume ? 'Resume queued' : 'Retry queued', workflowId: workflow.id, jobId };
   });
 
   // DELETE /:id - Delete execution
