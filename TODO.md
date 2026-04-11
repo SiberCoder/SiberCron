@@ -69,7 +69,7 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 #### Oncelik 2: Ek Node'lar
 - [x] AISummarizer node (metin ozetleme)
 - [x] AIClassifier node (metin siniflandirma)
-- [ ] AIWebBrowser node (web scraping + AI ozet)
+- [x] AIWebBrowser node (web scraping + AI ozet)
 - [x] TelegramTrigger node (incoming messages)
 - [ ] GoogleSheets node (read/write/append)
 - [x] MySQL / PostgreSQL query node (DatabaseQuery)
@@ -90,12 +90,14 @@ OpenClaw (AI otomasyon) + n8n (visual workflow builder) karisimi, acik kaynak, s
 #### Oncelik 4: Production Ozellikleri
 - [ ] Kullanici kimlik dogrulama (auth)
 - [ ] Rol bazli erisim kontrolu (RBAC)
-- [ ] Workflow versiyonlama
+- [x] Workflow versiyonlama (auto-snapshot, restore)
 - [x] Execution log retention policy (otomatik, env ile ayarlanabilir)
 - [ ] Rate limiting (gelismis)
 - [ ] API anahtari yonetimi
 - [ ] Monitoring / metricsler
 - [x] Webhook guvenligi (HMAC-SHA256 imza dogrulama)
+- [x] Node palette arama iyilestirmesi (otomatik grup acma)
+- [x] Settings sayfasi sistem bilgisi paneli
 
 #### Oncelik 5: Ekosistem
 - [ ] `create-sibercron-node` CLI araci
