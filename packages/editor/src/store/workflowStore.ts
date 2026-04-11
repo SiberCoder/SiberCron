@@ -525,8 +525,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     } else {
       data = parsed;
     }
-    if (!data.nodes || !data.edges) {
-      throw new Error('Invalid workflow JSON: missing nodes or edges');
+    if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
+      throw new Error('Invalid workflow JSON: nodes and edges must be arrays');
     }
     const workflow: IWorkflow = {
       id: `imported_${Date.now()}`,

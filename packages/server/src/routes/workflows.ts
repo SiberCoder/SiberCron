@@ -99,8 +99,8 @@ export async function workflowRoutes(
   fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
     const query = request.query as WorkflowListQuery & { withLastExecution?: string };
     const result = db.listWorkflows({
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
+      page: query.page ? Math.max(Number(query.page) || 1, 1) : undefined,
+      limit: query.limit ? Math.min(Math.max(Number(query.limit) || 20, 1), 500) : undefined,
       search: query.search,
       isActive: query.isActive !== undefined ? String(query.isActive) === 'true' : undefined,
       triggerType: query.triggerType as TriggerType | undefined,

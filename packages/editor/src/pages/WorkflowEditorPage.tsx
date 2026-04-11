@@ -394,7 +394,7 @@ export default function WorkflowEditorPage() {
     };
   }, [id, loadWorkflow, reset, resetExecution, location.state]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts — only page-specific ones; toolbar/canvas handle save/execute/undo/redo/duplicate
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -404,35 +404,6 @@ export default function WorkflowEditorPage() {
       if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput && selectedNodeId) {
         e.preventDefault();
         useWorkflowStore.getState().removeNode(selectedNodeId);
-      }
-
-      // Ctrl+Y / Cmd+Y — redo (alternative; EditorToolbar handles Ctrl+Z and Ctrl+Shift+Z)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'y' && !isInput) {
-        e.preventDefault();
-        useWorkflowStore.getState().redo();
-      }
-
-      // Ctrl+E / Cmd+E — save if dirty, then execute
-      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-        e.preventDefault();
-        const store = useWorkflowStore.getState();
-        if (store.workflowMeta.id) {
-          (async () => {
-            if (store.isDirty) await store.saveWorkflow();
-            const executionId = await store.executeWorkflow();
-            useExecutionStore.getState().connect(executionId);
-          })().catch((err: unknown) => {
-            toast.error(err instanceof Error ? err.message : 'Çalıştırma başlatılamadı');
-          });
-        } else {
-          toast.warning('Çalıştırmadan önce workflow\'u kaydedin');
-        }
-      }
-
-      // Ctrl+D / Cmd+D — duplicate selected node (preserves config)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd' && !isInput && selectedNodeId) {
-        e.preventDefault();
-        useWorkflowStore.getState().duplicateNodes([selectedNodeId]);
       }
 
       // Escape — deselect node
