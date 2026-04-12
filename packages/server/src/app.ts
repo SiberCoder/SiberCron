@@ -26,6 +26,7 @@ import { schedulerService } from './services/schedulerService.js';
 import { queueService } from './services/queueService.js';
 import { executionLogStore } from './services/executionLogStore.js';
 import { db } from './db/database.js';
+import { executionIdMap } from './state/executionIdMap.js';
 import type { IWorkflow } from '@sibercron/shared';
 
 // ── Initialize node registry ────────────────────────────────────────────
@@ -425,45 +426,6 @@ process.on('ai:stream' as any, (data: { executionId: string; nodeId: string; nod
   });
 });
 
-// ── TTL-aware execution ID map ─────────────────────────────────────────────
-// Tracks engine-executionId → api-executionId mappings with 2-hour TTL.
-// Uses a clean wrapper instead of monkey-patching Map.prototype.set.
-class TtlMap<K, V> {
-  private readonly data = new Map<K, V>();
-  private readonly timestamps = new Map<K, number>();
-
-  set(key: K, value: V): this {
-    this.timestamps.set(key, Date.now());
-    this.data.set(key, value);
-    return this;
-  }
-
-  get(key: K): V | undefined { return this.data.get(key); }
-  has(key: K): boolean { return this.data.has(key); }
-  delete(key: K): boolean {
-    this.timestamps.delete(key);
-    return this.data.delete(key);
-  }
-  [Symbol.iterator](): IterableIterator<[K, V]> { return this.data[Symbol.iterator](); }
-
-  evictExpired(ttlMs: number): void {
-    const cutoff = Date.now() - ttlMs;
-    for (const [key, ts] of this.timestamps) {
-      if (ts < cutoff) {
-        this.data.delete(key);
-        this.timestamps.delete(key);
-      }
-    }
-  }
-}
-
-const executionIdMap = new TtlMap<string, string>();
-
-// Expose the map so workflow route can register mappings
-(globalThis as any).__executionIdMap = executionIdMap;
-
-// Periodic TTL cleanup every 30 minutes (2-hour TTL)
-setInterval(() => executionIdMap.evictExpired(2 * 60 * 60 * 1000), 30 * 60_000).unref();
 
 // ── JSON Schema subset validator (for webhook payload validation) ────────
 type JsonSchemaNode = {

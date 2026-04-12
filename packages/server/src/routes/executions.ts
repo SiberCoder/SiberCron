@@ -244,7 +244,7 @@ export async function executionRoutes(
       }
       // Pass AutonomousDev session ID so it can --resume the Claude CLI conversation.
       // Try metadata first, then fall back to session file on disk.
-      let sessionId = (execution as any).metadata?.autonomousDevSessionId as string | undefined;
+      let sessionId = execution.metadata?.autonomousDevSessionId as string | undefined;
       if (!sessionId) {
         try {
           const fs = await import('node:fs');

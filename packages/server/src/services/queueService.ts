@@ -8,6 +8,7 @@ import type { INodeExecutionResult, IExecutionTrigger } from '@sibercron/shared'
 import type { Server as SocketIOServer } from 'socket.io';
 import { db } from '../db/database.js';
 import { config } from '../config/env.js';
+import { executionIdMap } from '../state/executionIdMap.js';
 
 const QUEUE_NAME = 'sibercron:workflows';
 
@@ -242,8 +243,7 @@ class QueueService {
           if (event === 'execution:started') {
             const engineId = (data as { executionId?: string })?.executionId;
             if (engineId) {
-              const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
-              idMap?.set(engineId, executionId);
+              executionIdMap.set(engineId, executionId);
             }
           }
 
@@ -371,11 +371,8 @@ class QueueService {
     } finally {
       // Clean up ALL executionIdMap entries that point to this executionId
       // (there may be multiple engine IDs mapping to the same API execution ID)
-      const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
-      if (idMap) {
-        for (const [engineId, apiId] of [...idMap]) {
-          if (apiId === executionId) idMap.delete(engineId);
-        }
+      for (const [engineId, apiId] of [...executionIdMap]) {
+        if (apiId === executionId) executionIdMap.delete(engineId);
       }
     }
   }

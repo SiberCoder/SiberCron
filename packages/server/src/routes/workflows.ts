@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { db } from '../db/database.js';
 import { schedulerService } from '../services/schedulerService.js';
 import { queueService } from '../services/queueService.js';
+import { executionIdMap } from '../state/executionIdMap.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -368,8 +369,7 @@ export async function workflowRoutes(
           if (event === 'execution:started') {
             const engineId = (data as { executionId?: string })?.executionId;
             if (engineId) {
-              const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
-              idMap?.set(engineId, executionId);
+              executionIdMap.set(engineId, executionId);
             }
           }
 
@@ -448,11 +448,8 @@ export async function workflowRoutes(
       });
     }).finally(() => {
       // Clean up ALL entries for this executionId to prevent memory leak
-      const idMap = (globalThis as any).__executionIdMap as Map<string, string> | undefined;
-      if (idMap) {
-        for (const [engineId, apiId] of idMap) {
-          if (apiId === executionId) idMap.delete(engineId);
-        }
+      for (const [engineId, apiId] of executionIdMap) {
+        if (apiId === executionId) executionIdMap.delete(engineId);
       }
     });
 
