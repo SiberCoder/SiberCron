@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import type { NodeGroup, INodeTypeDefinition } from '@sibercron/shared';
 import { NODE_GROUPS } from '@sibercron/shared';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
+import { useTranslation } from '../../i18n';
 import { getNodeIcon } from '../../lib/iconRegistry';
 
 const GROUP_ORDER: NodeGroup[] = ['trigger', 'ai', 'messaging', 'core', 'data', 'transform'];
@@ -27,10 +28,15 @@ function trackRecentNode(name: string) {
 interface NodeItemProps {
   definition: INodeTypeDefinition;
   onUsed?: (name: string) => void;
+  t: (key: string) => string;
 }
 
-function NodeItem({ definition, onUsed }: NodeItemProps) {
+function NodeItem({ definition, onUsed, t }: NodeItemProps) {
   const Icon = getNodeIcon(definition.icon);
+
+  // Get translated displayName and description from locale, fall back to definition
+  const displayName = t(`nodes.definitions.${definition.name}.displayName`) || definition.displayName;
+  const description = t(`nodes.definitions.${definition.name}.description`) || definition.description;
 
   const onDragStart = (event: DragEvent) => {
     event.dataTransfer.setData(
@@ -56,10 +62,10 @@ function NodeItem({ definition, onUsed }: NodeItemProps) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-xs font-medium text-obsidian-300 group-hover:text-white truncate transition-colors font-body">
-          {definition.displayName}
+          {displayName}
         </div>
         <div className="text-[10px] text-obsidian-600 truncate font-body">
-          {definition.description}
+          {description}
         </div>
       </div>
     </div>
@@ -73,6 +79,7 @@ export default function NodePalette() {
   );
   const [recentNames, setRecentNames] = useState<string[]>(() => getRecentNodes());
   const { nodeTypes, fetchNodeTypes } = useNodeRegistryStore();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (nodeTypes.length === 0) {
@@ -147,7 +154,9 @@ export default function NodePalette() {
           )}
         </div>
         {isSearching && filtered.length === 0 && (
-          <p className="text-[10px] text-obsidian-600 mt-2 text-center font-body">Node bulunamadı</p>
+          <p className="text-[10px] text-obsidian-600 mt-2 text-center font-body">
+            {t('common.noData')}
+          </p>
         )}
       </div>
 
@@ -162,7 +171,7 @@ export default function NodePalette() {
             </div>
             <div className="pb-1 px-1.5">
               {recentDefs.map((nt) => (
-                <NodeItem key={`recent-${nt.name}`} definition={nt} onUsed={handleNodeUsed} />
+                <NodeItem key={`recent-${nt.name}`} definition={nt} onUsed={handleNodeUsed} t={t} />
               ))}
             </div>
             <div className="mx-4 h-px bg-white/[0.04] mt-1 mb-2" />
@@ -177,6 +186,11 @@ export default function NodePalette() {
           const isOpen = isSearching || openGroups.has(group);
           const GroupIcon = getNodeIcon(groupInfo.icon);
 
+          // Get translated group label from first node definition's group field, fall back to original
+          const translatedGroupLabel = items.length > 0
+            ? t(`nodes.definitions.${items[0].name}.group`) || groupInfo.label
+            : groupInfo.label;
+
           return (
             <div key={group}>
               <button
@@ -189,7 +203,7 @@ export default function NodePalette() {
                   <ChevronRight size={11} className="text-obsidian-600" />
                 )}
                 <GroupIcon size={12} style={{ color: groupInfo.color }} />
-                <span>{groupInfo.label}</span>
+                <span>{translatedGroupLabel}</span>
                 <span className="ml-auto text-obsidian-700 font-normal normal-case text-[10px]">
                   {items.length}
                 </span>
@@ -197,7 +211,7 @@ export default function NodePalette() {
               {isOpen && (
                 <div className="pb-1 px-1.5 animate-slide-down">
                   {items.map((nt) => (
-                    <NodeItem key={nt.name} definition={nt} onUsed={handleNodeUsed} />
+                    <NodeItem key={nt.name} definition={nt} onUsed={handleNodeUsed} t={t} />
                   ))}
                 </div>
               )}

@@ -197,11 +197,11 @@ export const AIAgentNode: INodeType = {
     color: '#8B5CF6',
     group: 'ai',
     version: 2,
-    description: 'AI model ile etkilesim - OpenAI, Anthropic, Gemini, Ollama, Groq ve ozel endpoint destegi',
+    description: 'Interact with AI models - OpenAI, Anthropic, Gemini, Ollama, Groq and custom endpoints',
     inputs: ['main'],
     outputs: ['main'],
     credentials: [
-      { name: 'aiProvider', required: false, displayName: 'AI Saglayici Kimlik Bilgileri' },
+      { name: 'aiProvider', required: false, displayName: 'AI Provider Credentials' },
     ],
     properties: [
       {

@@ -832,6 +832,262 @@ const en = {
     clearHistoryTooltip: 'Clear history',
     outputItemsTooltip: (count: number) => `${count} item(s) — click to view output`,
   },
+
+  // ── Node Definitions (Dynamic Language Support) ────────────────────────
+  nodes: {
+    definitions: {
+      'sibercron.aiAgent': {
+        displayName: 'AI Agent',
+        group: 'AI',
+        description: 'Interact with AI models - OpenAI, Anthropic, Gemini, Ollama, Groq and custom endpoints',
+      },
+      'sibercron.aiClassifier': {
+        displayName: 'AI Classifier',
+        group: 'AI',
+        description: 'Classify text into categories using AI',
+      },
+      'sibercron.aiSummarizer': {
+        displayName: 'AI Summarizer',
+        group: 'AI',
+        description: 'Summarize text using AI',
+      },
+      'sibercron.aiWebBrowser': {
+        displayName: 'AI Web Browser',
+        group: 'AI',
+        description: 'Browse a web page and extract or analyze its content with AI',
+      },
+      'sibercron.autonomousDev': {
+        displayName: 'Autonomous Development',
+        group: 'AI',
+        description: 'AI autonomous development loop - give instruction, AI works, answer if asked, restart when done',
+      },
+      'sibercron.aggregate': {
+        displayName: 'Aggregate',
+        group: 'Core',
+        description: 'Perform math operations on items like count, sum, average, grouping',
+      },
+      'sibercron.airtable': {
+        displayName: 'Airtable',
+        group: 'Data',
+        description: 'Read and write Airtable base records',
+      },
+      'sibercron.csv': {
+        displayName: 'CSV',
+        group: 'Core',
+        description: 'Parse CSV to JSON or convert JSON to CSV (RFC 4180)',
+      },
+      'sibercron.code': {
+        displayName: 'Code',
+        group: 'Core',
+        description: 'Run custom JavaScript code to transform data',
+      },
+      'sibercron.conditional': {
+        displayName: 'Conditional',
+        group: 'Core',
+        description: 'Route items based on a condition',
+      },
+      'sibercron.crypto': {
+        displayName: 'Crypto',
+        group: 'Core',
+        description: 'Hash, HMAC, Base64, random, AES-256 encrypt/decrypt',
+      },
+      'sibercron.databaseQuery': {
+        displayName: 'Database Query',
+        group: 'Data',
+        description: 'Execute SQL queries on MySQL or PostgreSQL databases',
+      },
+      'sibercron.dateTime': {
+        displayName: 'DateTime',
+        group: 'Core',
+        description: 'Parse, format, and manipulate date/time values',
+      },
+      'sibercron.delay': {
+        displayName: 'Delay',
+        group: 'Core',
+        description: 'Wait for a specified duration before passing data through',
+      },
+      'sibercron.executeWorkflow': {
+        displayName: 'Execute Workflow',
+        group: 'Core',
+        description: 'Execute another SiberCron workflow and return its result',
+      },
+      'sibercron.fileOperation': {
+        displayName: 'File Operation',
+        group: 'Core',
+        description: 'Read, write, append, delete, or list local files on the server',
+      },
+      'sibercron.filter': {
+        displayName: 'Filter',
+        group: 'Core',
+        description: 'Filter items matching conditions, remove non-matching items',
+      },
+      'sibercron.ftpSftp': {
+        displayName: 'FTP / SFTP',
+        group: 'Data',
+        description: 'File operations on FTP or SFTP server: list, download, upload, delete, rename',
+      },
+      'sibercron.github': {
+        displayName: 'GitHub',
+        group: 'Data',
+        description: 'Interact with GitHub — issues, PRs, repositories, releases',
+      },
+      'sibercron.googleDrive': {
+        displayName: 'Google Drive',
+        group: 'Data',
+        description: 'Manage files and folders in Google Drive',
+      },
+      'sibercron.googleSheets': {
+        displayName: 'Google Sheets',
+        group: 'Data',
+        description: 'Read and write data in Google Sheets using a Service Account',
+      },
+      'sibercron.graphql': {
+        displayName: 'GraphQL',
+        group: 'Core',
+        description: 'Execute GraphQL queries and mutations',
+      },
+      'sibercron.httpRequest': {
+        displayName: 'HTTP Request',
+        group: 'Core',
+        description: 'Make an HTTP request to any URL',
+      },
+      'sibercron.httpResponse': {
+        displayName: 'HTTP Response',
+        group: 'Core',
+        description: 'Set the HTTP response for synchronous webhook workflows',
+      },
+      'sibercron.jira': {
+        displayName: 'Jira',
+        group: 'Data',
+        description: 'Manage Jira issues, projects, comments and transitions',
+      },
+      'sibercron.log': {
+        displayName: 'Log',
+        group: 'Core',
+        description: 'Log a message to the console and pass data through',
+      },
+      'sibercron.loop': {
+        displayName: 'Loop',
+        group: 'Core',
+        description: 'Iterate over input items, outputting each one with loop metadata',
+      },
+      'sibercron.merge': {
+        displayName: 'Merge',
+        group: 'Core',
+        description: 'Merge data from multiple inputs using various strategies',
+      },
+      'sibercron.notionDatabase': {
+        displayName: 'Notion Database',
+        group: 'Data',
+        description: 'Query, create, and update Notion database pages',
+      },
+      'sibercron.rssFeed': {
+        displayName: 'RSS Feed',
+        group: 'Data',
+        description: 'Fetch and parse RSS/Atom feeds',
+      },
+      'sibercron.redis': {
+        displayName: 'Redis',
+        group: 'Data',
+        description: 'Read, write, and manage data in Redis',
+      },
+      'sibercron.retry': {
+        displayName: 'Retry',
+        group: 'Core',
+        description: 'Retry an HTTP request with exponential backoff on failure',
+      },
+      'sibercron.sort': {
+        displayName: 'Sort',
+        group: 'Core',
+        description: 'Sort items by field value or randomly',
+      },
+      'sibercron.split': {
+        displayName: 'Split',
+        group: 'Core',
+        description: 'Split input items into batches or by field value',
+      },
+      'sibercron.switch': {
+        displayName: 'Switch',
+        group: 'Core',
+        description: 'Route items to multiple outputs based on field value',
+      },
+      'sibercron.text': {
+        displayName: 'Text',
+        group: 'Core',
+        description: 'Perform string operations: case, trim, replace, split, join, encode, truncate, and more',
+      },
+      'sibercron.transform': {
+        displayName: 'Transform',
+        group: 'Transform',
+        description: 'Transform input data by picking, renaming, removing, or setting fields',
+      },
+      'sibercron.variables': {
+        displayName: 'Variables',
+        group: 'Core',
+        description: 'Set, get, and manage per-execution variables',
+      },
+      'sibercron.xml': {
+        displayName: 'XML',
+        group: 'Core',
+        description: 'Parse XML to JSON or convert JSON to XML',
+      },
+      'sibercron.discordSend': {
+        displayName: 'Discord Send',
+        group: 'Messaging',
+        description: 'Send a message to Discord via webhook or Bot API',
+      },
+      'sibercron.emailSmtp': {
+        displayName: 'Email (SMTP)',
+        group: 'Messaging',
+        description: 'Send emails via SMTP',
+      },
+      'sibercron.slackSend': {
+        displayName: 'Slack Send',
+        group: 'Messaging',
+        description: 'Send a message to a Slack channel or thread',
+      },
+      'sibercron.telegramSend': {
+        displayName: 'Telegram Send',
+        group: 'Messaging',
+        description: 'Send a message, photo, or document via Telegram Bot API',
+      },
+      'sibercron.whatsappReceive': {
+        displayName: 'WhatsApp Receive',
+        group: 'Trigger',
+        description: 'Trigger workflow with incoming WhatsApp messages',
+      },
+      'sibercron.whatsappSend': {
+        displayName: 'WhatsApp Send',
+        group: 'Messaging',
+        description: 'Send messages via WhatsApp Cloud API',
+      },
+      'sibercron.cronTrigger': {
+        displayName: 'Cron Trigger',
+        group: 'Trigger',
+        description: 'Trigger a workflow on a cron schedule',
+      },
+      'sibercron.githubTrigger': {
+        displayName: 'GitHub Trigger',
+        group: 'Trigger',
+        description: 'Trigger a workflow from GitHub webhook events (push, PR, issues, release…)',
+      },
+      'sibercron.manualTrigger': {
+        displayName: 'Manual Trigger',
+        group: 'Trigger',
+        description: 'Manually trigger a workflow execution',
+      },
+      'sibercron.telegramTrigger': {
+        displayName: 'Telegram Trigger',
+        group: 'Trigger',
+        description: 'Trigger workflow on incoming Telegram messages',
+      },
+      'sibercron.webhookTrigger': {
+        displayName: 'Webhook Trigger',
+        group: 'Trigger',
+        description: 'Trigger a workflow via an incoming webhook',
+      },
+    },
+  },
 } as const;
 
 // Recursively replace all leaf string values with `string` so that
