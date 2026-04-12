@@ -27,6 +27,7 @@ import {
 import clsx from 'clsx';
 import type { Socket } from 'socket.io-client';
 import { getSocket, releaseSocket } from '../lib/socket';
+import { WS_EVENTS } from '@sibercron/shared';
 import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsNodeStart, WsExecutionCompleted } from '@sibercron/shared';
 import { apiGet, apiPost, apiDelete } from '../api/client';
 import { toast } from '../store/toastStore';
@@ -327,8 +328,8 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
     // If already connected, subscribe immediately (onConnect won't fire again)
     const socket = getSocket();
 
-    const onConnect = () => { socket.emit('subscribe:execution', executionId); };
-    const onReconnect = () => { socket.emit('subscribe:execution', executionId); };
+    const onConnect = () => { socket.emit(WS_EVENTS.SUBSCRIBE_EXECUTION, executionId); };
+    const onReconnect = () => { socket.emit(WS_EVENTS.SUBSCRIBE_EXECUTION, executionId); };
     const onLog = (data: { apiExecutionId?: string; level: string; message: string; timestamp?: string; data?: Record<string, unknown> }) => {
       if (cancelled) return;
       // Accept logs targeted at our execution (room-filtered) or explicitly matched
@@ -346,20 +347,20 @@ function LiveLogPanel({ executionId }: { executionId: string }) {
 
     socket.on('connect', onConnect);
     socket.io.on('reconnect', onReconnect);
-    socket.on('execution:log', onLog);
+    socket.on(WS_EVENTS.EXECUTION_LOG, onLog);
 
     // If socket is already connected, subscribe immediately
     if (socket.connected) {
-      socket.emit('subscribe:execution', executionId);
+      socket.emit(WS_EVENTS.SUBSCRIBE_EXECUTION, executionId);
     }
 
     return () => {
       cancelled = true;
       clearInterval(pollInterval);
-      socket.emit('unsubscribe:execution', executionId);
+      socket.emit(WS_EVENTS.UNSUBSCRIBE_EXECUTION, executionId);
       socket.off('connect', onConnect);
       socket.io.off('reconnect', onReconnect);
-      socket.off('execution:log', onLog);
+      socket.off(WS_EVENTS.EXECUTION_LOG, onLog);
       releaseSocket();
     };
   }, [executionId]);
@@ -745,18 +746,18 @@ export default function ExecutionHistoryPage() {
       );
     };
 
-    socket.on('execution:node:start', onNodeStart);
-    socket.on('execution:node:done', onNodeDone);
-    socket.on('execution:completed', onCompleted);
+    socket.on(WS_EVENTS.EXECUTION_NODE_START, onNodeStart);
+    socket.on(WS_EVENTS.EXECUTION_NODE_DONE, onNodeDone);
+    socket.on(WS_EVENTS.EXECUTION_COMPLETED, onCompleted);
 
     return () => {
       // Leave all execution rooms to prevent server-side memory leak
       for (const execId of subscribedIds.current) {
-        socket.emit('unsubscribe:execution', execId);
+        socket.emit(WS_EVENTS.UNSUBSCRIBE_EXECUTION, execId);
       }
-      socket.off('execution:node:start', onNodeStart);
-      socket.off('execution:node:done', onNodeDone);
-      socket.off('execution:completed', onCompleted);
+      socket.off(WS_EVENTS.EXECUTION_NODE_START, onNodeStart);
+      socket.off(WS_EVENTS.EXECUTION_NODE_DONE, onNodeDone);
+      socket.off(WS_EVENTS.EXECUTION_COMPLETED, onCompleted);
       releaseSocket();
       socketRef.current = null;
       subscribedIds.current.clear();
@@ -770,7 +771,7 @@ export default function ExecutionHistoryPage() {
 
     for (const exec of executions) {
       if (exec.status === 'running' && !subscribedIds.current.has(exec.id)) {
-        socket.emit('subscribe:execution', exec.id);
+        socket.emit(WS_EVENTS.SUBSCRIBE_EXECUTION, exec.id);
         subscribedIds.current.add(exec.id);
       }
     }

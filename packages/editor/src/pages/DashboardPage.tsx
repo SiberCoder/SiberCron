@@ -17,6 +17,7 @@ import {
   Cpu,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { WS_EVENTS } from '@sibercron/shared';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
 import { apiGet } from '../api/client';
 import { getSocket, releaseSocket } from '../lib/socket';
@@ -469,9 +470,9 @@ export default function DashboardPage() {
         toast.error(`${name} hata ile sonuçlandı${dur}`, 6000);
       }
     };
-    socket.on('workflow:execution:completed', onCompleted);
+    socket.on(WS_EVENTS.WORKFLOW_EXECUTION_COMPLETED, onCompleted);
     return () => {
-      socket.off('workflow:execution:completed', onCompleted);
+      socket.off(WS_EVENTS.WORKFLOW_EXECUTION_COMPLETED, onCompleted);
       releaseSocket();
     };
   }, [fetchDashboardData]);

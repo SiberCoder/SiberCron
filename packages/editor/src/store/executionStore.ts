@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getSocket, releaseSocket } from '../lib/socket';
+import { WS_EVENTS } from '@sibercron/shared';
 import type {
   WsExecutionStarted,
   WsNodeStart,
@@ -155,19 +156,19 @@ export const useExecutionStore = create<ExecutionState>((set) => ({
       }));
     };
 
-    socket.on('execution:started', onStarted);
-    socket.on('execution:node:start', onNodeStart);
-    socket.on('execution:node:done', onNodeDone);
-    socket.on('execution:log', onLog);
-    socket.on('execution:completed', onCompleted);
+    socket.on(WS_EVENTS.EXECUTION_STARTED, onStarted);
+    socket.on(WS_EVENTS.EXECUTION_NODE_START, onNodeStart);
+    socket.on(WS_EVENTS.EXECUTION_NODE_DONE, onNodeDone);
+    socket.on(WS_EVENTS.EXECUTION_LOG, onLog);
+    socket.on(WS_EVENTS.EXECUTION_COMPLETED, onCompleted);
 
     // Store cleanup function
     _activeHandlers = () => {
-      socket.off('execution:started', onStarted);
-      socket.off('execution:node:start', onNodeStart);
-      socket.off('execution:node:done', onNodeDone);
-      socket.off('execution:log', onLog);
-      socket.off('execution:completed', onCompleted);
+      socket.off(WS_EVENTS.EXECUTION_STARTED, onStarted);
+      socket.off(WS_EVENTS.EXECUTION_NODE_START, onNodeStart);
+      socket.off(WS_EVENTS.EXECUTION_NODE_DONE, onNodeDone);
+      socket.off(WS_EVENTS.EXECUTION_LOG, onLog);
+      socket.off(WS_EVENTS.EXECUTION_COMPLETED, onCompleted);
       releaseSocket();
     };
 

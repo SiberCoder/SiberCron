@@ -110,10 +110,10 @@ export default function LiveExecutionPanel() {
       }, 30000);
     };
 
-    socket.on('execution:log', onLog);
-    socket.on('execution:node:start', onNodeStart);
-    socket.on('execution:node:done', onNodeDone);
-    socket.on('execution:completed', onCompleted);
+    socket.on(WS_EVENTS.EXECUTION_LOG, onLog);
+    socket.on(WS_EVENTS.EXECUTION_NODE_START, onNodeStart);
+    socket.on(WS_EVENTS.EXECUTION_NODE_DONE, onNodeDone);
+    socket.on(WS_EVENTS.EXECUTION_COMPLETED, onCompleted);
 
     // Fetch existing logs via API (in case we connected late)
     // API returns { logs: [...], total: N } or plain array
@@ -139,10 +139,10 @@ export default function LiveExecutionPanel() {
       clearInterval(logPoll);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('execution:log', onLog);
-      socket.off('execution:node:start', onNodeStart);
-      socket.off('execution:node:done', onNodeDone);
-      socket.off('execution:completed', onCompleted);
+      socket.off(WS_EVENTS.EXECUTION_LOG, onLog);
+      socket.off(WS_EVENTS.EXECUTION_NODE_START, onNodeStart);
+      socket.off(WS_EVENTS.EXECUTION_NODE_DONE, onNodeDone);
+      socket.off(WS_EVENTS.EXECUTION_COMPLETED, onCompleted);
       releaseSocket();
       setIsConnected(false);
     };
