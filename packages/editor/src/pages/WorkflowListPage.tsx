@@ -92,7 +92,25 @@ export default function WorkflowListPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const bulkTagPopoverRef = useRef<HTMLDivElement>(null);
   const pageSize = 10;
+
+  // Close bulk-tag popover on Escape or click outside
+  useEffect(() => {
+    if (!showBulkTagPopover) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowBulkTagPopover(false); };
+    const onClickOutside = (e: MouseEvent) => {
+      if (bulkTagPopoverRef.current && !bulkTagPopoverRef.current.contains(e.target as Node)) {
+        setShowBulkTagPopover(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onClickOutside);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onClickOutside);
+    };
+  }, [showBulkTagPopover]);
 
   const toggleSort = (col: typeof sortBy) => {
     if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -532,7 +550,7 @@ export default function WorkflowListPage() {
               Etiket
             </button>
             {showBulkTagPopover && (
-              <div className="absolute bottom-full left-0 mb-2 w-64 glass-card rounded-xl p-3 shadow-2xl z-50 animate-fade-in">
+              <div ref={bulkTagPopoverRef} className="absolute bottom-full left-0 mb-2 w-64 glass-card rounded-xl p-3 shadow-2xl z-50 animate-fade-in">
                 <p className="text-[10px] text-obsidian-500 mb-2 font-body">Etiket ekle veya kaldır ({selectedIds.size} workflow)</p>
                 <div className="flex gap-1.5 mb-2">
                   <input

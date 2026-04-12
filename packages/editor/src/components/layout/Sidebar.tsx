@@ -17,6 +17,7 @@ import {
   User,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { WS_EVENTS } from '@sibercron/shared';
 import { useAuthStore } from '../../store/authStore';
 import { getSocket, releaseSocket } from '../../lib/socket';
 import { apiGet } from '../../api/client';
@@ -48,23 +49,25 @@ function useRunningCount() {
       .then((r) => setCount(r.data?.filter((e) => e.status === 'running').length ?? 0))
       .catch(() => {});
 
-    // Socket: update on execution start/complete/fail
+    // Socket: update on execution start/complete via global broadcast events
+    // NOTE: 'execution:started' and 'execution:completed' are room-scoped events;
+    // use the global 'workflow:execution:*' variants so the sidebar receives them
+    // without subscribing to a specific execution room.
     const socket = getSocket();
     const onStarted = () => setCount((c) => c + 1);
-    const onCompleted = () => setCount((c) => Math.max(0, c - 1));
-    const onFailed = (data: { workflowName?: string; errorMessage?: string }) => {
+    const onCompleted = (data: { status?: string; workflowName?: string; errorMessage?: string }) => {
       setCount((c) => Math.max(0, c - 1));
-      const name = data?.workflowName ?? 'Workflow';
-      const msg = data?.errorMessage ? `: ${data.errorMessage}` : '';
-      toast.error(`${name} başarısız oldu${msg}`, 6000);
+      if (data?.status === 'error') {
+        const name = data?.workflowName ?? 'Workflow';
+        const msg = data?.errorMessage ? `: ${data.errorMessage}` : '';
+        toast.error(`${name} başarısız oldu${msg}`, 6000);
+      }
     };
-    socket.on('execution:started', onStarted);
-    socket.on('execution:completed', onCompleted);
-    socket.on('workflow:execution:failed', onFailed);
+    socket.on(WS_EVENTS.WORKFLOW_EXECUTION_STARTED, onStarted);
+    socket.on(WS_EVENTS.WORKFLOW_EXECUTION_COMPLETED, onCompleted);
     return () => {
-      socket.off('execution:started', onStarted);
-      socket.off('execution:completed', onCompleted);
-      socket.off('workflow:execution:failed', onFailed);
+      socket.off(WS_EVENTS.WORKFLOW_EXECUTION_STARTED, onStarted);
+      socket.off(WS_EVENTS.WORKFLOW_EXECUTION_COMPLETED, onCompleted);
       releaseSocket();
     };
   }, []);

@@ -1182,8 +1182,18 @@ export default function NodeConfigPanel() {
               {currentLabel}
             </button>
           )}
-          <div className="text-[10px] text-obsidian-500 truncate font-body mt-0.5">
-            {definition.description}
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-[10px] text-obsidian-500 truncate font-body flex-1">
+              {definition.description}
+            </span>
+            <button
+              title={`Node ID: ${selectedNodeId} — Kopyala`}
+              onClick={() => { void navigator.clipboard.writeText(selectedNodeId); }}
+              className="shrink-0 flex items-center gap-0.5 text-[9px] text-obsidian-600 hover:text-obsidian-300 font-mono transition-colors"
+            >
+              <Copy size={9} />
+              ID
+            </button>
           </div>
         </div>
         <button
