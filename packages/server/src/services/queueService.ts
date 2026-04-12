@@ -317,7 +317,7 @@ class QueueService {
 
       // Fire error webhook notification if configured and execution failed
       if (engineResult.status === 'error') {
-        const errorWebhookUrl = (workflow.settings as Record<string, unknown> | undefined)?.errorWebhookUrl as string | undefined;
+        const errorWebhookUrl = workflow.settings?.errorWebhookUrl;
         if (errorWebhookUrl?.startsWith('http')) {
           const exec = db.getExecution(executionId);
           fetch(errorWebhookUrl, {
@@ -347,7 +347,7 @@ class QueueService {
       });
 
       // Fire error webhook notification on caught errors too
-      const errorWebhookUrl = (workflow.settings as Record<string, unknown> | undefined)?.errorWebhookUrl as string | undefined;
+      const errorWebhookUrl = workflow.settings?.errorWebhookUrl;
       if (errorWebhookUrl?.startsWith('http')) {
         const exec = db.getExecution(executionId);
         fetch(errorWebhookUrl, {
