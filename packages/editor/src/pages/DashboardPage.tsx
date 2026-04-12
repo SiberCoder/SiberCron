@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   GitBranch,
@@ -13,12 +13,12 @@ import {
   Activity,
   RefreshCw,
   AlertTriangle,
-  X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
 import { apiGet } from '../api/client';
 import { getSocket, releaseSocket } from '../lib/socket';
+import { toast } from '../store/toastStore';
 import LiveExecutionPanel from '../components/dashboard/LiveExecutionPanel';
 
 // ── Execution Trend Chart ─────────────────────────────────────────────
@@ -298,14 +298,6 @@ interface WorkflowHealthAlert {
   total: number;
 }
 
-interface ExecutionToast {
-  id: string;
-  workflowName: string;
-  executionId: string;
-  status: 'success' | 'error';
-  durationMs?: number;
-}
-
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -324,14 +316,6 @@ export default function DashboardPage() {
   const [topWorkflows, setTopWorkflows] = useState<WorkflowSummary[]>([]);
   const [topFailingNodes, setTopFailingNodes] = useState<NodeErrorStat[]>([]);
   const [healthAlerts, setHealthAlerts] = useState<WorkflowHealthAlert[]>([]);
-  const [toasts, setToasts] = useState<ExecutionToast[]>([]);
-  const toastTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-    const timer = toastTimers.current.get(id);
-    if (timer) { clearTimeout(timer); toastTimers.current.delete(id); }
-  }, []);
 
   const fetchDashboardData = useCallback(async (silent = false, signal?: AbortSignal) => {
     if (!silent) setLoading(true);
@@ -440,34 +424,27 @@ export default function DashboardPage() {
     const socket = getSocket();
     const onCompleted = (data: {
       workflowName?: string;
-      executionId?: string;
       status?: string;
       durationMs?: number;
     }) => {
       fetchDashboardData(true);
-      const toastId = `toast-${Date.now()}-${Math.random()}`;
-      const newToast: ExecutionToast = {
-        id: toastId,
-        workflowName: data.workflowName ?? 'Workflow',
-        executionId: data.executionId ?? '',
-        status: data.status === 'success' ? 'success' : 'error',
-        durationMs: data.durationMs,
-      };
-      setToasts((prev) => [...prev.slice(-4), newToast]);
-      const timer = setTimeout(() => dismissToast(toastId), 6000);
-      toastTimers.current.set(toastId, timer);
+      const name = data.workflowName ?? 'Workflow';
+      const ms = data.durationMs;
+      const dur = ms
+        ? ms < 1000 ? ` (${ms}ms)` : ` (${(ms / 1000).toFixed(1)}s)`
+        : '';
+      if (data.status === 'success') {
+        toast.success(`${name} tamamlandı${dur}`, 5000);
+      } else {
+        toast.error(`${name} hata ile sonuçlandı${dur}`, 6000);
+      }
     };
     socket.on('workflow:execution:completed', onCompleted);
     return () => {
       socket.off('workflow:execution:completed', onCompleted);
       releaseSocket();
     };
-  }, [fetchDashboardData, dismissToast]);
-
-  useEffect(() => {
-    const timers = toastTimers.current;
-    return () => { timers.forEach(clearTimeout); timers.clear(); };
-  }, []);
+  }, [fetchDashboardData]);
 
   const STATS_CONFIG = [
     {
@@ -821,56 +798,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Execution completion toasts — fixed bottom-right */}
-      {toasts.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
-          {toasts.map((t) => {
-            const isSuccess = t.status === 'success';
-            const dur = t.durationMs
-              ? t.durationMs < 1000
-                ? ` (${t.durationMs}ms)`
-                : ` (${(t.durationMs / 1000).toFixed(1)}s)`
-              : '';
-            return (
-              <div
-                key={t.id}
-                className={clsx(
-                  'pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-glass-lg border backdrop-blur-sm animate-slide-in-right max-w-xs',
-                  isSuccess
-                    ? 'bg-aurora-emerald/10 border-aurora-emerald/20'
-                    : 'bg-aurora-rose/10 border-aurora-rose/20',
-                )}
-              >
-                <div className={clsx('shrink-0 mt-0.5', isSuccess ? 'text-aurora-emerald' : 'text-aurora-rose')}>
-                  {isSuccess ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-white font-body truncate">{t.workflowName}</p>
-                  <p className={clsx('text-[10px] font-body', isSuccess ? 'text-aurora-emerald' : 'text-aurora-rose')}>
-                    {isSuccess ? `Tamamlandı${dur}` : `Hata ile sonuçlandı${dur}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {t.executionId && (
-                    <button
-                      onClick={() => { navigate(`/executions?id=${t.executionId}`); dismissToast(t.id); }}
-                      className="text-[10px] text-obsidian-400 hover:text-white transition-colors font-body underline underline-offset-2"
-                    >
-                      Detay
-                    </button>
-                  )}
-                  <button
-                    onClick={() => dismissToast(t.id)}
-                    className="text-obsidian-600 hover:text-white transition-colors ml-1"
-                  >
-                    <X size={11} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
