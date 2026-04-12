@@ -138,7 +138,7 @@ const TEMPLATES: TemplateDefinition[] = [
     glowColor: 'group-hover:shadow-neon-green',
     nodes: [
       { id: 'node_tpl_1', type: 'siberNode', position: { x: 50, y: 200 }, data: { nodeType: 'sibercron.cronTrigger', label: 'Hourly Check', parameters: { cronExpression: '0 * * * *' } } },
-      { id: 'node_tpl_2', type: 'siberNode', position: { x: 300, y: 200 }, data: { nodeType: 'sibercron.rssFeed', label: 'Fetch RSS', parameters: { url: 'https://example.com/rss', limit: 10 } } },
+      { id: 'node_tpl_2', type: 'siberNode', position: { x: 300, y: 200 }, data: { nodeType: 'sibercron.rssFeed', label: 'Fetch RSS', parameters: { feedUrl: 'https://example.com/rss', maxItems: 10 } } },
       { id: 'node_tpl_3', type: 'siberNode', position: { x: 550, y: 200 }, data: { nodeType: 'sibercron.aiClassifier', label: 'Relevance Filter', parameters: { categories: 'relevant,not_relevant', userPrompt: 'Is this article relevant to software engineering and AI?' } } },
       { id: 'node_tpl_4', type: 'siberNode', position: { x: 800, y: 100 }, data: { nodeType: 'sibercron.aiSummarizer', label: 'Summarize', parameters: { mode: 'bullets', language: 'en' } } },
       { id: 'node_tpl_5', type: 'siberNode', position: { x: 1050, y: 100 }, data: { nodeType: 'sibercron.notionDatabase', label: 'Save to Notion', parameters: { operation: 'createPage' } } },
