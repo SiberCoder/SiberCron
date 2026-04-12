@@ -37,9 +37,9 @@ import { useAuthStore } from '../store/authStore';
 import { getSocket, releaseSocket } from '../lib/socket';
 import { useTranslation } from '../i18n';
 
-function getNextCronRun(expr: string): string {
+function getNextCronRun(expr: string, lang: string): string {
   try {
-    return cronstrue.toString(expr, { locale: 'tr', throwExceptionOnParseError: true });
+    return cronstrue.toString(expr, { locale: lang === 'tr' ? 'tr' : 'en', throwExceptionOnParseError: true });
   } catch {
     return expr;
   }
@@ -68,7 +68,7 @@ const TRIGGER_COLORS: Record<TriggerType, string> = {
 };
 
 export default function WorkflowListPage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
   const isAdmin = !currentUser || currentUser.role === 'admin'; // allow all when auth disabled (user is null)
@@ -379,7 +379,7 @@ export default function WorkflowListPage() {
           return u ? { ...w, isActive: u.isActive } : w;
         }),
       );
-      toast.success(`${updated.length} workflow ${activate ? 'aktif edildi' : 'durduruldu'}`);
+      toast.success(`${updated.length} workflow ${activate ? t('workflows.activatedCount') : t('workflows.deactivatedCount')}`);
     }
     setSelectedIds(new Set());
     setBulkToggling(false);
@@ -395,7 +395,7 @@ export default function WorkflowListPage() {
       .map((r) => r.value);
 
     if (exports.length === 0) {
-      toast.error('Dışa aktarılacak workflow bulunamadı');
+      toast.error(t('workflows.noExportWorkflows'));
       return;
     }
 
@@ -407,7 +407,7 @@ export default function WorkflowListPage() {
     a.download = `sibercron_export_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`${exports.length} workflow dışa aktarıldı`);
+    toast.success(`${exports.length} ${t('workflows.exportedCount')}`);
   };
 
   const handleBulkDelete = async () => {
@@ -417,7 +417,7 @@ export default function WorkflowListPage() {
     const deletedCount = results.filter((r) => r.status === 'fulfilled').length;
     if (deletedCount > 0) {
       setWorkflows((prev) => prev.filter((w) => !selectedIds.has(w.id)));
-      toast.success(`${deletedCount} workflow silindi`);
+      toast.success(`${deletedCount} ${t('workflows.deletedCount')}`);
     }
     setSelectedIds(new Set());
     setBulkDeleting(false);
@@ -448,7 +448,7 @@ export default function WorkflowListPage() {
         const u = updated.find((u) => u.id === w.id);
         return u ? { ...w, tags: u.tags } : w;
       }));
-      toast.success(`${updated.length} workflow'a etiket ${remove ? 'kaldırıldı' : 'eklendi'}: #${tag}`);
+      toast.success(`${updated.length} workflow - #${tag} ${remove ? t('workflows.tagRemoved') : t('workflows.tagAdded')}`);
     }
     setBulkTagInput('');
     setBulkTagging(false);
@@ -509,7 +509,7 @@ export default function WorkflowListPage() {
           <button
             onClick={() => setSelectedIds(new Set())}
             className="p-1.5 rounded-lg text-obsidian-500 hover:text-white hover:bg-white/[0.04] transition-all"
-            title="Seçimi kaldır"
+            title={t('workflows.deselect')}
           >
             <X size={14} />
           </button>
@@ -546,21 +546,21 @@ export default function WorkflowListPage() {
             <button
               onClick={() => setShowBulkTagPopover((v) => !v)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-violet hover:bg-aurora-violet/10 rounded-lg transition-all font-body"
-              title="Seçili workflow'lara etiket ekle/kaldır"
+              title={t('workflows.tagLabel')}
             >
               <Tag size={12} />
-              Etiket
+              {t('workflows.tag')}
             </button>
             {showBulkTagPopover && (
               <div ref={bulkTagPopoverRef} className="absolute bottom-full left-0 mb-2 w-64 glass-card rounded-xl p-3 shadow-2xl z-50 animate-fade-in">
-                <p className="text-[10px] text-obsidian-500 mb-2 font-body">Etiket ekle veya kaldır ({selectedIds.size} workflow)</p>
+                <p className="text-[10px] text-obsidian-500 mb-2 font-body">{t('workflows.tagLabel')} ({selectedIds.size} workflow)</p>
                 <div className="flex gap-1.5 mb-2">
                   <input
                     type="text"
                     value={bulkTagInput}
                     onChange={(e) => setBulkTagInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleBulkAddTag(bulkTagInput); } }}
-                    placeholder="Etiket adı..."
+                    placeholder={t('workflows.tagNamePlaceholder')}
                     className="glass-input text-xs flex-1 py-1.5"
                     autoFocus
                   />
@@ -571,14 +571,14 @@ export default function WorkflowListPage() {
                     disabled={bulkTagging || !bulkTagInput.trim()}
                     className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold bg-aurora-violet/10 border border-aurora-violet/20 text-aurora-violet hover:bg-aurora-violet/20 transition-colors disabled:opacity-50 font-body"
                   >
-                    {bulkTagging ? <Loader2 size={10} className="animate-spin mx-auto" /> : 'Ekle'}
+                    {bulkTagging ? <Loader2 size={10} className="animate-spin mx-auto" /> : t('workflows.tagAdd')}
                   </button>
                   <button
                     onClick={() => handleBulkAddTag(bulkTagInput, true)}
                     disabled={bulkTagging || !bulkTagInput.trim()}
                     className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold bg-aurora-rose/10 border border-aurora-rose/20 text-aurora-rose hover:bg-aurora-rose/20 transition-colors disabled:opacity-50 font-body"
                   >
-                    {bulkTagging ? <Loader2 size={10} className="animate-spin mx-auto" /> : 'Kaldır'}
+                    {bulkTagging ? <Loader2 size={10} className="animate-spin mx-auto" /> : t('workflows.tagRemove')}
                   </button>
                 </div>
               </div>
@@ -592,7 +592,7 @@ export default function WorkflowListPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-rose hover:bg-aurora-rose/10 rounded-lg transition-all font-body disabled:opacity-50"
             >
               {bulkDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-              Tümünü Sil
+              {t('workflows.deleteAll')}
             </button>
           )}
         </div>
@@ -606,7 +606,7 @@ export default function WorkflowListPage() {
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Workflow ara..."
+            placeholder={t('workflows.searchPlaceholder')}
             className="w-60 pl-9 pr-8 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-obsidian-600 focus:outline-none focus:border-aurora-cyan/40 focus:bg-white/[0.06] transition-all font-body"
           />
           {search && (
@@ -633,7 +633,7 @@ export default function WorkflowListPage() {
                   : 'text-obsidian-500 hover:text-white',
               )}
             >
-              {f === 'all' ? 'Tümü' : f === 'active' ? 'Aktif' : 'Pasif'}
+              {f === 'all' ? t('workflows.filterAll') : f === 'active' ? t('workflows.filterActive') : t('workflows.filterInactive')}
               {f !== 'all' && (
                 <span className="ml-1 opacity-60">
                   ({f === 'active' ? workflows.filter((w) => w.isActive).length : workflows.filter((w) => !w.isActive).length})
@@ -649,11 +649,11 @@ export default function WorkflowListPage() {
           onChange={(e) => { setTriggerFilter(e.target.value as typeof triggerFilter); setPage(1); }}
           className="px-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:border-aurora-cyan/40 font-body"
         >
-          <option value="all">Tüm Triggerlar</option>
-          <option value="manual">Manuel</option>
-          <option value="cron">Cron</option>
-          <option value="webhook">Webhook</option>
-          <option value="event">Event</option>
+          <option value="all">{t('workflows.allTriggers')}</option>
+          <option value="manual">{t('workflows.manual')}</option>
+          <option value="cron">{t('workflows.cron')}</option>
+          <option value="webhook">{t('workflows.webhook')}</option>
+          <option value="event">{t('workflows.event')}</option>
         </select>
 
         {/* Tag filter */}
@@ -678,13 +678,13 @@ export default function WorkflowListPage() {
 
         {/* Sort control */}
         <div className="flex items-center gap-1 ml-auto">
-          <span className="text-[10px] text-obsidian-500 font-body">Sırala:</span>
+          <span className="text-[10px] text-obsidian-500 font-body">{t('workflows.sortBy')}</span>
           {([
-            { key: 'updatedAt', label: 'Tarih' },
-            { key: 'name', label: 'İsim' },
-            { key: 'lastRun', label: 'Son Çalışma' },
-            { key: 'successRate', label: 'Başarı' },
-          ] as const).map(({ key, label }) => (
+            { key: 'updatedAt', labelKey: 'workflows.sortDate' as const },
+            { key: 'name', labelKey: 'workflows.sortName' as const },
+            { key: 'lastRun', labelKey: 'workflows.sortLastRun' as const },
+            { key: 'successRate', labelKey: 'workflows.sortSuccess' as const },
+          ] as const).map(({ key, labelKey }) => (
             <button
               key={key}
               onClick={() => toggleSort(key)}
@@ -695,7 +695,7 @@ export default function WorkflowListPage() {
                   : 'text-obsidian-500 hover:text-white',
               )}
             >
-              {label}
+              {t(labelKey)}
               {sortBy === key && (
                 <span className="text-[8px]">{sortDir === 'asc' ? '↑' : '↓'}</span>
               )}
@@ -721,10 +721,10 @@ export default function WorkflowListPage() {
             <div className="absolute -inset-4 bg-aurora-cyan/5 rounded-full blur-2xl pointer-events-none" />
           </div>
           <h3 className="text-xl font-display font-semibold text-white mb-2">
-            Henüz workflow yok
+            {t('workflows.noWorkflows')}
           </h3>
           <p className="text-sm text-obsidian-500 mb-8 max-w-sm font-body">
-            AI destekli nodelarla görevleri otomatikleştirmek için ilk workflow'unuzu oluşturun
+            {t('workflows.createFirst')}
           </p>
           {isAdmin && (
             <button
@@ -732,7 +732,7 @@ export default function WorkflowListPage() {
               className="btn-aurora"
             >
               <Plus size={16} />
-              Workflow Oluştur
+              {t('dashboard.createWorkflow')}
             </button>
           )}
         </div>
@@ -741,23 +741,23 @@ export default function WorkflowListPage() {
           <Search size={32} className="text-obsidian-600 mb-4" />
           <p className="text-sm text-obsidian-500 font-body mb-3">
             {search
-              ? <><span className="text-obsidian-300">"{search}"</span> için sonuç bulunamadı</>
-              : 'Aktif filtrelerle eşleşen workflow yok'}
+              ? <><span className="text-obsidian-300">"{search}"</span> {t('workflows.noResultsFor')}</>
+              : t('workflows.noMatchingFilter')}
           </p>
           <div className="flex flex-wrap justify-center gap-2 mb-4">
             {search && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-aurora-cyan/10 border border-aurora-cyan/20 text-[10px] font-medium text-aurora-cyan font-body">
-                Arama: {search}
+                {t('workflows.filterSearchLabel')} {search}
               </span>
             )}
             {statusFilter !== 'all' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-aurora-emerald/10 border border-aurora-emerald/20 text-[10px] font-medium text-aurora-emerald font-body">
-                Durum: {statusFilter === 'active' ? 'Aktif' : 'Pasif'}
+                {t('workflows.filterStatusLabel')} {statusFilter === 'active' ? t('workflows.filterActive') : t('workflows.filterInactive')}
               </span>
             )}
             {triggerFilter !== 'all' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-aurora-blue/10 border border-aurora-blue/20 text-[10px] font-medium text-aurora-blue font-body">
-                Trigger: {triggerFilter}
+                {t('workflows.filterTriggerLabel')} {triggerFilter}
               </span>
             )}
             {tagFilter && (
@@ -770,7 +770,7 @@ export default function WorkflowListPage() {
             onClick={() => { setSearch(''); setStatusFilter('all'); setTriggerFilter('all'); setTagFilter(null); setPage(1); }}
             className="text-xs text-aurora-cyan hover:underline font-body"
           >
-            Tüm filtreleri temizle
+            {t('workflows.clearFilters')}
           </button>
         </div>
       ) : (
@@ -785,11 +785,11 @@ export default function WorkflowListPage() {
               {filtered.slice((page - 1) * pageSize, page * pageSize).every((w) => selectedIds.has(w.id))
                 ? <CheckSquare size={13} className="text-aurora-cyan" />
                 : <Square size={13} />}
-              Sayfayı Seç
+              {t('workflows.selectPage')}
             </button>
             {selectedIds.size > 0 && (
               <span className="text-[10px] text-aurora-cyan/70 font-body">
-                ({selectedIds.size} seçili)
+                ({selectedIds.size} {t('workflows.selected')})
               </span>
             )}
           </div>
@@ -818,7 +818,7 @@ export default function WorkflowListPage() {
                           'shrink-0 transition-colors',
                           isSelected ? 'text-aurora-cyan' : 'text-obsidian-600 hover:text-obsidian-400 opacity-0 group-hover:opacity-100',
                         )}
-                        title="Seç"
+                        title={t('workflows.select')}
                       >
                         {isSelected ? <CheckSquare size={14} /> : <Square size={14} />}
                       </button>
@@ -835,10 +835,10 @@ export default function WorkflowListPage() {
                           ? 'bg-aurora-emerald/10 text-aurora-emerald'
                           : 'bg-white/[0.04] text-obsidian-500',
                       )}
-                      title={wf.isActive ? 'Devre dışı bırak' : 'Aktif et'}
+                      title={wf.isActive ? t('workflows.deactivateTitle') : t('workflows.activateTitle')}
                     >
                       <span className={clsx('w-1.5 h-1.5 rounded-full', wf.isActive ? 'bg-aurora-emerald' : 'bg-obsidian-600')} />
-                      {wf.isActive ? 'Aktif' : 'Pasif'}
+                      {wf.isActive ? t('workflows.filterActive') : t('workflows.filterInactive')}
                     </button>
                   </div>
 
@@ -871,7 +871,7 @@ export default function WorkflowListPage() {
                   <div className="flex items-center gap-3 text-[10px] text-obsidian-500 font-body">
                     <span className={clsx('flex items-center gap-1', triggerColor)}>
                       <TriggerIcon size={11} />
-                      <span>{{ manual: 'Manuel', cron: 'Cron', webhook: 'Webhook', event: 'Olay' }[wf.triggerType] ?? wf.triggerType}</span>
+                      <span>{t(`workflows.${wf.triggerType}`)}</span>
                     </span>
                     <span className="flex items-center gap-1 text-obsidian-500">
                       <GitBranch size={11} />
@@ -886,7 +886,7 @@ export default function WorkflowListPage() {
                   {wf.triggerType === 'cron' && wf.cronExpression && (
                     <div className="mt-1.5 flex items-center gap-1 text-[10px] text-aurora-amber/70 font-body" title={wf.cronExpression}>
                       <Clock size={10} />
-                      <span className="truncate">{getNextCronRun(wf.cronExpression)}</span>
+                      <span className="truncate">{getNextCronRun(wf.cronExpression, language)}</span>
                     </div>
                   )}
 
@@ -902,10 +902,10 @@ export default function WorkflowListPage() {
                           e.stopPropagation();
                           const url = `${API_BASE_URL}/api/v1/webhook${wf.webhookPath}`;
                           navigator.clipboard.writeText(url);
-                          toast.success('Webhook URL kopyalandı');
+                          toast.success(t('workflows.webhookUrlCopied'));
                         }}
                         className="opacity-0 group-hover/webhook:opacity-100 transition-opacity p-0.5 hover:text-white"
-                        title="URL'yi kopyala"
+                        title={t('common.copy')}
                       >
                         <Copy size={9} />
                       </button>
@@ -927,18 +927,18 @@ export default function WorkflowListPage() {
                         summary[wf.id].lastStatus === 'error' ? 'text-aurora-rose' :
                         'text-aurora-blue',
                       )}>
-                        {summary[wf.id].total} çalıştırma
+                        {summary[wf.id].total} {t('workflows.runs')}
                       </span>
                       <span className="text-obsidian-600">·</span>
                       <span className="text-obsidian-500">
                         {(() => {
                           const diff = Date.now() - new Date(summary[wf.id].lastAt).getTime();
                           const m = Math.floor(diff / 60000);
-                          if (m < 1) return 'şimdi';
-                          if (m < 60) return `${m}dk önce`;
+                          if (m < 1) return t('dashboard.justNow');
+                          if (m < 60) return `${m}${t('dashboard.minutesAgo')}`;
                           const h = Math.floor(m / 60);
-                          if (h < 24) return `${h}sa önce`;
-                          return `${Math.floor(h / 24)}g önce`;
+                          if (h < 24) return `${h}${t('dashboard.hoursAgo')}`;
+                          return `${Math.floor(h / 24)}${t('dashboard.daysAgo')}`;
                         })()}
                       </span>
                     </div>
@@ -951,7 +951,7 @@ export default function WorkflowListPage() {
                     return (
                       <div className="mt-2.5">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[9px] text-obsidian-600 font-body uppercase tracking-wider">Başarı Oranı</span>
+                          <span className="text-[9px] text-obsidian-600 font-body uppercase tracking-wider">{t('workflows.successRateLabel')}</span>
                           <span className={clsx(
                             'text-[10px] font-semibold font-body',
                             rate >= 80 ? 'text-aurora-emerald' : rate >= 50 ? 'text-aurora-amber' : 'text-aurora-rose',
@@ -977,10 +977,10 @@ export default function WorkflowListPage() {
                     <button
                       onClick={() => navigate(`/workflows/${wf.id}`)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-obsidian-300 hover:text-aurora-cyan hover:bg-aurora-cyan/5 rounded-lg transition-all font-body"
-                      title="Düzenle"
+                      title={t('workflows.editBtn')}
                     >
                       <Edit3 size={12} />
-                      Düzenle
+                      {t('workflows.editBtn')}
                     </button>
                     <button
                       onClick={(e) => handleToggleActive(e, wf)}
@@ -991,10 +991,10 @@ export default function WorkflowListPage() {
                           ? 'text-aurora-amber hover:bg-aurora-amber/5'
                           : 'text-aurora-emerald hover:bg-aurora-emerald/5',
                       )}
-                      title={wf.isActive ? 'Durdur' : 'Başlat'}
+                      title={wf.isActive ? t('workflows.stopBtn') : t('workflows.startBtn')}
                     >
                       {wf.isActive ? <PowerOff size={12} /> : <Power size={12} />}
-                      {wf.isActive ? 'Durdur' : 'Başlat'}
+                      {wf.isActive ? t('workflows.stopBtn') : t('workflows.startBtn')}
                     </button>
                     <button
                       onClick={async (e) => {
@@ -1002,13 +1002,13 @@ export default function WorkflowListPage() {
                         setExecutingId(wf.id);
                         try {
                           const exec = await apiPost<{ id: string }>(`/workflows/${wf.id}/execute`, {});
-                          toast.success(`"${wf.name}" başlatıldı`);
+                          toast.success(`"${wf.name}" ${t('workflows.started')}`);
                           if (exec?.id) navigate(`/executions?id=${exec.id}`);
                         } catch (err) {
                           if (err instanceof ApiError && err.status === 409) {
-                            toast.warning(`"${wf.name}" zaten çalışıyor`);
+                            toast.warning(`"${wf.name}" ${t('workflows.alreadyRunning')}`);
                           } else {
-                            const msg = err instanceof Error ? err.message : 'Çalıştırma başarısız';
+                            const msg = err instanceof Error ? err.message : t('workflows.runFailed');
                             toast.error(msg);
                           }
                         } finally {
@@ -1017,12 +1017,12 @@ export default function WorkflowListPage() {
                       }}
                       disabled={executingId === wf.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-aurora-blue hover:bg-aurora-blue/5 rounded-lg transition-all font-body disabled:opacity-50"
-                      title="Çalıştır"
+                      title={t('workflows.runBtn')}
                     >
                       {executingId === wf.id
                         ? <Loader2 size={12} className="animate-spin" />
                         : <Play size={12} />}
-                      Çalıştır
+                      {t('workflows.runBtn')}
                     </button>
                     <div className="flex-1" />
                     {isAdmin && (
@@ -1030,7 +1030,7 @@ export default function WorkflowListPage() {
                         onClick={(e) => handleDuplicate(e, wf)}
                         disabled={duplicatingId === wf.id}
                         className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-cyan hover:bg-aurora-cyan/5 rounded-lg transition-all font-body disabled:opacity-50"
-                        title="Kopyala"
+                        title={t('common.duplicate')}
                       >
                         <Copy size={12} />
                       </button>
@@ -1038,7 +1038,7 @@ export default function WorkflowListPage() {
                     <button
                       onClick={(e) => handleExport(e, wf)}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-indigo hover:bg-aurora-indigo/5 rounded-lg transition-all font-body"
-                      title="Dışa Aktar"
+                      title={t('common.export')}
                     >
                       <Download size={12} />
                     </button>
@@ -1046,7 +1046,7 @@ export default function WorkflowListPage() {
                       <button
                         onClick={() => setDeleteConfirmId(wf.id)}
                         className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-obsidian-500 hover:text-aurora-rose hover:bg-aurora-rose/5 rounded-lg transition-all font-body"
-                        title="Sil"
+                        title={t('common.delete')}
                       >
                         <Trash2 size={12} />
                       </button>
@@ -1067,25 +1067,25 @@ export default function WorkflowListPage() {
                   <AlertTriangle size={20} className="text-aurora-rose" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-display font-semibold text-white">Workflow Sil</h3>
-                  <p className="text-xs text-obsidian-400 font-body">Bu işlem geri alınamaz</p>
+                  <h3 className="text-sm font-display font-semibold text-white">{t('workflows.deleteConfirmTitle')}</h3>
+                  <p className="text-xs text-obsidian-400 font-body">{t('workflows.cannotUndoShort')}</p>
                 </div>
               </div>
               <p className="text-xs text-obsidian-300 font-body">
-                <strong className="text-white">{workflows.find((w) => w.id === deleteConfirmId)?.name}</strong> workflow'unu silmek istediğinizden emin misiniz?
+                <strong className="text-white">{workflows.find((w) => w.id === deleteConfirmId)?.name}</strong> {t('workflows.deleteConfirmMsg')}?
               </p>
               <div className="flex items-center gap-3 pt-2">
                 <button
                   onClick={() => setDeleteConfirmId(null)}
                   className="flex-1 px-4 py-2.5 text-xs font-semibold text-obsidian-300 border border-white/[0.08] rounded-xl hover:bg-white/[0.04] transition-all font-body"
                 >
-                  Vazgeç
+                  {t('workflows.cancel')}
                 </button>
                 <button
                   onClick={() => handleDelete(deleteConfirmId)}
                   className="flex-1 px-4 py-2.5 text-xs font-semibold text-white bg-aurora-rose/80 hover:bg-aurora-rose rounded-xl transition-all font-body"
                 >
-                  Evet, Sil
+                  {t('workflows.confirmDelete')}
                 </button>
               </div>
             </div>
@@ -1100,26 +1100,26 @@ export default function WorkflowListPage() {
                   <AlertTriangle size={20} className="text-aurora-rose" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-display font-semibold text-white">Toplu Silme</h3>
-                  <p className="text-xs text-obsidian-400 font-body">Bu işlem geri alınamaz</p>
+                  <h3 className="text-sm font-display font-semibold text-white">{t('workflows.bulkDeleteConfirmTitle')}</h3>
+                  <p className="text-xs text-obsidian-400 font-body">{t('workflows.cannotUndoShort')}</p>
                 </div>
               </div>
               <p className="text-xs text-obsidian-300 font-body">
-                <strong className="text-white">{selectedIds.size} workflow</strong> silinecek. Emin misiniz?
+                <strong className="text-white">{selectedIds.size} workflow</strong> {t('workflows.cannotUndo')}
               </p>
               <div className="flex items-center gap-3 pt-2">
                 <button
                   onClick={() => setBulkDeleteConfirm(false)}
                   className="flex-1 px-4 py-2.5 text-xs font-semibold text-obsidian-300 border border-white/[0.08] rounded-xl hover:bg-white/[0.04] transition-all font-body"
                 >
-                  Vazgeç
+                  {t('workflows.cancel')}
                 </button>
                 <button
                   onClick={handleBulkDelete}
                   disabled={bulkDeleting}
                   className="flex-1 px-4 py-2.5 text-xs font-semibold text-white bg-aurora-rose/80 hover:bg-aurora-rose rounded-xl transition-all font-body disabled:opacity-50"
                 >
-                  {bulkDeleting ? 'Siliniyor...' : `Evet, ${selectedIds.size} Workflow Sil`}
+                  {bulkDeleting ? t('workflows.deleting') : `${t('workflows.confirmDelete')} (${selectedIds.size})`}
                 </button>
               </div>
             </div>
@@ -1139,10 +1139,10 @@ export default function WorkflowListPage() {
                   : 'border-white/[0.08] text-obsidian-300 hover:text-white hover:border-white/[0.15] hover:bg-white/[0.04]',
               )}
             >
-              Previous
+              {t('workflows.previous')}
             </button>
             <span className="text-xs text-obsidian-400 font-body">
-              Page {page} of {Math.ceil(filtered.length / pageSize)}
+              {t('workflows.page')} {page} {t('workflows.of')} {Math.ceil(filtered.length / pageSize)}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(Math.ceil(filtered.length / pageSize), p + 1))}
@@ -1154,7 +1154,7 @@ export default function WorkflowListPage() {
                   : 'border-white/[0.08] text-obsidian-300 hover:text-white hover:border-white/[0.15] hover:bg-white/[0.04]',
               )}
             >
-              Next
+              {t('workflows.next')}
             </button>
           </div>
         )}

@@ -37,6 +37,11 @@ export default {
           rose: '#f43f5e',
           yellow: '#facc15',
         },
+        electric: {
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+        },
         primary: {
           50: '#ecfdf5',
           100: '#d1fae5',

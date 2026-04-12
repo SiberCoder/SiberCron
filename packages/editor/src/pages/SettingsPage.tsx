@@ -128,6 +128,7 @@ interface ApiKeyInfo {
 }
 
 function ApiKeySection() {
+  const { t } = useTranslation();
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
@@ -143,10 +144,10 @@ function ApiKeySection() {
       setKeys(Array.isArray(data) ? data : []);
       setSectionError(null);
     } catch (err) {
-      setSectionError((err as Error).message ?? 'API anahtarları yüklenemedi');
+      setSectionError((err as Error).message ?? t('settings.apiKeyLoadFailed'));
     }
     setLoading(false);
-  }, []);
+  }, [t]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -159,18 +160,18 @@ function ApiKeySection() {
       setNewName('');
       void load();
     } catch (err) {
-      setSectionError((err as Error).message ?? 'API anahtarı oluşturulamadı');
+      setSectionError((err as Error).message ?? t('settings.apiKeyCreateFailed'));
     }
     setCreating(false);
   };
 
   const handleRevoke = async (id: string) => {
-    if (!window.confirm('Bu API anahtarını iptal etmek istediğinizden emin misiniz?')) return;
+    if (!window.confirm(t('settings.revokeKeyConfirm'))) return;
     try {
       await apiDelete(`/auth/api-keys/${id}`);
       void load();
     } catch (err) {
-      setSectionError((err as Error).message ?? 'API anahtarı iptal edilemedi');
+      setSectionError((err as Error).message ?? t('settings.apiKeyRevokeFailed'));
     }
   };
 
@@ -183,7 +184,7 @@ function ApiKeySection() {
   };
 
   return (
-    <Section icon={Key} title="API Anahtarları" description="Programatik API erişimi için kişisel erişim anahtarları" defaultOpen={false}>
+    <Section icon={Key} title={t('settings.apiKeysSection')} description={t('settings.apiKeysDesc')} defaultOpen={false}>
       <div className="space-y-3">
         {/* Section-level error */}
         {sectionError && (
@@ -198,7 +199,7 @@ function ApiKeySection() {
           <div className="glass-panel rounded-xl p-4 space-y-2 border border-aurora-emerald/30">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={14} className="text-aurora-emerald" />
-              <p className="text-xs font-semibold text-aurora-emerald">Anahtar oluşturuldu! Şimdi kopyalayın — bir daha gösterilmeyecek.</p>
+              <p className="text-xs font-semibold text-aurora-emerald">{t('settings.apiKeyCreated')}</p>
             </div>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-xs font-mono bg-obsidian-800/60 border border-white/[0.06] rounded-lg px-3 py-2 text-white break-all">
@@ -209,7 +210,7 @@ function ApiKeySection() {
                 className="shrink-0 flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs bg-white/[0.06] hover:bg-white/[0.10] text-slate-300 transition-colors"
               >
                 {copied ? <CheckCircle2 size={12} className="text-aurora-emerald" /> : <Copy size={12} />}
-                {copied ? 'Kopyalandı' : 'Kopyala'}
+                {copied ? t('common.copied') : t('common.copy')}
               </button>
               <button onClick={() => setNewKey(null)} className="shrink-0 p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors">
                 <X size={12} />
@@ -224,7 +225,7 @@ function ApiKeySection() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void handleCreate()}
-            placeholder="Anahtar adı (örn: CI/CD pipeline)"
+            placeholder={t('settings.apiKeyName')}
             className="flex-1 bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-electric-500/40 transition-all"
           />
           <button
@@ -233,7 +234,7 @@ function ApiKeySection() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-electric-600/20 text-electric-400 text-xs font-semibold hover:bg-electric-600/30 disabled:opacity-50 transition-colors"
           >
             {creating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-            Oluştur
+            {t('settings.create')}
           </button>
         </div>
 
@@ -243,7 +244,7 @@ function ApiKeySection() {
             <Loader2 size={16} className="animate-spin text-obsidian-500" />
           </div>
         ) : keys.length === 0 ? (
-          <p className="text-xs text-obsidian-500 text-center py-4">Henüz API anahtarı yok</p>
+          <p className="text-xs text-obsidian-500 text-center py-4">{t('settings.noApiKeys')}</p>
         ) : (
           <div className="space-y-2">
             {keys.map((k) => (
@@ -252,18 +253,18 @@ function ApiKeySection() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-white truncate">{k.name}</p>
                   <p className="text-[10px] text-obsidian-500 font-mono">
-                    {k.prefix}… · Oluşturuldu: {new Date(k.createdAt).toLocaleDateString('tr-TR')}
-                    {k.lastUsedAt ? ` · Son kullanım: ${new Date(k.lastUsedAt).toLocaleDateString('tr-TR')}` : ' · Hiç kullanılmadı'}
+                    {k.prefix}… · {t('settings.createdLabel')} {new Date(k.createdAt).toLocaleDateString()}
+                    {k.lastUsedAt ? ` · ${t('settings.lastUsed')} ${new Date(k.lastUsedAt).toLocaleDateString()}` : ` · ${t('settings.neverUsed')}`}
                     {k.expiresAt
                       ? (new Date(k.expiresAt) < new Date()
-                          ? <span className="text-aurora-rose"> · Süresi doldu</span>
-                          : ` · Son geçerlilik: ${new Date(k.expiresAt).toLocaleDateString('tr-TR')}`)
-                      : ' · Süresiz'}
+                          ? <span className="text-aurora-rose"> · {t('settings.expired')}</span>
+                          : ` · ${t('settings.expiresLabel')} ${new Date(k.expiresAt).toLocaleDateString()}`)
+                      : ` · ${t('settings.noExpiry')}`}
                   </p>
                 </div>
                 <button
                   onClick={() => void handleRevoke(k.id)}
-                  title="İptal et"
+                  title={t('settings.revoke')}
                   className="shrink-0 p-1.5 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 size={12} />
@@ -289,6 +290,7 @@ interface UserInfo {
 }
 
 function UserManagementSection() {
+  const { t } = useTranslation();
   const currentUser = useAuthStore((s) => s.user);
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -326,7 +328,7 @@ function UserManagementSection() {
     setCreating(true);
     try {
       const data = await apiPost<UserInfo>('/auth/users', { username: newUsername.trim(), password: newPassword, role: newRole });
-      setMsg({ type: 'success', text: `"${data.username}" kullanıcısı oluşturuldu` });
+      setMsg({ type: 'success', text: `"${data.username}" ${t('settings.userCreated')}` });
       setNewUsername(''); setNewPassword(''); setNewRole('viewer');
       void load();
     } catch (err) {
@@ -337,47 +339,47 @@ function UserManagementSection() {
   };
 
   const handleDelete = async (id: string, username: string) => {
-    if (!window.confirm(`"${username}" kullanıcısını silmek istediğinizden emin misiniz?`)) return;
+    if (!window.confirm(`${t('settings.userDeleteConfirm')} "${username}"?`)) return;
     try {
       await apiDelete(`/auth/users/${id}`);
-      setMsg({ type: 'success', text: `"${username}" silindi` });
+      setMsg({ type: 'success', text: `"${username}" ${t('settings.userDeleted')}` });
       void load();
     } catch {
-      setMsg({ type: 'error', text: 'Silme başarısız' });
+      setMsg({ type: 'error', text: t('settings.userDeleteFailed') });
     }
   };
 
   const handleResetPassword = async (id: string) => {
     if (!resetPasswordValue || resetPasswordValue.length < 6) {
-      setMsg({ type: 'error', text: 'Şifre en az 6 karakter olmalı' });
+      setMsg({ type: 'error', text: t('settings.passwordTooShort') });
       return;
     }
     try {
       await apiPut(`/auth/users/${id}/reset-password`, { newPassword: resetPasswordValue });
-      setMsg({ type: 'success', text: 'Şifre sıfırlandı' });
+      setMsg({ type: 'success', text: t('settings.passwordChanged') });
       setResetPasswordUserId(null);
       setResetPasswordValue('');
     } catch {
-      setMsg({ type: 'error', text: 'Şifre sıfırlama başarısız' });
+      setMsg({ type: 'error', text: t('settings.passwordChangeFailed') });
     }
   };
 
   const handleRoleChange = async (id: string, role: 'admin' | 'viewer') => {
     try {
       await apiPut(`/auth/users/${id}/role`, { role });
-      setMsg({ type: 'success', text: 'Rol güncellendi' });
+      setMsg({ type: 'success', text: t('settings.roleUpdated') });
       void load();
     } catch {
-      setMsg({ type: 'error', text: 'Rol değiştirme başarısız' });
+      setMsg({ type: 'error', text: t('settings.roleFailed') });
     }
   };
 
   return (
-    <Section icon={Users} title="Kullanıcı Yönetimi" description="Kullanıcı hesapları, roller ve şifre yönetimi" defaultOpen={false}>
+    <Section icon={Users} title={t('settings.userManagement')} description={t('settings.userManagementDesc')} defaultOpen={false}>
       {!isAdmin ? (
         <div className="flex items-center gap-2 py-2">
           <AlertTriangle size={13} className="text-aurora-amber shrink-0" />
-          <p className="text-xs text-obsidian-400">Bu bölüm yalnızca admin kullanıcılar için görünür.</p>
+          <p className="text-xs text-obsidian-400">{t('settings.adminOnlySection')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -403,11 +405,11 @@ function UserManagementSection() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-white">{u.username}</span>
                         {u.id === currentUser?.id && (
-                          <span className="text-[9px] text-aurora-cyan bg-aurora-cyan/10 px-1.5 py-0.5 rounded font-body">Sen</span>
+                          <span className="text-[9px] text-aurora-cyan bg-aurora-cyan/10 px-1.5 py-0.5 rounded font-body">{t('settings.you')}</span>
                         )}
                       </div>
                       <p className="text-[10px] text-obsidian-500">
-                        Oluşturuldu: {new Date(u.createdAt).toLocaleDateString('tr-TR')}
+                        {t('settings.createdLabel')} {new Date(u.createdAt).toLocaleDateString()}
                       </p>
                     </div>
 
@@ -428,7 +430,7 @@ function UserManagementSection() {
                         setResetPasswordUserId(resetPasswordUserId === u.id ? null : u.id);
                         setResetPasswordValue('');
                       }}
-                      title="Şifre sıfırla"
+                      title={t('settings.resetPasswordTitle')}
                       className="p-1.5 rounded-lg text-obsidian-500 hover:text-aurora-amber hover:bg-aurora-amber/10 transition-colors"
                     >
                       <Key size={13} />
@@ -438,7 +440,7 @@ function UserManagementSection() {
                     {u.id !== currentUser?.id && (
                       <button
                         onClick={() => void handleDelete(u.id, u.username)}
-                        title="Sil"
+                        title={t('common.delete')}
                         className="p-1.5 rounded-lg text-red-400/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                       >
                         <Trash2 size={13} />
@@ -451,7 +453,7 @@ function UserManagementSection() {
                     <div className="mt-3 flex gap-2 animate-fade-in">
                       <input
                         type="password"
-                        placeholder="Yeni şifre (min 6 karakter)"
+                        placeholder={t('settings.newPassword')}
                         value={resetPasswordValue}
                         onChange={(e) => setResetPasswordValue(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && void handleResetPassword(u.id)}
@@ -461,7 +463,7 @@ function UserManagementSection() {
                         onClick={() => void handleResetPassword(u.id)}
                         className="px-3 py-2 rounded-lg text-xs font-semibold bg-aurora-amber/10 text-aurora-amber hover:bg-aurora-amber/20 transition-colors"
                       >
-                        Sıfırla
+                        {t('settings.resetPasswordTitle')}
                       </button>
                       <button
                         onClick={() => { setResetPasswordUserId(null); setResetPasswordValue(''); }}
@@ -478,18 +480,18 @@ function UserManagementSection() {
 
           {/* Create new user */}
           <div className="glass-panel rounded-xl p-4 space-y-3">
-            <p className="text-xs font-semibold text-white">Yeni Kullanıcı Ekle</p>
+            <p className="text-xs font-semibold text-white">{t('settings.addUser')}</p>
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="text"
-                placeholder="Kullanıcı adı"
+                placeholder={t('settings.usernameLabel')}
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
                 className="text-xs bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-aurora-cyan/40 transition-all"
               />
               <input
                 type="password"
-                placeholder="Şifre (min 6 karakter)"
+                placeholder={t('settings.newPassword')}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="text-xs bg-obsidian-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-aurora-cyan/40 transition-all"
@@ -510,7 +512,7 @@ function UserManagementSection() {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-aurora-cyan/10 text-aurora-cyan text-xs font-semibold hover:bg-aurora-cyan/20 disabled:opacity-50 transition-colors"
               >
                 {creating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                Ekle
+                {t('common.add')}
               </button>
             </div>
           </div>
@@ -534,6 +536,7 @@ const TTL_PRESETS = [
 ];
 
 function SecuritySection() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [ttl, setTtl] = useState('8h');
   const [loading, setLoading] = useState(true);
@@ -553,7 +556,7 @@ function SecuritySection() {
     try {
       const data = await apiPost<{ jwtAccessTtl?: string }>('/setup/auth-settings', { jwtAccessTtl: ttl });
       if (data.jwtAccessTtl) setTtl(data.jwtAccessTtl);
-      setMsg({ type: 'success', text: `Token süresi "${data.jwtAccessTtl}" olarak güncellendi. Yeni giriş yapıldığında geçerli olur.` });
+      setMsg({ type: 'success', text: `${t('settings.ttlUpdated')} "${data.jwtAccessTtl}". ${t('settings.ttlUpdateNote')}` });
     } catch (err) {
       setMsg({ type: 'error', text: err instanceof Error ? err.message : 'Hata' });
     } finally {
@@ -564,19 +567,19 @@ function SecuritySection() {
   const isAdmin = user?.role === 'admin';
 
   return (
-    <Section icon={Shield} title="Güvenlik" description="JWT token süresi ve auth ayarları" defaultOpen={false}>
+    <Section icon={Shield} title={t('settings.security')} description={t('settings.securityDesc')} defaultOpen={false}>
       <div className="space-y-4">
         {!isAdmin && (
           <div className="glass-panel rounded-xl p-3 flex items-center gap-2 border border-aurora-amber/20">
             <AlertTriangle size={13} className="text-aurora-amber shrink-0" />
-            <p className="text-xs text-obsidian-400">Bu ayarları değiştirmek için admin yetkisi gerekir.</p>
+            <p className="text-xs text-obsidian-400">{t('settings.adminRequiredNote')}</p>
           </div>
         )}
 
         <div className="glass-panel rounded-xl p-4 space-y-4">
           <div>
-            <p className="text-xs font-semibold text-white mb-1">Erişim Token Süresi</p>
-            <p className="text-[11px] text-obsidian-500">JWT access token ne kadar süre geçerli olacak. Refresh token her zaman 30 gün geçerlidir.</p>
+            <p className="text-xs font-semibold text-white mb-1">{t('settings.accessTokenTtl')}</p>
+            <p className="text-[11px] text-obsidian-500">{t('settings.accessTokenTtlDesc')}</p>
           </div>
 
           {/* Preset chips */}
@@ -603,17 +606,17 @@ function SecuritySection() {
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <label className="block text-[10px] font-semibold text-obsidian-500 uppercase tracking-wider mb-1">
-                Özel Değer
+                {t('settings.customValue')}
               </label>
               <input
                 type="text"
                 value={ttl}
                 disabled={!isAdmin || loading}
                 onChange={(e) => setTtl(e.target.value)}
-                placeholder="örn: 2h, 45m, 3d"
+                placeholder="2h, 45m, 3d"
                 className="glass-input font-mono text-xs w-full disabled:opacity-50"
               />
-              <p className="text-[10px] text-obsidian-600 mt-1">Format: sayı + birim (s=saniye, m=dakika, h=saat, d=gün)</p>
+              <p className="text-[10px] text-obsidian-600 mt-1">{t('settings.ttlFormat')}</p>
             </div>
           </div>
 
@@ -632,7 +635,7 @@ function SecuritySection() {
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-aurora-cyan/10 text-aurora-cyan text-xs font-semibold hover:bg-aurora-cyan/20 disabled:opacity-50 transition-colors"
             >
               {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-              Kaydet
+              {t('common.save')}
             </button>
           )}
         </div>
@@ -646,6 +649,7 @@ function SecuritySection() {
 /* ------------------------------------------------------------------ */
 
 function AccountSection() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -656,21 +660,21 @@ function AccountSection() {
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     if (newPw !== confirmPw) {
-      setMsg({ type: 'error', text: 'Yeni şifreler eşleşmiyor' });
+      setMsg({ type: 'error', text: t('settings.passwordMismatch') });
       return;
     }
     if (newPw.length < 6) {
-      setMsg({ type: 'error', text: 'Yeni şifre en az 6 karakter olmalı' });
+      setMsg({ type: 'error', text: t('settings.passwordTooShort') });
       return;
     }
     setSaving(true);
     setMsg(null);
     try {
       await apiPut('/auth/change-password', { currentPassword: currentPw, newPassword: newPw });
-      setMsg({ type: 'success', text: 'Şifre başarıyla değiştirildi' });
+      setMsg({ type: 'success', text: t('settings.passwordChanged') });
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
     } catch (err) {
-      setMsg({ type: 'error', text: err instanceof Error ? err.message : 'Hata' });
+      setMsg({ type: 'error', text: err instanceof Error ? err.message : t('settings.passwordChangeFailed') });
     } finally {
       setSaving(false);
     }
