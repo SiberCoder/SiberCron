@@ -123,7 +123,7 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
 
         {state.freq === 'hour' && (
           <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span>Her saat basinda, dakika:</span>
+            <span>Her saat başında, dakika:</span>
             <select value={state.minute} onChange={e => update({ minute: e.target.value })} className="glass-input w-16 text-xs py-1 px-2">
               {[0,5,10,15,20,25,30,35,40,45,50,55].map(n => <option key={n} value={String(n)}>:{String(n).padStart(2,'0')}</option>)}
             </select>
