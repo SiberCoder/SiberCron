@@ -1,4 +1,5 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 /**
  * Split node — splits input data based on a field value or chunks.
@@ -131,12 +132,3 @@ export const SplitNode: INodeType = {
     return output.length > 0 ? output : items;
   },
 };
-
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, key) => {
-    if (current !== null && current !== undefined && typeof current === 'object') {
-      return (current as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
-}

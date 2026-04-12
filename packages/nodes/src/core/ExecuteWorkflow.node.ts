@@ -1,14 +1,14 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
 
 /**
- * ExecuteWorkflow node — Başka bir SiberCron workflow'unu çalıştırır ve sonucunu bekler.
+ * ExecuteWorkflow node — Executes another SiberCron workflow and waits for result.
  *
- * Kullanım senaryoları:
- *  - Modüler workflow: ortak işlemleri ayrı bir workflow'a taşı, birden fazla yerden çağır
- *  - Hata yönetimi: alt workflow'u try/catch mantığıyla çağır
- *  - Paralel çalıştırma: birden fazla ExecuteWorkflow node'unu paralel branches'ta kullan
+ * Use cases:
+ *  - Modular workflow: move common operations to separate workflow, call from multiple places
+ *  - Error handling: call sub-workflow with try/catch logic
+ *  - Parallel execution: use multiple ExecuteWorkflow nodes in parallel branches
  *
- * Not: Kendi kendini çağırma (recursive) sonsuz döngüye yol açar — kaçının.
+ * Note: Self-calling (recursive) causes infinite loop — avoid it.
  */
 export const ExecuteWorkflowNode: INodeType = {
   definition: {
@@ -18,9 +18,9 @@ export const ExecuteWorkflowNode: INodeType = {
     color: '#F59E0B',
     group: 'core',
     version: 1,
-    description: 'Başka bir SiberCron workflow\'unu çalıştırır ve sonucunu döner',
-    // Node-level timeout: kullanıcının timeoutSeconds parametresini aşabilmek için
-    // 30s varsayılan yerine 1 saat olarak ayarlandı. Gerçek limit timeoutSeconds'tan gelir.
+    description: 'Execute another SiberCron workflow and return its result',
+    // Node-level timeout: to allow user timeoutSeconds parameter to be respected
+    // Set to 1 hour instead of 30s default. Actual limit comes from timeoutSeconds.
     timeout: 3_600_000, // 1 hour max
     inputs: ['main'],
     outputs: ['main'],
@@ -31,43 +31,43 @@ export const ExecuteWorkflowNode: INodeType = {
         type: 'workflowId',
         default: '',
         required: true,
-        description: 'Çalıştırılacak workflow\'u seçin',
+        description: 'Select the workflow to execute',
       },
       {
         name: 'triggerData',
-        displayName: 'Giriş Verisi (JSON)',
+        displayName: 'Input Data (JSON)',
         type: 'json',
         default: '{}',
-        description: 'Alt workflow\'a iletilecek tetikleyici veri. Boş bırakılırsa üstten gelen item\'ın json\'ı iletilir.',
+        description: 'Trigger data to pass to sub-workflow. If empty, uses input item JSON.',
       },
       {
         name: 'waitForCompletion',
-        displayName: 'Tamamlanmasını Bekle',
+        displayName: 'Wait for Completion',
         type: 'boolean',
         default: true,
-        description: 'true: alt workflow bitene kadar bekler ve sonucu döner. false: sadece execution ID döner (fire-and-forget).',
+        description: 'true: wait for sub-workflow to finish and return result. false: only return execution ID (fire-and-forget).',
       },
       {
         name: 'timeoutSeconds',
-        displayName: 'Zaman Aşımı (saniye)',
+        displayName: 'Timeout (seconds)',
         type: 'number',
         default: 300,
-        description: 'Tamamlanmayı beklerken maksimum bekleme süresi (saniye). 0 = sınırsız.',
+        description: 'Maximum wait time for completion (seconds). 0 = unlimited.',
         displayOptions: { show: { waitForCompletion: [true] } },
       },
       {
         name: 'serverUrl',
-        displayName: 'SiberCron Sunucu URL',
+        displayName: 'SiberCron Server URL',
         type: 'string',
         default: 'http://localhost:3001',
-        description: 'SiberCron API sunucusunun adresi. Uzak sunucu için değiştirin.',
+        description: 'Address of SiberCron API server. Change for remote server.',
       },
       {
         name: 'apiKey',
-        displayName: 'API Anahtarı (opsiyonel)',
+        displayName: 'API Key (optional)',
         type: 'password',
         default: '',
-        description: 'Auth aktifse kullanılacak scx_... formatında API anahtarı. AUTH_ENABLED=false ise boş bırakın.',
+        description: 'API key in scx_... format when auth is enabled. Leave empty if AUTH_ENABLED=false.',
       },
     ],
   },
@@ -82,7 +82,7 @@ export const ExecuteWorkflowNode: INodeType = {
     const apiKey = (context.getParameter('apiKey') as string) ?? '';
 
     if (!workflowId) {
-      throw new Error('Workflow ID boş olamaz');
+      throw new Error('Workflow ID cannot be empty');
     }
 
     // Build trigger data: use parameter JSON or fall back to first input item's json
@@ -117,7 +117,7 @@ export const ExecuteWorkflowNode: INodeType = {
     const executionId = executeResponse?.id;
     if (!executionId) {
       throw new Error(
-        `Alt workflow başlatılamadı (workflow: ${workflowId}): ${executeResponse?.error ?? JSON.stringify(executeResponse)}`,
+        `Failed to start sub-workflow (workflow: ${workflowId}): ${executeResponse?.error ?? JSON.stringify(executeResponse)}`,
       );
     }
 
@@ -164,7 +164,7 @@ export const ExecuteWorkflowNode: INodeType = {
         );
         if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
           throw new Error(
-            `Alt workflow durumu alınamadı (execution: ${executionId}): ${MAX_CONSECUTIVE_ERRORS} ardışık poll hatası. Son hata: ${(pollErr as Error).message}`,
+            `Failed to get sub-workflow status (execution: ${executionId}): ${MAX_CONSECUTIVE_ERRORS} consecutive poll errors. Last error: ${(pollErr as Error).message}`,
           );
         }
         continue;
@@ -188,7 +188,7 @@ export const ExecuteWorkflowNode: INodeType = {
 
       if (status === 'error' || status === 'failed') {
         throw new Error(
-          `Alt workflow başarısız (execution: ${executionId}): ${execResponse.errorMessage ?? 'Bilinmeyen hata'}`,
+          `Sub-workflow failed (execution: ${executionId}): ${execResponse.errorMessage ?? 'Unknown error'}`,
         );
       }
 
@@ -198,8 +198,8 @@ export const ExecuteWorkflowNode: INodeType = {
 
     // Timeout exceeded
     throw new Error(
-      `Alt workflow zaman aşımına uğradı (execution: ${executionId}, timeout: ${timeoutSeconds}s). ` +
-      `Zaman aşımı değerini artırın veya "Tamamlanmasını Bekle" seçeneğini kapatın.`,
+      `Sub-workflow timed out (execution: ${executionId}, timeout: ${timeoutSeconds}s). ` +
+      `Increase timeout value or disable "Wait for Completion" option.`,
     );
   },
 };

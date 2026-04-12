@@ -2,14 +2,14 @@ import type { INodeType, INodeTypeDefinition, IExecutionContext, INodeExecutionD
 import * as ftp from 'basic-ftp';
 
 /* ------------------------------------------------------------------ */
-/*  FTP/SFTP node — dosya transfer işlemleri                          */
+/*  FTP/SFTP node — file transfer operations                          */
 /* ------------------------------------------------------------------ */
 
 export const FtpSftpNode: INodeType = {
   definition: {
     name: 'sibercron.ftpSftp',
     displayName: 'FTP / SFTP',
-    description: 'FTP veya SFTP sunucusunda dosya işlemleri: listele, indir, yükle, sil, yeniden adlandır',
+    description: 'File operations on FTP or SFTP server: list, download, upload, delete, rename',
     icon: 'HardDrive',
     group: 'data',
     version: 1,
@@ -24,7 +24,7 @@ export const FtpSftpNode: INodeType = {
     properties: [
       {
         name: 'protocol',
-        displayName: 'Protokol',
+        displayName: 'Protocol',
         type: 'options',
         options: [
           { name: 'FTP', value: 'ftp' },
@@ -36,15 +36,15 @@ export const FtpSftpNode: INodeType = {
       },
       {
         name: 'operation',
-        displayName: 'İşlem',
+        displayName: 'Operation',
         type: 'options',
         options: [
-          { name: 'Listele (list)', value: 'list' },
-          { name: 'İndir (download)', value: 'download' },
-          { name: 'Yükle (upload)', value: 'upload' },
-          { name: 'Sil (delete)', value: 'delete' },
-          { name: 'Yeniden Adlandır (rename)', value: 'rename' },
-          { name: 'Dizin Oluştur (mkdir)', value: 'mkdir' },
+          { name: 'List', value: 'list' },
+          { name: 'Download', value: 'download' },
+          { name: 'Upload', value: 'upload' },
+          { name: 'Delete', value: 'delete' },
+          { name: 'Rename', value: 'rename' },
+          { name: 'Create Directory', value: 'mkdir' },
         ],
         default: 'list',
         required: true,

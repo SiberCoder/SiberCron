@@ -2,7 +2,7 @@ import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercro
 
 /**
  * WhatsApp Send node.
- * WhatsApp Cloud API üzerinden mesaj gönderir.
+ * Send messages via WhatsApp Cloud API.
  */
 export const WhatsAppSendNode: INodeType = {
   definition: {
@@ -12,7 +12,7 @@ export const WhatsAppSendNode: INodeType = {
     color: '#25D366',
     group: 'messaging',
     version: 1,
-    description: 'WhatsApp Cloud API ile mesaj gönderir',
+    description: 'Send messages via WhatsApp Cloud API',
     inputs: ['main'],
     outputs: ['main'],
     credentials: [
@@ -29,7 +29,7 @@ export const WhatsAppSendNode: INodeType = {
         type: 'string',
         default: '',
         required: true,
-        description: 'Mesaj gönderilecek telefon numarası (uluslararası format, ör: 905551234567)',
+        description: 'Phone number to receive message (international format, e.g.: 905551234567)',
       },
       {
         name: 'message',
@@ -37,7 +37,7 @@ export const WhatsAppSendNode: INodeType = {
         type: 'string',
         default: '',
         required: true,
-        description: 'Gönderilecek mesaj metni',
+        description: 'Message text to send',
       },
       {
         name: 'messageType',
@@ -45,7 +45,7 @@ export const WhatsAppSendNode: INodeType = {
         type: 'select',
         default: 'text',
         required: false,
-        description: 'Mesaj tipi',
+        description: 'Type of message',
         options: [
           { name: 'Text', value: 'text' },
           { name: 'Template', value: 'template' },
@@ -62,10 +62,10 @@ export const WhatsAppSendNode: INodeType = {
 
     const accessToken = credentials['accessToken'] as string | undefined;
     const phoneNumberId = credentials['phoneNumberId'] as string | undefined;
-    if (!accessToken) throw new Error('WhatsApp credential eksik: accessToken bulunamadı');
-    if (!phoneNumberId) throw new Error('WhatsApp credential eksik: phoneNumberId bulunamadı');
+    if (!accessToken) throw new Error('WhatsApp credential missing: accessToken not found');
+    if (!phoneNumberId) throw new Error('WhatsApp credential missing: phoneNumberId not found');
 
-    context.helpers.log(`WhatsApp: ${phoneNumber} numarasına mesaj gönderiliyor`);
+    context.helpers.log(`WhatsApp: sending message to ${phoneNumber}`);
 
     let body: Record<string, unknown>;
 

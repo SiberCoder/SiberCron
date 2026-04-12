@@ -264,11 +264,11 @@ export const DateTimeNode: INodeType = {
           const diff = Date.now() - d.getTime();
           const sec = Math.abs(diff) / 1000;
           const future = diff < 0;
-          const suffix = future ? 'sonra' : 'önce';
-          if (sec < 60) return `${Math.round(sec)} saniye ${suffix}`;
-          if (sec < 3600) return `${Math.round(sec / 60)} dakika ${suffix}`;
-          if (sec < 86400) return `${Math.round(sec / 3600)} saat ${suffix}`;
-          return `${Math.round(sec / 86400)} gün ${suffix}`;
+          const suffix = future ? 'from now' : 'ago';
+          if (sec < 60) return `${Math.round(sec)} seconds ${suffix}`;
+          if (sec < 3600) return `${Math.round(sec / 60)} minutes ${suffix}`;
+          if (sec < 86400) return `${Math.round(sec / 3600)} hours ${suffix}`;
+          return `${Math.round(sec / 86400)} days ${suffix}`;
         }
         case 'custom': {
           if (!custom) return d.toISOString();

@@ -149,7 +149,9 @@ function ApiKeySection() {
     setLoading(false);
   }, [t]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;

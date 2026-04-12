@@ -63,19 +63,19 @@ function formatToolCall(name: string, input: Record<string, unknown>): string {
       return `${icon} ${cmd}${desc}\n`;
     }
     case 'Read':
-      return `${icon} Okuyor: ${formatPath(String(input.file_path ?? ''))}\n`;
+      return `${icon} Reading: ${formatPath(String(input.file_path ?? ''))}\n`;
     case 'Write':
-      return `${icon} Yazıyor: ${formatPath(String(input.file_path ?? ''))}\n`;
+      return `${icon} Writing: ${formatPath(String(input.file_path ?? ''))}\n`;
     case 'Edit':
-      return `${icon} Düzenliyor: ${formatPath(String(input.file_path ?? ''))}\n`;
+      return `${icon} Editing: ${formatPath(String(input.file_path ?? ''))}\n`;
     case 'Grep':
-      return `${icon} Arıyor: "${input.pattern}" ${input.path ? 'in ' + formatPath(String(input.path)) : ''}\n`;
+      return `${icon} Searching: "${input.pattern}" ${input.path ? 'in ' + formatPath(String(input.path)) : ''}\n`;
     case 'Glob':
-      return `${icon} Dosya arıyor: ${input.pattern}\n`;
+      return `${icon} Finding files: ${input.pattern}\n`;
     case 'Agent':
-      return `${icon} Alt görev: ${input.description ?? input.prompt?.toString().slice(0, 80) ?? name}\n`;
+      return `${icon} Subtask: ${input.description ?? input.prompt?.toString().slice(0, 80) ?? name}\n`;
     case 'TodoWrite':
-      return `${icon} Görev listesi güncelleniyor\n`;
+      return `${icon} Updating task list\n`;
     default: {
       const summary = Object.entries(input).map(([k, v]) => `${k}=${String(v).slice(0, 50)}`).join(', ');
       return `${icon} ${name}: ${summary.slice(0, 120)}\n`;
@@ -272,11 +272,11 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
       clearTimeout(timer);
 
       if (timedOut) {
-        reject(new Error(`Claude CLI ${timeoutMs}ms zaman asimina ugradi`));
+        reject(new Error(`Claude CLI timed out after ${timeoutMs}ms`));
         return;
       }
       if (aborted) {
-        reject(new Error('Claude CLI iptal edildi'));
+        reject(new Error('Claude CLI aborted'));
         return;
       }
 
@@ -284,9 +284,9 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
       const responseText = fullResponse.trim() || rawStdout.trim();
 
       if (code !== 0 && code !== null && !responseText) {
-        reject(new Error(`Claude CLI hata (${code}): ${stderr.trim() || rawStdout.trim()}`));
+        reject(new Error(`Claude CLI error (${code}): ${stderr.trim() || rawStdout.trim()}`));
       } else if (!responseText && stderr.trim()) {
-        reject(new Error(`Claude CLI hata: ${stderr.trim()}`));
+        reject(new Error(`Claude CLI error: ${stderr.trim()}`));
       } else {
         // Use session ID from stream-json events, or try to extract from stderr
         const sid = detectedSessionId
@@ -315,31 +315,31 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
 
 export const AutonomousDevNode: INodeType = {
   definition: {
-    displayName: 'Otonom Geliştirme',
+    displayName: 'Autonomous Development',
     name: 'sibercron.autonomousDev',
     icon: 'RefreshCcw',
     color: '#8B5CF6',
     group: 'ai',
     version: 1,
-    description: 'AI ile otonom geliştirme döngüsü - talimat ver, AI çalışsın, soru sorarsa cevapla, bitirirse tekrar başlat',
+    description: 'AI autonomous development loop - give instruction, AI works, answer if asked, restart when done',
     inputs: ['main'],
     outputs: ['completed', 'maxIterations', 'stopped', 'error'],
     timeout: 14400000, // 4 hours
     properties: [
       {
         name: 'instruction',
-        displayName: 'Talimat',
+        displayName: 'Instruction',
         type: 'code',
         required: true,
-        description: 'AI\'ya verilecek geliştirme talimatı (örn: "login sayfası ekle")',
-        placeholder: 'Yapılacak işi detaylı olarak yazın...',
+        description: 'Development instruction for the AI (e.g., "add login page")',
+        placeholder: 'Write the task in detail...',
       },
       {
         name: 'workingDirectory',
-        displayName: 'Çalışma Dizini',
+        displayName: 'Working Directory',
         type: 'string',
         default: '.',
-        description: 'Projenin bulunduğu dizin',
+        description: 'Directory where the project is located',
       },
       {
         name: 'model',
@@ -354,53 +354,53 @@ export const AutonomousDevNode: INodeType = {
       },
       {
         name: 'maxLoopIterations',
-        displayName: 'Maks Döngü Sayısı',
+        displayName: 'Max Loop Iterations',
         type: 'number',
         default: 10,
-        description: 'Güvenlik limiti - en fazla kaç kez döngüde kalsın',
+        description: 'Safety limit - maximum iterations in the loop',
       },
       {
         name: 'autoAnswerStrategy',
-        displayName: 'Soru Cevaplama Stratejisi',
+        displayName: 'Question Answer Strategy',
         type: 'select',
         default: 'useDefault',
-        description: 'AI soru sorduğunda ne yapılsın',
+        description: 'What to do when AI asks a question',
         options: [
-          { name: 'Varsayılan cevap ver', value: 'useDefault' },
-          { name: 'AI ile cevap üret', value: 'contextual' },
-          { name: 'Dur, döngüyü bitir', value: 'stop' },
+          { name: 'Use default answer', value: 'useDefault' },
+          { name: 'Generate answer with AI', value: 'contextual' },
+          { name: 'Stop the loop', value: 'stop' },
         ],
       },
       {
         name: 'defaultAnswer',
-        displayName: 'Varsayılan Cevap',
+        displayName: 'Default Answer',
         type: 'string',
-        default: 'Evet, devam et. En iyi kararı sen ver.',
-        description: 'AI soru sorduğunda verilecek otomatik cevap',
+        default: 'Yes, continue. Make the best decision.',
+        description: 'Auto answer when AI asks a question',
         displayOptions: {
           show: { autoAnswerStrategy: ['useDefault'] },
         },
       },
       {
         name: 'cooldownMs',
-        displayName: 'Bekleme Süresi (ms)',
+        displayName: 'Cooldown (ms)',
         type: 'number',
         default: 2000,
-        description: 'Her döngü arası bekleme (rate-limit koruması)',
+        description: 'Wait time between iterations (rate-limit protection)',
       },
       {
         name: 'iterationTimeoutMs',
-        displayName: 'İterasyon Zaman Aşımı (ms)',
+        displayName: 'Iteration Timeout (ms)',
         type: 'number',
         default: 900000,
-        description: 'Her bir AI çağrısı için maks süre (15dk varsayılan)',
+        description: 'Max time per AI call (15min default)',
       },
       {
         name: 'systemContext',
-        displayName: 'Ek Sistem Bağlamı',
+        displayName: 'Extra System Context',
         type: 'code',
         default: '',
-        description: 'Her iterasyonda talimata eklenen ek bağlam (opsiyonel)',
+        description: 'Extra context added to instruction in each iteration (optional)',
       },
     ],
   },
@@ -417,7 +417,7 @@ export const AutonomousDevNode: INodeType = {
     const systemContext = context.getParameter<string>('systemContext') || '';
 
     if (!instruction) {
-      return [{ json: { error: 'Talimat gerekli', output: 'error' } }];
+      return [{ json: { error: 'Instruction is required', output: 'error' } }];
     }
 
     const inputData = context.getInputData();
@@ -452,7 +452,7 @@ export const AutonomousDevNode: INodeType = {
     let exitReason: 'completed' | 'maxIterations' | 'error' | 'stopped' = 'maxIterations';
     let currentSessionId: string | undefined = resumeSessionId;
 
-    emitLog('system', `Baslatiliyor: "${dynamicInstruction.slice(0, 120)}..."${resumeSessionId ? ` (session devam: ${resumeSessionId.slice(0, 8)}...)` : ''}`, { maxIterations: maxLoopIterations, model, resumeSessionId });
+    emitLog('system', `Starting: "${dynamicInstruction.slice(0, 120)}..."${resumeSessionId ? ` (session resume: ${resumeSessionId.slice(0, 8)}...)` : ''}`, { maxIterations: maxLoopIterations, model, resumeSessionId });
 
     while (iterationCount < maxLoopIterations) {
       iterationCount++;
@@ -463,11 +463,11 @@ export const AutonomousDevNode: INodeType = {
         // First iteration (fresh start): full instruction + context + safety rules
         if (systemContext) prompt += `${systemContext}\n\n---\n\n`;
         prompt += dynamicInstruction;
-        prompt += '\n\nKRİTİK KURALLAR:\n- Alt agent/subagent OLUŞTURMA. Tüm işleri tek session\'da yap.\n- pnpm build, tsc, npx tsc gibi build komutları ÇALIŞTIRMA (dev server çalışıyor, dist değişirse server çöker).\n- Değişiklik yaptıktan sonra build doğrulaması YAPMA.';
+        prompt += '\n\nCRITICAL RULES:\n- Do NOT create subagents/alt agents. Do all work in a single session.\n- Do NOT run build commands like pnpm build, tsc, npx tsc (dev server running, dist changes crash server).\n- Do NOT verify build after making changes.';
       } else if (iterationCount === 1 && resumeSessionId) {
         // First iteration but resuming a previous session
-        prompt = 'Server yeniden basladi. Kaldığın yerden devam et. Daha önce yaptıklarını tekrarlama, nerede kaldıysan oradan devam et.';
-        emitLog('system', 'Onceki session\'dan devam ediliyor (resume)', { sessionId: resumeSessionId });
+        prompt = 'Server restarted. Continue from where you left off. Do not repeat previous actions, pick up from where you stopped.';
+        emitLog('system', 'Resuming previous session', { sessionId: resumeSessionId });
       } else {
         // Subsequent iterations: continuation prompt
         // If we have a session ID, Claude already has context — just nudge it
@@ -476,26 +476,26 @@ export const AutonomousDevNode: INodeType = {
           if (lastEntry?.role === 'answer') {
             prompt = lastEntry.content;
           } else {
-            prompt = 'Devam et. Kaldığın yerden devam et, daha önce yaptıklarını tekrarlama.';
+            prompt = 'Continue. Pick up from where you left off, do not repeat previous actions.';
           }
         } else {
           // No session continuity — rebuild context from history
           if (systemContext) prompt += `${systemContext}\n\n---\n\n`;
-          prompt += `TALIMAT: ${dynamicInstruction}\n`;
+          prompt += `INSTRUCTION: ${dynamicInstruction}\n`;
           const recentHistory = conversationHistory.slice(-20);
           if (recentHistory.length > 0) {
-            prompt += '\n--- ONCEKI ISLEMLER ---\n';
+            prompt += '\n--- PREVIOUS ACTIONS ---\n';
             for (const entry of recentHistory) {
-              const prefix = entry.role === 'instruction' ? 'TALIMAT' : entry.role === 'response' ? 'AI' : 'KULLANICI';
+              const prefix = entry.role === 'instruction' ? 'INSTRUCTION' : entry.role === 'response' ? 'AI' : 'USER';
               prompt += `\n${prefix}: ${entry.content.slice(0, 1000)}\n`;
             }
-            prompt += '\n--- SIMDI DEVAM ET ---\n';
-            prompt += 'Yukardaki talimata devam et. Daha once yaptiklarini tekrarlama, kaldgin yerden devam et.\n';
+            prompt += '\n--- NOW CONTINUE ---\n';
+            prompt += 'Continue the instruction above. Do not repeat previous actions, pick up from where you left off.\n';
           }
         }
       }
 
-      emitLog('iteration', `Iterasyon ${iterationCount}/${maxLoopIterations} basliyor${currentSessionId ? ' (session devam)' : ' (yeni session)'}`, {
+      emitLog('iteration', `Iteration ${iterationCount}/${maxLoopIterations} starting${currentSessionId ? ' (session resume)' : ' (new session)'}`, {
         iteration: iterationCount,
         sessionId: currentSessionId,
       });
@@ -539,7 +539,7 @@ export const AutonomousDevNode: INodeType = {
                 iteration: iterationCount,
                 timestamp: new Date().toISOString(),
               }));
-              emitLog('system', `Session dosyaya kaydedildi: ${sessionFile}`);
+              emitLog('system', `Session saved to file: ${sessionFile}`);
             }).catch(() => { /* best-effort */ });
             try {
               (process.emit as any)('autonomousDev:sessionUpdate', {
@@ -569,24 +569,24 @@ export const AutonomousDevNode: INodeType = {
         const taskDone = !askedQuestion && isDone(result.response);
 
         if (taskDone) {
-          emitLog('system', 'AI görevi tamamladı, döngü durduruluyor');
+          emitLog('system', 'AI completed task, stopping loop');
           exitReason = 'completed';
           break;
         }
 
         if (askedQuestion) {
-          emitLog('system', `AI soru sordu, strateji: ${autoAnswerStrategy}`);
+          emitLog('system', `AI asked a question, strategy: ${autoAnswerStrategy}`);
 
           if (autoAnswerStrategy === 'stop') {
-            emitLog('system', 'Strateji "dur" - döngü durduruluyor');
+            emitLog('system', 'Strategy "stop" - stopping loop');
             exitReason = 'stopped';
             break;
           }
 
           let answer: string;
           if (autoAnswerStrategy === 'contextual') {
-            const answerPrompt = `Bir AI geliştirici şu talimatı uyguluyor: "${dynamicInstruction}"\n\nAI şu soruyu sordu:\n"${result.response.slice(-500)}"\n\nBu soruya kısa ve kararlı bir cevap ver. Sadece cevabı yaz.`;
-            emitLog('system', 'AI ile otomatik cevap üretiliyor...');
+            const answerPrompt = `An AI developer is executing this instruction: "${dynamicInstruction}"\n\nThe AI asked this question:\n"${result.response.slice(-500)}"\n\nGive a short and decisive answer to this question. Only write the answer.`;
+            emitLog('system', 'Generating auto answer with AI...');
             try {
               const answerResult = await callClaude({
                 prompt: answerPrompt,
@@ -606,11 +606,11 @@ export const AutonomousDevNode: INodeType = {
           conversationHistory.push({ role: 'answer', content: answer });
           emitLog('auto_answer', answer, { iteration: iterationCount });
         } else {
-          emitLog('system', `İterasyon ${iterationCount} tamamlandı, döngü devam ediyor`);
-          conversationHistory.push({ role: 'instruction', content: `(İterasyon ${iterationCount} tamamlandı)` });
+          emitLog('system', `Iteration ${iterationCount} completed, loop continuing`);
+          conversationHistory.push({ role: 'instruction', content: `(Iteration ${iterationCount} completed)` });
         }
       } catch (err) {
-        emitLog('error', `Hata: ${(err as Error).message}`, { iteration: iterationCount });
+        emitLog('error', `Error: ${(err as Error).message}`, { iteration: iterationCount });
         // Session might be broken, reset it
         currentSessionId = undefined;
         exitReason = 'error';
@@ -627,7 +627,7 @@ export const AutonomousDevNode: INodeType = {
     // without an explicit done/stop/error signal. 'completed' fires when isDone()
     // detects the AI finished the task early.
 
-    emitLog('system', `Sonuc: ${exitReason}, toplam ${iterationCount} iterasyon, session: ${currentSessionId?.slice(0, 8) ?? 'yok'}`);
+    emitLog('system', `Result: ${exitReason}, total ${iterationCount} iterations, session: ${currentSessionId?.slice(0, 8) ?? 'none'}`);
 
     return [{
       json: {

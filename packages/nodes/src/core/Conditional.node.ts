@@ -1,4 +1,5 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 export const ConditionalNode: INodeType = {
   definition: {
@@ -82,15 +83,6 @@ export const ConditionalNode: INodeType = {
     }));
   },
 };
-
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, key) => {
-    if (current !== null && current !== undefined && typeof current === 'object') {
-      return (current as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
-}
 
 function evaluate(fieldValue: unknown, operator: string, compareValue: string): boolean {
   const fieldStr = String(fieldValue ?? '');

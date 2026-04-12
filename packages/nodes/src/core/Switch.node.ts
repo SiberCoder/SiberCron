@@ -1,4 +1,5 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 /**
  * Switch node — routes items to one of up to 5 named outputs based on field value matching.
@@ -107,13 +108,6 @@ export const SwitchNode: INodeType = {
       context.getParameter<string>('case5Value') ?? '',
     ];
     const sendToDefault = context.getParameter<boolean>('sendToDefault') ?? true;
-
-    function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-      return path.split('.').reduce((curr: unknown, key) => {
-        if (curr == null || typeof curr !== 'object') return undefined;
-        return (curr as Record<string, unknown>)[key];
-      }, obj);
-    }
 
     function matches(fieldValue: unknown, caseValue: string): boolean {
       if (caseValue === '') return false;

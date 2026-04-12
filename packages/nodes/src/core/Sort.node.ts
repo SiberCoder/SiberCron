@@ -1,4 +1,5 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 /**
  * Sort node — Gelen item array'ini bir veya birden fazla alana göre sıralar.
@@ -83,17 +84,6 @@ export const SortNode: INodeType = {
     });
   },
 };
-
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  if (!path) return undefined;
-  const parts = path.split('.');
-  let current: unknown = obj;
-  for (const part of parts) {
-    if (current === null || current === undefined) return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
-}
 
 function compareValues(a: unknown, b: unknown, type: string): number {
   if (a === undefined || a === null) return 1;

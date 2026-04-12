@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { AlertCircle, Power, Pause, Play, Trash2, Server, Zap, Database, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import { WS_EVENTS } from '@sibercron/shared';
@@ -81,14 +81,10 @@ export default function ServerPage() {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const [metricsRes, logsRes, execRes] = await Promise.all([
-          apiGet('/metrics'),
-          apiGet('/admin/logs?limit=200'),
-          apiGet('/executions?status=error&limit=20'),
-        ]);
 
-        if ((metricsRes as any)?.ok) {
-          const metrics = await (metricsRes as any).json();
+        // Metrics (required)
+        try {
+          const metrics = await apiGet<any>('/metrics');
           setHealth({
             uptimeSeconds: metrics.uptime,
             heapUsedMb: metrics.process.heapUsedMb,
@@ -97,17 +93,25 @@ export default function ServerPage() {
             schedulerActiveJobs: metrics.scheduler.activeJobs,
             version: metrics.version,
           });
+        } catch (error) {
+          console.warn('Failed to load metrics:', error);
+          throw error; // Metrics is required
         }
 
-        if ((logsRes as any)?.ok) {
-          const logsData = await (logsRes as any).json();
+        // Logs (optional)
+        try {
+          const logsData = await apiGet<any>('/admin/logs?limit=200');
           setLogs(logsData.logs || []);
+        } catch (error) {
+          console.warn('Failed to load logs:', error);
         }
 
-        if ((execRes as any)?.ok) {
-          const execData: IExecution[] = await (execRes as any).json();
+        // Executions (optional)
+        try {
+          const execResponse = await apiGet<{ data: IExecution[]; total: number }>('/executions?status=error&limit=20');
+          const execArray = Array.isArray(execResponse) ? execResponse : (execResponse?.data || []);
           setFailedExecutions(
-            execData
+            execArray
               .filter((e: any) => e.status === 'error')
               .map((e: any) => ({
                 id: e.id,
@@ -117,10 +121,16 @@ export default function ServerPage() {
                 finishedAt: e.finishedAt,
               }))
           );
+        } catch (error) {
+          console.warn('Failed to load executions:', error);
         }
       } catch (error) {
         console.error('Failed to load server data:', error);
-        toast.error(t('server.loadError'));
+        try {
+          toast.error(t('server.loadError'));
+        } catch (e) {
+          console.error('Toast notification failed:', e);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -225,10 +235,28 @@ export default function ServerPage() {
     setLogs([]);
   };
 
-  if (isLoading || !health) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-obsidian-400">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!health) {
+    return (
+      <div className="min-h-screen bg-obsidian-950 p-6 flex items-center justify-center">
+        <div className="max-w-md text-center space-y-4">
+          <AlertCircle size={32} className="mx-auto text-aurora-rose" />
+          <h2 className="text-lg font-semibold text-white">{t('server.loadError')}</h2>
+          <p className="text-sm text-obsidian-400">API bağlantısı kurulamıyor. Server çalışıyor mu?</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg bg-aurora-cyan/10 text-aurora-cyan hover:bg-aurora-cyan/20 transition-colors text-sm font-semibold"
+          >
+            Sayfayı Yenile
+          </button>
+        </div>
       </div>
     );
   }

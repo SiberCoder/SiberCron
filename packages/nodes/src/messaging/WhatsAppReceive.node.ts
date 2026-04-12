@@ -2,8 +2,8 @@ import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercro
 
 /**
  * WhatsApp Receive trigger node.
- * Gelen WhatsApp mesajlarıyla tetiklenen workflow'larda kullanılır.
- * Webhook handler tarafından enjekte edilen mesaj verisini iletir.
+ * Triggers workflows with incoming WhatsApp messages.
+ * Passes message data injected by webhook handler.
  */
 export const WhatsAppReceiveNode: INodeType = {
   definition: {
@@ -13,7 +13,7 @@ export const WhatsAppReceiveNode: INodeType = {
     color: '#25D366',
     group: 'trigger',
     version: 1,
-    description: 'Gelen WhatsApp mesajlarıyla workflow tetikler',
+    description: 'Trigger workflow with incoming WhatsApp messages',
     inputs: [],
     outputs: ['main'],
     properties: [
@@ -23,7 +23,7 @@ export const WhatsAppReceiveNode: INodeType = {
         type: 'string',
         default: '',
         required: false,
-        description: 'Belirli bir telefon numarasından gelen mesajları filtrele (boş bırakılırsa tümü)',
+        description: 'Filter messages from specific phone number (empty for all)',
       },
       {
         name: 'messageFilter',
@@ -31,7 +31,7 @@ export const WhatsAppReceiveNode: INodeType = {
         type: 'string',
         default: '',
         required: false,
-        description: 'Mesaj içeriğini regex ile filtrele (boş bırakılırsa tümü)',
+        description: 'Filter message content with regex (empty for all)',
       },
     ],
   },
@@ -40,19 +40,19 @@ export const WhatsAppReceiveNode: INodeType = {
     const phoneFilter = context.getParameter<string>('phoneFilter');
     const messageFilter = context.getParameter<string>('messageFilter');
 
-    // Webhook handler tarafından enjekte edilen giriş verisini al
+    // Get input data injected by webhook handler
     const inputData = context.getInputData();
     const items = inputData ?? [];
 
     const filtered = items.filter((item) => {
       const json = item.json as Record<string, unknown>;
 
-      // Telefon filtresi
+      // Phone filter
       if (phoneFilter && json.from !== phoneFilter) {
         return false;
       }
 
-      // Mesaj regex filtresi
+      // Message regex filter
       if (messageFilter) {
         const text = (json.text as string) ?? '';
         const regex = new RegExp(messageFilter, 'i');
@@ -65,11 +65,11 @@ export const WhatsAppReceiveNode: INodeType = {
     });
 
     if (filtered.length === 0) {
-      context.helpers.log('WhatsApp Receive: Filtrelerle eşleşen mesaj yok, atlanıyor.');
+      context.helpers.log('WhatsApp Receive: No messages matching filters, skipping.');
       return [];
     }
 
-    context.helpers.log(`WhatsApp Receive: ${filtered.length} mesaj alındı.`);
+    context.helpers.log(`WhatsApp Receive: received ${filtered.length} messages.`);
     return filtered;
   },
 };

@@ -1,4 +1,5 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 export const TransformNode: INodeType = {
   definition: {
@@ -121,15 +122,6 @@ export const TransformNode: INodeType = {
     });
   },
 };
-
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, key) => {
-    if (current !== null && current !== undefined && typeof current === 'object') {
-      return (current as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
-}
 
 function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
   const keys = path.split('.');

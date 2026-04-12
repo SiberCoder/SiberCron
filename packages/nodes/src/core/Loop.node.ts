@@ -1,4 +1,5 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 /**
  * Loop node — iterates over input items one by one.
@@ -123,12 +124,3 @@ export const LoopNode: INodeType = {
     return output.length > 0 ? output : [{ json: { _loopEmpty: true, _loopIndex: 0, _loopTotal: 0 } }];
   },
 };
-
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, key) => {
-    if (current !== null && current !== undefined && typeof current === 'object') {
-      return (current as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
-}

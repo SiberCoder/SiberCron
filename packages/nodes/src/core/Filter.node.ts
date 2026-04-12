@@ -1,11 +1,12 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 /**
- * Filter node — Gelen item array'ini koşullara göre filtreler.
- * Conditional node'dan farkı: routing değil, in-place filtreleme yapar.
- * AND veya OR kombinasyon modunu destekler, birden fazla koşul eklenebilir.
+ * Filter node — Filters item array based on conditions.
+ * Different from Conditional node: does in-place filtering, not routing.
+ * Supports AND/OR combination mode, multiple conditions can be added.
  *
- * Koşullar JSON dizisi olarak girilir:
+ * Conditions entered as JSON array:
  * [{ "field": "age", "operator": "greaterThan", "value": "18" }, ...]
  */
 export const FilterNode: INodeType = {
@@ -16,27 +17,27 @@ export const FilterNode: INodeType = {
     color: '#6366F1',
     group: 'core',
     version: 1,
-    description: 'Koşullara uyan item\'ları filtreler, uymayanlları çıktıya geçirmez',
+    description: 'Filter items matching conditions, remove non-matching items',
     inputs: ['main'],
     outputs: ['main'],
     properties: [
       {
         name: 'combineMode',
-        displayName: 'Koşul Kombinasyonu',
+        displayName: 'Condition Combination',
         type: 'select',
         options: [
-          { name: 'Tümü Eşleşmeli (AND)', value: 'AND' },
-          { name: 'En Az Biri Eşleşmeli (OR)', value: 'OR' },
+          { name: 'All Must Match (AND)', value: 'AND' },
+          { name: 'At Least One Must Match (OR)', value: 'OR' },
         ],
         default: 'AND',
-        description: 'Birden fazla koşul varken nasıl kombinleneceğini belirler',
+        description: 'How to combine conditions when there are multiple',
       },
       {
         name: 'conditions',
-        displayName: 'Koşullar (JSON)',
+        displayName: 'Conditions (JSON)',
         type: 'json',
         default: '[{"field":"","operator":"equals","value":""}]',
-        description: 'Filtreleme koşulları. Operatörler: equals, notEquals, contains, notContains, startsWith, endsWith, regex, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, exists, notExists, isEmpty, isNotEmpty, isTrue, isFalse, isNull',
+        description: 'Filter conditions. Operators: equals, notEquals, contains, notContains, startsWith, endsWith, regex, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, exists, notExists, isEmpty, isNotEmpty, isTrue, isFalse, isNull',
       },
     ],
   },
@@ -68,18 +69,6 @@ export const FilterNode: INodeType = {
     });
   },
 };
-
-/** Dot-notation path resolver: "user.address.city" → value */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  if (!path) return undefined;
-  const parts = path.split('.');
-  let current: unknown = obj;
-  for (const part of parts) {
-    if (current === null || current === undefined) return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
-}
 
 function evaluateCondition(fieldValue: unknown, operator: string, compareValue: string): boolean {
   const fieldStr = String(fieldValue ?? '');

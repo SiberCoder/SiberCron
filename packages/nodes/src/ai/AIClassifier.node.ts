@@ -1,4 +1,5 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 /**
  * AI Classifier node — classifies text into predefined or auto-detected categories.
@@ -236,13 +237,4 @@ function extractContent(provider: string, data: Record<string, unknown>): string
   const choices = data['choices'] as Array<Record<string, unknown>> | undefined;
   const message = choices?.[0]?.['message'] as Record<string, unknown> | undefined;
   return (message?.['content'] as string) ?? '';
-}
-
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, key) => {
-    if (current !== null && current !== undefined && typeof current === 'object') {
-      return (current as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
 }

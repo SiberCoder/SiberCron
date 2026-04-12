@@ -1,8 +1,9 @@
 import type { INodeType, IExecutionContext, INodeExecutionData } from '@sibercron/shared';
+import { getNestedValue } from '../utils/pathResolver.js';
 
 /**
- * Aggregate node — Gelen item array'inde matematiksel ve gruplama operasyonları uygular.
- * Operasyonlar: count, sum, avg, min, max, concat, groupBy, unique
+ * Aggregate node — Performs mathematical and grouping operations on item arrays.
+ * Operations: count, sum, avg, min, max, concat, groupBy, unique
  */
 export const AggregateNode: INodeType = {
   definition: {
@@ -12,57 +13,57 @@ export const AggregateNode: INodeType = {
     color: '#10B981',
     group: 'core',
     version: 1,
-    description: 'Item\'lar üzerinde toplam, ortalama, gruplama gibi matematik işlemleri yapar',
+    description: 'Perform math operations on items like count, sum, average, grouping',
     inputs: ['main'],
     outputs: ['main'],
     properties: [
       {
         name: 'operation',
-        displayName: 'Operasyon',
+        displayName: 'Operation',
         type: 'select',
         default: 'count',
         required: true,
         options: [
-          { name: 'Sayım (count)', value: 'count' },
-          { name: 'Toplam (sum)', value: 'sum' },
-          { name: 'Ortalama (avg)', value: 'avg' },
-          { name: 'Minimum (min)', value: 'min' },
-          { name: 'Maksimum (max)', value: 'max' },
-          { name: 'Birleştir (concat)', value: 'concat' },
-          { name: 'Gruplama (groupBy)', value: 'groupBy' },
-          { name: 'Tekil Değerler (unique)', value: 'unique' },
+          { name: 'Count', value: 'count' },
+          { name: 'Sum', value: 'sum' },
+          { name: 'Average', value: 'avg' },
+          { name: 'Minimum', value: 'min' },
+          { name: 'Maximum', value: 'max' },
+          { name: 'Concatenate', value: 'concat' },
+          { name: 'Group By', value: 'groupBy' },
+          { name: 'Unique Values', value: 'unique' },
         ],
-        description: 'Uygulanacak agregasyon operasyonu',
+        description: 'Aggregation operation to apply',
       },
       {
         name: 'field',
-        displayName: 'Alan',
+        displayName: 'Field',
         type: 'string',
         default: '',
-        description: 'Operasyonun uygulanacağı alan adı (noktalı yol desteklenir). count için opsiyonel.',
+        description: 'Field name to operate on (supports dot notation). Optional for count.',
         displayOptions: { show: { operation: ['sum', 'avg', 'min', 'max', 'concat', 'groupBy', 'unique'] } },
       },
       {
         name: 'separator',
-        displayName: 'Ayraç',
+        displayName: 'Separator',
         type: 'string',
         default: ', ',
-        description: 'concat operasyonunda değerler arasına konulacak karakter',
+        description: 'Character to place between values in concat operation',
         displayOptions: { show: { operation: ['concat'] } },
       },
       {
         name: 'outputField',
-        displayName: 'Sonuç Alanı',
+        displayName: 'Output Field',
         type: 'string',
         default: 'result',
-        description: 'Sonucun yazılacağı alan adı (groupBy hariç)',
+        description: 'Field name to write result to (except groupBy)',
       },
       {
         name: 'includeCount',
-        displayName: 'Toplam Sayıyı Da Ekle',
+        displayName: 'Include Item Count',
         type: 'boolean',
         default: false,
-        description: 'groupBy sonucuna her grubun item sayısını ekler',
+        description: 'Add item count to each group in groupBy result',
         displayOptions: { show: { operation: ['groupBy'] } },
       },
     ],
@@ -74,7 +75,7 @@ export const AggregateNode: INodeType = {
     const field = (context.getParameter('field') as string) ?? '';
     const separator = (context.getParameter('separator') as string) ?? ', ';
     const outputField = (context.getParameter('outputField') as string) || 'result';
-    const includeCount = context.getParameter('includeCount') as boolean ?? false;
+    const includeCount = (context.getParameter('includeCount') as boolean | undefined) ?? false;
 
     if (items.length === 0) {
       return [{ json: { [outputField]: operation === 'count' ? 0 : null, itemCount: 0 } }];
@@ -170,19 +171,7 @@ export const AggregateNode: INodeType = {
       }
 
       default:
-        throw new Error(`Bilinmeyen operasyon: ${operation}`);
+        throw new Error(`Unknown operation: ${operation}`);
     }
   },
 };
-
-/** Dot-notation path resolver: "user.address.city" → value */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  if (!path) return undefined;
-  const parts = path.split('.');
-  let current: unknown = obj;
-  for (const part of parts) {
-    if (current === null || current === undefined) return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
-}
