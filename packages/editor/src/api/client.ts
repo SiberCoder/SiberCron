@@ -116,7 +116,13 @@ async function request<T>(
     const newToken = await tryRefreshToken();
     if (newToken) {
       headers['Authorization'] = `Bearer ${newToken}`;
-      res = await fetch(url, { ...options, headers });
+      const retryController = new AbortController();
+      const retryTimer = setTimeout(() => retryController.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        res = await fetch(url, { ...options, headers, signal: retryController.signal });
+      } finally {
+        clearTimeout(retryTimer);
+      }
     }
   }
 

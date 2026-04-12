@@ -593,6 +593,55 @@ function ExpressionInput({
   );
 }
 
+// ── Workflow Picker (for ExecuteWorkflow node) ──────────────────────────────
+
+function WorkflowPickerField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [workflows, setWorkflows] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    apiGet<{ data: { id: string; name: string }[] }>('/workflows?limit=200')
+      .then((r) => setWorkflows(r.data ?? []))
+      .catch(() => setWorkflows([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const selected = workflows.find((w) => w.id === value);
+
+  return (
+    <div className="space-y-1.5">
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="glass-input text-sm w-full"
+        disabled={loading}
+      >
+        <option value="">{loading ? 'Yükleniyor...' : 'Workflow seç...'}</option>
+        {workflows.map((wf) => (
+          <option key={wf.id} value={wf.id}>
+            {wf.name}
+          </option>
+        ))}
+      </select>
+      {value && !selected && !loading && (
+        <p className="text-[10px] text-aurora-amber font-body">
+          ID: {value} (liste yenilenince görünür)
+        </p>
+      )}
+      {selected && (
+        <p className="text-[10px] text-obsidian-500 font-mono truncate">ID: {selected.id}</p>
+      )}
+    </div>
+  );
+}
+
 interface FieldProps {
   property: INodeProperty;
   value: unknown;
@@ -656,6 +705,15 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
   let input: React.ReactNode;
 
   switch (type) {
+    case 'workflowId':
+      input = (
+        <WorkflowPickerField
+          value={(value as string) ?? ''}
+          onChange={(v) => { onChange(name, v); if (touchedRef.current) setFieldError(validateRequired(v)); }}
+        />
+      );
+      break;
+
     case 'string':
       input = (
         <ExpressionInput

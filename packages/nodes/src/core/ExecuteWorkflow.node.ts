@@ -27,11 +27,11 @@ export const ExecuteWorkflowNode: INodeType = {
     properties: [
       {
         name: 'workflowId',
-        displayName: 'Workflow ID',
-        type: 'string',
+        displayName: 'Workflow',
+        type: 'workflowId',
         default: '',
         required: true,
-        description: 'Çalıştırılacak workflow\'un ID\'si (Workflow listesinden kopyalanabilir)',
+        description: 'Çalıştırılacak workflow\'u seçin',
       },
       {
         name: 'triggerData',

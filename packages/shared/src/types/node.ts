@@ -9,7 +9,8 @@ export type NodePropertyType =
   | 'code'
   | 'json'
   | 'cron'
-  | 'credential';
+  | 'credential'
+  | 'workflowId';
 
 export type NodeGroup =
   | 'trigger'
