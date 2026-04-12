@@ -440,6 +440,24 @@ export async function workflowRoutes(
         finishedAt: result.finishedAt,
         errorMessage: result.errorMessage,
       });
+      // Fire error webhook notification if configured
+      if (result.status === 'error' && workflow.settings?.errorWebhookUrl?.startsWith('http')) {
+        fetch(workflow.settings.errorWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workflowId: workflow.id,
+            workflowName: workflow.name,
+            executionId,
+            errorMessage: result.errorMessage,
+            finishedAt: result.finishedAt,
+            durationMs: result.durationMs,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        }).catch((notifErr) => {
+          fastify.log.warn({ err: (notifErr as Error).message }, `Error webhook notification failed for "${workflow.name}"`);
+        });
+      }
     }).catch((err) => {
       db.updateExecution(executionId, {
         status: 'error',
