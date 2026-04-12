@@ -16,6 +16,7 @@ import {
   LogOut,
   User,
   Globe,
+  Server,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { WS_EVENTS } from '@sibercron/shared';
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { to: '/templates', icon: FileCode, labelKey: 'sidebar.templates' },
   { to: '/accounts', icon: Users, labelKey: 'sidebar.accounts' },
   { to: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
+  { to: '/server', icon: Server, labelKey: 'sidebar.server' },
 ] as const;
 
 interface SidebarProps {

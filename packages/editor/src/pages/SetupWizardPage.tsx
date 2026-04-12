@@ -178,7 +178,7 @@ interface ChannelDef {
   name: string;
   accent: string;
   bg: string;
-  description: string;
+  descriptionKey: string;
   icon: React.ReactNode;
 }
 
@@ -292,7 +292,7 @@ const CHANNELS: ChannelDef[] = [
     name: 'WhatsApp',
     accent: 'text-[#25D366]',
     bg: 'bg-[#25D366]/10',
-    description: 'QR kod okutarak WhatsApp hesabınızı bağlayın',
+    descriptionKey: 'setup.channelWhatsApp',
     icon: <MessageSquare size={18} />,
   },
   {
@@ -300,7 +300,7 @@ const CHANNELS: ChannelDef[] = [
     name: 'Telegram',
     accent: 'text-[#0088CC]',
     bg: 'bg-[#0088CC]/10',
-    description: 'Telegram Bot Token ile bağlanın',
+    descriptionKey: 'setup.channelTelegram',
     icon: <Send size={18} />,
   },
   {
@@ -308,7 +308,7 @@ const CHANNELS: ChannelDef[] = [
     name: 'Discord',
     accent: 'text-[#5865F2]',
     bg: 'bg-[#5865F2]/10',
-    description: 'Discord Bot ile bağlanın',
+    descriptionKey: 'setup.channelDiscord',
     icon: <Hash size={18} />,
   },
   {
@@ -316,12 +316,13 @@ const CHANNELS: ChannelDef[] = [
     name: 'Slack',
     accent: 'text-[#E01E5A]',
     bg: 'bg-[#E01E5A]/10',
-    description: 'Slack workspace bağlantısı',
+    descriptionKey: 'setup.channelSlack',
     icon: <MessageSquare size={18} />,
   },
 ];
 
 function MessagingStep() {
+  const { t } = useTranslation();
   const { config, updateMessagingConfig } = useSetupStore();
   const [testResults, setTestResults] = useState<
     Record<string, { ok: boolean; msg: string } | null>
@@ -342,7 +343,7 @@ function MessagingStep() {
     } catch (e) {
       setTestResults((r) => ({
         ...r,
-        [platform]: { ok: false, msg: e instanceof Error ? e.message : 'Hata' },
+        [platform]: { ok: false, msg: e instanceof Error ? e.message : t('setup.testError') },
       }));
     } finally {
       setTesting(null);
@@ -353,10 +354,10 @@ function MessagingStep() {
     <div className="space-y-4 animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-display font-bold text-white tracking-tight">
-          Mesajlaşma Kanallarını Bağlayın
+          {t('setup.messagingChannelsConfig')}
         </h2>
         <p className="text-sm text-obsidian-400 mt-2 font-body">
-          İsteğe bağlı — istediğiniz kanalları bağlayın
+          {t('setup.messagingChannelsDesc')}
         </p>
       </div>
 
@@ -380,12 +381,12 @@ function MessagingStep() {
               </div>
               <div className="flex-1">
                 <h3 className="text-sm font-semibold text-white font-body">{ch.name}</h3>
-                <p className="text-xs text-obsidian-500 font-body">{ch.description}</p>
+                <p className="text-xs text-obsidian-500 font-body">{t(ch.descriptionKey as any)}</p>
               </div>
               {data?.enabled && (
                 <span className="badge text-[10px] bg-aurora-emerald/10 text-aurora-emerald">
                   <span className="w-1.5 h-1.5 rounded-full bg-aurora-emerald" />
-                  Bağlı
+                  {t('setup.channelConnected')}
                 </span>
               )}
             </div>
@@ -483,7 +484,7 @@ function MessagingStep() {
                 disabled={testing === ch.key}
                 className="btn-ghost text-xs disabled:opacity-40"
               >
-                {testing === ch.key ? 'Test ediliyor...' : 'Test Et'}
+                {testing === ch.key ? t('setup.testing') : t('setup.testConnection')}
               </button>
               {testResults[ch.key] && (
                 <span
@@ -525,6 +526,7 @@ const TIMEZONES = [
 ];
 
 function SchedulingStep() {
+  const { t } = useTranslation();
   const { config, updateSchedulingConfig } = useSetupStore();
   const s = config.scheduling;
 
@@ -532,10 +534,10 @@ function SchedulingStep() {
     <div className="space-y-6 animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-display font-bold text-white tracking-tight">
-          Varsayılan Zamanlama Ayarları
+          {t('setup.schedulingConfig')}
         </h2>
         <p className="text-sm text-obsidian-400 mt-2 font-body">
-          Workflow'lar için varsayılan zamanlama ayarlarını belirleyin
+          {t('setup.schedulingDesc')}
         </p>
       </div>
 
@@ -543,7 +545,7 @@ function SchedulingStep() {
         {/* Timezone */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-obsidian-300 font-body">
-            Zaman Dilimi
+            {t('setup.defaultTimezone')}
           </label>
           <select
             value={s.timezone}
@@ -561,7 +563,7 @@ function SchedulingStep() {
         {/* Default cron */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-obsidian-300 font-body">
-            Varsayılan Cron İfadesi
+            {t('setup.defaultCronPattern')}
           </label>
           <input
             type="text"
@@ -572,14 +574,14 @@ function SchedulingStep() {
             className="glass-input font-mono"
           />
           <p className="text-[10px] text-obsidian-500 font-body">
-            Örn: "0 * * * *" = her saat başı, "*/5 * * * *" = her 5 dakikada
+            {t('setup.cronExample')}
           </p>
         </div>
 
         {/* Timeout */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-obsidian-300 font-body">
-            Yurutme Zaman Asimi (saniye)
+            {t('setup.timeout')}
           </label>
           <input
             type="number"
@@ -596,7 +598,7 @@ function SchedulingStep() {
         {/* Max concurrent */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-obsidian-300 font-body">
-            Maks. Es Zamanli Yurutme
+            {t('setup.maxConcurrent')}
           </label>
           <input
             type="number"
@@ -619,6 +621,7 @@ function SchedulingStep() {
 /* ------------------------------------------------------------------ */
 
 function CompleteStep({ onFinish }: { onFinish: () => void }) {
+  const { t } = useTranslation();
   const { config } = useSetupStore();
   const connectedItems: string[] = [];
   // New multi-provider system
@@ -646,17 +649,16 @@ function CompleteStep({ onFinish }: { onFinish: () => void }) {
         <div className="absolute -inset-6 bg-aurora-emerald/10 rounded-full blur-3xl pointer-events-none" />
       </div>
       <h1 className="text-4xl font-display font-bold text-white mb-4 tracking-tight">
-        Kurulum Tamamlandı!
+        {t('setup.setupComplete')}
       </h1>
       <p className="text-obsidian-400 max-w-md mb-10 font-body leading-relaxed">
-        Platformunuz kullanıma hazır. İstediğiniz zaman ayarları
-        değiştirebilirsiniz.
+        {t('setup.setupCompleteDesc')}
       </p>
 
       {connectedItems.length > 0 && (
         <div className="glass-card rounded-2xl p-6 mb-10 w-full max-w-sm">
           <h3 className="text-xs font-semibold text-obsidian-400 mb-4 uppercase tracking-wider font-body">
-            Yapılandırılan Servisler
+            {t('setup.configuredServices')}
           </h3>
           <div className="space-y-3">
             {connectedItems.map((item) => (
@@ -671,12 +673,12 @@ function CompleteStep({ onFinish }: { onFinish: () => void }) {
 
       {connectedItems.length === 0 && (
         <p className="text-sm text-obsidian-500 mb-10 font-body">
-          Henüz bir servis yapılandırılmadı — sonra ekleyebilirsiniz.
+          {t('setup.noServicesConfigured')}
         </p>
       )}
 
       <button onClick={onFinish} className="btn-aurora text-base px-8 py-3.5">
-        Dashboard'a Git <ArrowRight size={18} />
+        {t('setup.finishButton')} <ArrowRight size={18} />
       </button>
     </div>
   );
@@ -749,17 +751,17 @@ export default function SetupWizardPage() {
               onClick={prevStep}
               className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-obsidian-400 hover:text-white transition-colors font-body"
             >
-              <ArrowLeft size={16} /> Geri
+              <ArrowLeft size={16} /> {t('common.back')}
             </button>
             <div className="flex gap-3">
               <button
                 onClick={nextStep}
                 className="px-4 py-2.5 text-sm font-medium text-obsidian-500 hover:text-white transition-colors font-body"
               >
-                Atla
+                {t('setup.skip')}
               </button>
               <button onClick={nextStep} className="btn-aurora">
-                İleri <ArrowRight size={16} />
+                {t('setup.next')} <ArrowRight size={16} />
               </button>
             </div>
           </div>

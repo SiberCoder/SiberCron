@@ -249,6 +249,7 @@ function CronPreview({ expression, language }: { expression: string; language: s
 // ── Webhook URL Banner ────────────────────────────────────────────────
 
 function WebhookUrlBanner({ path, responseMode }: { path: string; responseMode?: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [curlCopied, setCurlCopied] = useState(false);
   const webhookPath = path?.startsWith('/') ? path : `/${path || 'webhook'}`;
@@ -297,10 +298,10 @@ function WebhookUrlBanner({ path, responseMode }: { path: string; responseMode?:
       <button
         onClick={copyCurl}
         className="flex items-center gap-1.5 text-[9px] text-obsidian-500 hover:text-aurora-cyan transition-colors font-mono"
-        title="curl komutunu kopyala"
+        title={t('editor.copyCurl')}
       >
         {curlCopied ? <Check size={9} className="text-aurora-emerald" /> : <Copy size={9} />}
-        {curlCopied ? 'Kopyalandı!' : 'curl komutunu kopyala'}
+        {curlCopied ? t('editor.copied') : t('editor.copyCurl')}
       </button>
     </div>
   );
@@ -316,6 +317,7 @@ function generateSecret(length = 32): string {
 }
 
 function WebhookSecretSection({ secret, onChange }: { secret: string; onChange: (v: string) => void }) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -331,23 +333,23 @@ function WebhookSecretSection({ secret, onChange }: { secret: string; onChange: 
     <div className="rounded-xl border border-aurora-violet/20 bg-aurora-violet/5 p-3 space-y-2.5">
       <div className="flex items-center gap-1.5 text-[10px] font-semibold text-aurora-violet uppercase tracking-wider">
         <ShieldCheck size={11} />
-        Webhook İmza Anahtarı
+        {t('editor.webhookSignatureKey')}
       </div>
       <p className="text-[10px] text-obsidian-500 leading-relaxed">
-        Gelen webhook isteklerini doğrulamak için kullanılır. Boş bırakılırsa imzalama devre dışıdır.
+        {t('editor.webhookSecretDesc')}
       </p>
       <div className="flex items-center gap-1.5">
         <input
           type={show ? 'text' : 'password'}
           value={secret}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Boş = imzalama yok"
+          placeholder={t('editor.emptyNoSigning')}
           className="glass-input text-xs flex-1 font-mono"
         />
         <button
           type="button"
           onClick={() => setShow((s) => !s)}
-          title={show ? 'Gizle' : 'Göster'}
+          title={show ? t('editor.hide') : t('editor.show')}
           className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-obsidian-500 hover:text-white hover:bg-white/[0.06] transition-all"
         >
           {show ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -355,7 +357,7 @@ function WebhookSecretSection({ secret, onChange }: { secret: string; onChange: 
         <button
           type="button"
           onClick={copy}
-          title="Kopyala"
+          title={t('editor.copy')}
           disabled={!secret}
           className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-obsidian-500 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-30"
         >
@@ -364,7 +366,7 @@ function WebhookSecretSection({ secret, onChange }: { secret: string; onChange: 
         <button
           type="button"
           onClick={() => onChange(generateSecret())}
-          title="Rastgele oluştur"
+          title={t('editor.generateSecret')}
           className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-obsidian-500 hover:text-aurora-violet hover:bg-aurora-violet/10 transition-all"
         >
           <RefreshCw size={12} />
@@ -372,7 +374,7 @@ function WebhookSecretSection({ secret, onChange }: { secret: string; onChange: 
       </div>
       {secret && (
         <p className="text-[10px] text-obsidian-600">
-          <code className="text-aurora-violet/70">X-Webhook-Signature</code> header ile SHA-256 HMAC olarak gönderilir.
+          <code className="text-aurora-violet/70">X-Webhook-Signature</code> {t('editor.sentAsHeader')}
         </p>
       )}
     </div>
@@ -415,6 +417,7 @@ function ExpressionInput({
   contextVars?: ExpressionVar[];
   hasError: boolean;
 }) {
+  const { t } = useTranslation();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -485,8 +488,8 @@ function ExpressionInput({
   }, [showSuggestions]);
 
   const CATEGORY_LABELS: Record<string, string> = {
-    context: '⚡ Son Çalışma Çıktısı',
-    data: 'Veri Erişimi',
+    context: `⚡ ${t('editor.lastExecutionOutput')}`,
+    data: t('editor.dataAccess'),
     time: 'Tarih & Saat',
     meta: 'Sistem',
   };
@@ -536,7 +539,7 @@ function ExpressionInput({
         />
         <button
           type="button"
-          title="Expression değişkeni ekle ({{ }})"
+          title={t('editor.addExpressionVariable')}
           onClick={() => {
             if (showSuggestions) {
               setShowSuggestions(false);
@@ -562,7 +565,7 @@ function ExpressionInput({
         <div className="absolute z-50 left-0 right-0 top-full mt-1 glass-card rounded-xl border border-aurora-violet/20 shadow-2xl overflow-hidden max-h-56 overflow-y-auto">
           <div className="p-2 space-y-1">
             {filteredVars.length === 0 ? (
-              <div className="text-[10px] text-obsidian-500 px-2 py-2 text-center">Eşleşen değişken yok</div>
+              <div className="text-[10px] text-obsidian-500 px-2 py-2 text-center">{t('editor.noMatchingVariable')}</div>
             ) : (
               Object.entries(groupedVars).map(([cat, vars]) => (
                 <div key={cat}>
