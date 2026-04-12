@@ -276,10 +276,10 @@ function WebhookUrlBanner({ path, responseMode }: { path: string; responseMode?:
     <div className="rounded-xl border border-aurora-blue/20 bg-aurora-blue/5 p-3 space-y-2">
       <div className="flex items-center gap-2 text-[10px] font-semibold text-aurora-blue uppercase tracking-wider">
         <Globe size={11} />
-        Webhook URL
+        {t('editor.webhookUrl')}
         {responseMode === 'sync' && (
           <span className="px-1.5 py-0.5 rounded-full bg-aurora-emerald/20 text-aurora-emerald text-[9px] normal-case tracking-normal border border-aurora-emerald/30">
-            Sync Mode
+            {t('editor.webhookSyncMode')}
           </span>
         )}
       </div>
@@ -290,7 +290,7 @@ function WebhookUrlBanner({ path, responseMode }: { path: string; responseMode?:
         <button
           onClick={copy}
           className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.06] text-obsidian-500 hover:text-white transition-all"
-          title="URL'yi kopyala"
+          title={t('editor.copyUrl')}
         >
           {copied ? <Check size={12} className="text-aurora-emerald" /> : <Copy size={12} />}
         </button>
@@ -383,17 +383,19 @@ function WebhookSecretSection({ secret, onChange }: { secret: string; onChange: 
 
 // ── Expression Builder ────────────────────────────────────────────────
 
-const EXPRESSION_VARS = [
-  { label: '$json.field', insert: '{{ $json.field }}', description: 'Önceki node çıktısı (ilk item)', category: 'data' },
-  { label: '$json.id', insert: '{{ $json.id }}', description: 'Önceki node çıktısından id alanı', category: 'data' },
-  { label: '$json.name', insert: '{{ $json.name }}', description: 'Önceki node çıktısından name alanı', category: 'data' },
-  { label: '$input[0].json', insert: '{{ $input[0].json.field }}', description: 'İlk girdi item alanı (index ile)', category: 'data' },
-  { label: '$item(0)', insert: '{{ $item(0).json.field }}', description: 'n. input item\'ından alan', category: 'data' },
-  { label: '$now', insert: '{{ $now }}', description: 'Şu anki tarih/saat (ISO 8601)', category: 'time' },
-  { label: '$timestamp', insert: '{{ $timestamp }}', description: 'Unix timestamp (milisaniye)', category: 'time' },
-  { label: '$runId', insert: '{{ $runId }}', description: 'Bu çalıştırmanın benzersiz ID\'si', category: 'meta' },
-  { label: '$env.VAR', insert: '{{ $env.VARIABLE_NAME }}', description: 'Sunucu ortam değişkeni', category: 'meta' },
-];
+function buildExpressionVars(t: (key: string) => string): ExpressionVar[] {
+  return [
+    { label: '$json.field', insert: '{{ $json.field }}', description: t('editor.exprVarPrevNode'), category: 'data' },
+    { label: '$json.id', insert: '{{ $json.id }}', description: t('editor.exprVarPrevNodeId'), category: 'data' },
+    { label: '$json.name', insert: '{{ $json.name }}', description: t('editor.exprVarPrevNodeName'), category: 'data' },
+    { label: '$input[0].json', insert: '{{ $input[0].json.field }}', description: t('editor.exprVarFirstInput'), category: 'data' },
+    { label: '$item(0)', insert: '{{ $item(0).json.field }}', description: t('editor.exprVarNthInput'), category: 'data' },
+    { label: '$now', insert: '{{ $now }}', description: t('editor.exprVarNow'), category: 'time' },
+    { label: '$timestamp', insert: '{{ $timestamp }}', description: t('editor.exprVarTimestamp'), category: 'time' },
+    { label: '$runId', insert: '{{ $runId }}', description: t('editor.exprVarRunId'), category: 'meta' },
+    { label: '$env.VAR', insert: '{{ $env.VARIABLE_NAME }}', description: t('editor.exprVarEnv'), category: 'meta' },
+  ];
+}
 
 interface ExpressionVar {
   label: string;
@@ -433,9 +435,11 @@ function ExpressionInput({
     return afterOpen;
   };
 
+  const exprVars = buildExpressionVars(t);
+
   const allVars: ExpressionVar[] = contextVars && contextVars.length > 0
-    ? [...contextVars, ...EXPRESSION_VARS]
-    : EXPRESSION_VARS;
+    ? [...contextVars, ...exprVars]
+    : exprVars;
 
   const filteredVars = filterQuery.trim()
     ? allVars.filter(
@@ -490,11 +494,11 @@ function ExpressionInput({
   const CATEGORY_LABELS: Record<string, string> = {
     context: `⚡ ${t('editor.lastExecutionOutput')}`,
     data: t('editor.dataAccess'),
-    time: 'Tarih & Saat',
-    meta: 'Sistem',
+    time: t('editor.exprCategoryDateTime'),
+    meta: t('editor.exprCategorySystem'),
   };
 
-  const groupedVars = filteredVars.reduce<Record<string, typeof EXPRESSION_VARS>>((acc, v) => {
+  const groupedVars = filteredVars.reduce<Record<string, ExpressionVar[]>>((acc, v) => {
     const cat = v.category;
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(v);
@@ -607,6 +611,7 @@ function WorkflowPickerField({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   const [workflows, setWorkflows] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -628,7 +633,7 @@ function WorkflowPickerField({
         className="glass-input text-sm w-full"
         disabled={loading}
       >
-        <option value="">{loading ? 'Yükleniyor...' : 'Workflow seç...'}</option>
+        <option value="">{loading ? t('editor.workflowPickerLoading') : t('editor.workflowPickerSelect')}</option>
         {workflows.map((wf) => (
           <option key={wf.id} value={wf.id}>
             {wf.name}
@@ -637,7 +642,7 @@ function WorkflowPickerField({
       </select>
       {value && !selected && !loading && (
         <p className="text-[10px] text-aurora-amber font-body">
-          ID: {value} (liste yenilenince görünür)
+          ID: {value} ({t('editor.workflowPickerNotFound')})
         </p>
       )}
       {selected && (
@@ -684,28 +689,37 @@ interface FieldProps {
   value: unknown;
   onChange: (name: string, value: unknown) => void;
   contextVars?: ExpressionVar[];
+  nodeKey?: string;
 }
 
-function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
+function PropertyField({ property, value, onChange, contextVars, nodeKey }: FieldProps) {
   const { name, displayName, type, placeholder, options, description } = property;
   const [fieldError, setFieldError] = useState<string | null>(null);
   const touchedRef = useRef(false);
 
+  const { t } = useTranslation();
+  const tKey = nodeKey ? `nodes.properties.${nodeKey}.${name}` : '';
+  const rawLabel = tKey ? t(`${tKey}.label`) : '';
+  const rawDesc = tKey ? t(`${tKey}.description`) : '';
+  // t() returns the key path when a translation is missing — treat that as a miss
+  const propLabel = (rawLabel && rawLabel !== `${tKey}.label`) ? rawLabel : displayName;
+  const propDesc = (rawDesc && rawDesc !== `${tKey}.description`) ? rawDesc : description;
+
   const validateRequired = useCallback((val: unknown): string | null => {
     if (!property.required) return null;
     if (val === undefined || val === null || val === '') {
-      return 'This field is required';
+      return t('editor.fieldRequired');
     }
     return null;
-  }, [property.required]);
+  }, [property.required, t]);
 
   const validateNumber = useCallback((val: string): string | null => {
     if (val === '') return null;
     if (isNaN(Number(val)) || val.trim() === '') {
-      return 'Geçerli bir sayı girin';
+      return t('editor.fieldInvalidNumber');
     }
     return null;
-  }, []);
+  }, [t]);
 
   const validateJson = useCallback((val: string): string | null => {
     if (!val || val.trim() === '') return null;
@@ -835,7 +849,7 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
           onBlur={() => handleBlur(value)}
           className={clsx('glass-input text-xs', errorBorder)}
         >
-          <option value="">Seç...</option>
+          <option value="">{t('editor.selectDropdown')}</option>
           {options?.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.name}
@@ -871,7 +885,7 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
               {opt.description && <span className="text-[10px] text-obsidian-600 font-body truncate">{opt.description}</span>}
             </label>
           )) : (
-            <p className="text-[10px] text-obsidian-600 px-1 font-body">Seçenek tanımlı değil</p>
+            <p className="text-[10px] text-obsidian-600 px-1 font-body">{t('editor.noOptionsDefined')}</p>
           )}
         </div>
       );
@@ -943,15 +957,15 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
   return (
     <div className="space-y-2">
       <label className="flex items-center gap-1 text-xs font-semibold text-obsidian-300 font-body">
-        {displayName}
+        {propLabel}
         {property.required && <span className="text-aurora-rose">*</span>}
       </label>
       {input}
       {hasError && (
         <p className="text-[10px] text-red-500 font-body">{fieldError}</p>
       )}
-      {description && (
-        <p className="text-[10px] text-obsidian-600 font-body">{description}</p>
+      {propDesc && (
+        <p className="text-[10px] text-obsidian-600 font-body">{propDesc}</p>
       )}
     </div>
   );
@@ -960,6 +974,7 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
 // ── Workflow Meta Panel (shown when no node is selected) ─────────────────────
 
 function WorkflowMetaPanel() {
+  const { t } = useTranslation();
   const workflowMeta = useWorkflowStore((s) => s.workflowMeta);
   const updateMeta = useWorkflowStore((s) => s.updateMeta);
   const [tagInput, setTagInput] = useState('');
@@ -971,8 +986,8 @@ function WorkflowMetaPanel() {
     setTagInput('');
   };
 
-  const removeTag = (t: string) => {
-    updateMeta({ tags: workflowMeta.tags.filter((x) => x !== t) });
+  const removeTag = (tag: string) => {
+    updateMeta({ tags: workflowMeta.tags.filter((x) => x !== tag) });
   };
 
   return (
@@ -1417,6 +1432,7 @@ export default function NodeConfigPanel() {
                 value={parameters[prop.name] ?? prop.default}
                 onChange={handleChange}
                 contextVars={contextVars}
+                nodeKey={nodeType.replace(/\./g, '_')}
               />
             ))
         )}
