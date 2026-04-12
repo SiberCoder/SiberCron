@@ -337,7 +337,7 @@ function SettingsModal({
               </div>
               <CopyableField label="Webhook URL" value={webhookUrl} />
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Komut Oneki</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">Komut Öneki</label>
                 <input value={cfg.commandPrefix || '/'} onChange={(e) => update('commandPrefix', e.target.value)} className="glass-input" />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
@@ -364,7 +364,7 @@ function SettingsModal({
               </div>
               <CopyableField label="Webhook URL" value={webhookUrl} />
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Komut Oneki</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">Komut Öneki</label>
                 <input value={cfg.commandPrefix || '/'} onChange={(e) => update('commandPrefix', e.target.value)} className="glass-input" />
               </div>
               <div className="space-y-1.5">

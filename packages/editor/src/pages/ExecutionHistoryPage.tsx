@@ -143,7 +143,7 @@ function ConversationHistory({ history }: { history: Array<{ role: string; conte
                     isAI ? 'text-aurora-violet' : isAnswer ? 'text-aurora-cyan' : 'text-obsidian-500',
                   )}
                 >
-                  {isAI ? 'AI Cevabi' : isAnswer ? 'Otomatik Cevap' : 'Sistem'}
+                  {isAI ? 'AI Cevabı' : isAnswer ? 'Otomatik Cevap' : 'Sistem'}
                 </span>
                 <span className="text-[10px] text-obsidian-600">#{i + 1}</span>
               </div>
@@ -1358,7 +1358,7 @@ export default function ExecutionHistoryPage() {
                         <div className="mb-4 glass-panel rounded-xl p-4">
                           <div className="flex items-center gap-2 mb-3">
                             <Loader2 size={14} className="animate-spin text-aurora-cyan" />
-                            <span className="text-xs font-semibold text-aurora-cyan">Canli Izleme</span>
+                            <span className="text-xs font-semibold text-aurora-cyan">Canlı İzleme</span>
                           </div>
                           <LiveLogPanel executionId={exec.id} />
                         </div>

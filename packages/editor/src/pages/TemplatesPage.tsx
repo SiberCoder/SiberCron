@@ -29,9 +29,9 @@ interface TemplateDefinition {
 const TEMPLATES: TemplateDefinition[] = [
   {
     id: 'ai-customer-support',
-    name: 'AI Customer Support',
+    name: 'AI Müşteri Desteği',
     description:
-      'Automatically respond to customer inquiries using OpenAI GPT. Connects webhook trigger to AI analysis, sentiment detection, and Slack/email routing based on urgency.',
+      'OpenAI GPT kullanarak müşteri sorularına otomatik yanıt verir. Webhook tetikleyiciyi AI analizine, duygu tespitine ve aciliyete göre Slack/email yönlendirmesine bağlar.',
     category: 'AI',
     categoryColor: 'text-aurora-violet bg-aurora-violet/10',
     icon: MessageSquare,
@@ -54,10 +54,10 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'daily-news-digest',
-    name: 'Daily News Digest',
+    name: 'Günlük Haber Özeti',
     description:
-      'Fetch top stories from multiple RSS feeds every morning, summarize them with AI, and deliver a curated digest via email. Perfect for staying informed on autopilot.',
-    category: 'Automation',
+      'Her sabah birden fazla RSS beslemesinden haber çeker, AI ile özetler ve düzenlenmiş bir özeti email ile gönderir. Otomatik pilot modunda güncel kalmak için idealdir.',
+    category: 'Otomasyon',
     categoryColor: 'text-aurora-cyan bg-aurora-cyan/10',
     icon: Newspaper,
     iconColor: 'text-aurora-cyan',
@@ -77,9 +77,9 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'github-issue-responder',
-    name: 'GitHub Issue Responder',
+    name: 'GitHub Issue Yanıtlayıcı',
     description:
-      'Listens for new GitHub issues via GitHubTrigger (HMAC-validated), uses AI to categorize and draft responses, posts an initial comment, and notifies the team on Slack.',
+      'GitHubTrigger (HMAC doğrulamalı) ile yeni issue\'ları dinler, AI ile kategorize edip yanıt taslağı oluşturur, ilk yorumu atar ve Slack\'te ekibi bildirir.',
     category: 'DevOps',
     categoryColor: 'text-aurora-emerald bg-aurora-emerald/10',
     icon: Github,
@@ -102,9 +102,9 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'jira-bug-triage',
-    name: 'Jira Bug Triage',
+    name: 'Jira Hata Triajı',
     description:
-      'Runs on a schedule, searches for unassigned Jira bugs, uses AI to estimate severity, transitions them to "In Progress", and posts a summary to Slack.',
+      'Planlanmış şekilde çalışır, atanmamış Jira hatalarını arar, AI ile ciddiyet tahmin eder, "Devam Ediyor" durumuna geçirir ve Slack\'te özet paylaşır.',
     category: 'DevOps',
     categoryColor: 'text-aurora-emerald bg-aurora-emerald/10',
     icon: Layers,
@@ -127,10 +127,10 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'rss-to-notion',
-    name: 'RSS → Notion Knowledge Base',
+    name: 'RSS → Notion Bilgi Tabanı',
     description:
-      'Monitors RSS feeds on a schedule, filters items with AI, and saves relevant articles to a Notion database automatically. Build a living knowledge base without lifting a finger.',
-    category: 'Automation',
+      'RSS beslemelerini planlanmış şekilde izler, AI ile filtreler ve ilgili makaleleri otomatik olarak Notion veritabanına kaydeder. Hiç efor harcamadan canlı bir bilgi tabanı oluşturun.',
+    category: 'Otomasyon',
     categoryColor: 'text-aurora-cyan bg-aurora-cyan/10',
     icon: Rss,
     iconColor: 'text-aurora-cyan',
@@ -154,10 +154,10 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'social-media-scheduler',
-    name: 'Social Media Scheduler',
+    name: 'Sosyal Medya Zamanlayıcı',
     description:
-      'Schedule and publish content across Twitter, LinkedIn, and Instagram on a cron schedule. Includes AI-powered caption generation and image optimization.',
-    category: 'Marketing',
+      'İçeriği Twitter, LinkedIn ve Instagram\'da cron programıyla planlayıp yayınlar. AI destekli altyazı üretimi ve görsel optimizasyonu içerir.',
+    category: 'Pazarlama',
     categoryColor: 'text-aurora-pink bg-aurora-pink/10',
     icon: Calendar,
     iconColor: 'text-aurora-pink',

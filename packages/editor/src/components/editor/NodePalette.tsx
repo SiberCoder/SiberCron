@@ -147,7 +147,7 @@ export default function NodePalette() {
           )}
         </div>
         {isSearching && filtered.length === 0 && (
-          <p className="text-[10px] text-obsidian-600 mt-2 text-center font-body">No nodes found</p>
+          <p className="text-[10px] text-obsidian-600 mt-2 text-center font-body">Node bulunamadı</p>
         )}
       </div>
 
