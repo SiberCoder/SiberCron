@@ -966,7 +966,7 @@ export default function ChatPage() {
             </button>
           </div>
           <p className="text-[10px] text-slate-600 mt-2 text-center">
-            Enter ile gonder, Shift+Enter ile yeni satir
+            Enter ile gönder, Shift+Enter ile yeni satır
           </p>
         </div>
       </div>

@@ -680,7 +680,7 @@ export async function setupRoutes(fastify: FastifyInstance): Promise<void> {
           upsertCredential('github-copilot-oauth', 'github_copilot', { token: data.access_token, authMethod: 'oauth_session' });
           return;
         }
-        if (data.error === 'expired_token') { session.status = 'failed'; session.message = 'Kod suresi doldu'; return; }
+        if (data.error === 'expired_token') { session.status = 'failed'; session.message = 'Kod süresi doldu'; return; }
       } catch { /* retry */ }
     }
   }

@@ -532,7 +532,7 @@ export const AutonomousDevNode: INodeType = {
         const taskDone = !askedQuestion && isDone(result.response);
 
         if (taskDone) {
-          emitLog('system', 'AI gorevi tamamladi, dongu durduruluyor');
+          emitLog('system', 'AI görevi tamamladı, döngü durduruluyor');
           exitReason = 'completed';
           break;
         }
@@ -541,15 +541,15 @@ export const AutonomousDevNode: INodeType = {
           emitLog('system', `AI soru sordu, strateji: ${autoAnswerStrategy}`);
 
           if (autoAnswerStrategy === 'stop') {
-            emitLog('system', 'Strateji "dur" - dongu durduruluyor');
+            emitLog('system', 'Strateji "dur" - döngü durduruluyor');
             exitReason = 'stopped';
             break;
           }
 
           let answer: string;
           if (autoAnswerStrategy === 'contextual') {
-            const answerPrompt = `Bir AI gelistirici su talimati uyguluyor: "${dynamicInstruction}"\n\nAI su soruyu sordu:\n"${result.response.slice(-500)}"\n\nBu soruya kisa ve kararli bir cevap ver. Sadece cevabi yaz.`;
-            emitLog('system', 'AI ile otomatik cevap uretiliyor...');
+            const answerPrompt = `Bir AI geliştirici şu talimatı uyguluyor: "${dynamicInstruction}"\n\nAI şu soruyu sordu:\n"${result.response.slice(-500)}"\n\nBu soruya kısa ve kararlı bir cevap ver. Sadece cevabı yaz.`;
+            emitLog('system', 'AI ile otomatik cevap üretiliyor...');
             try {
               const answerResult = await callClaude({
                 prompt: answerPrompt,
@@ -569,8 +569,8 @@ export const AutonomousDevNode: INodeType = {
           conversationHistory.push({ role: 'answer', content: answer });
           emitLog('auto_answer', answer, { iteration: iterationCount });
         } else {
-          emitLog('system', `Iterasyon ${iterationCount} tamamlandi, dongu devam ediyor`);
-          conversationHistory.push({ role: 'instruction', content: `(Iterasyon ${iterationCount} tamamlandi)` });
+          emitLog('system', `İterasyon ${iterationCount} tamamlandı, döngü devam ediyor`);
+          conversationHistory.push({ role: 'instruction', content: `(İterasyon ${iterationCount} tamamlandı)` });
         }
       } catch (err) {
         emitLog('error', `Hata: ${(err as Error).message}`, { iteration: iterationCount });

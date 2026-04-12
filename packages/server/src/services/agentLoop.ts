@@ -325,7 +325,7 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
     case 'file_read': {
       const filePath = path.resolve(PROJECT_ROOT, args.path as string);
       // Security: only allow reading within project
-      if (!filePath.startsWith(PROJECT_ROOT)) return { error: 'Proje dizini disina erisilemez' };
+      if (!filePath.startsWith(PROJECT_ROOT)) return { error: 'Proje dizini dışına erişilemez' };
       try {
         const content = fs.readFileSync(filePath, 'utf-8');
         return {
@@ -338,7 +338,7 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
     }
     case 'file_write': {
       const filePath = path.resolve(PROJECT_ROOT, args.path as string);
-      if (!filePath.startsWith(PROJECT_ROOT)) return { error: 'Proje dizini disina yazilamaz' };
+      if (!filePath.startsWith(PROJECT_ROOT)) return { error: 'Proje dizini dışına yazılamaz' };
       try {
         const dir = path.dirname(filePath);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -350,7 +350,7 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
     }
     case 'file_list': {
       const dirPath = path.resolve(PROJECT_ROOT, (args.path as string) || '');
-      if (!dirPath.startsWith(PROJECT_ROOT)) return { error: 'Proje dizini disina erisilemez' };
+      if (!dirPath.startsWith(PROJECT_ROOT)) return { error: 'Proje dizini dışına erişilemez' };
       try {
         const items = fs.readdirSync(dirPath, { withFileTypes: true });
         return items.slice(0, 50).map(i => ({

@@ -218,7 +218,7 @@ Kullanici sana guveniyorr. Sistem hakkinda sorularda yukardaki verileri kullan.`
         if (defaultProvider) {
           aiProvider = {
             name: defaultProvider.displayName,
-            model: defaultProvider.config.defaultModel || 'varsayilan',
+            model: defaultProvider.config.defaultModel || 'varsayılan',
             status: 'connected',
           };
         }
