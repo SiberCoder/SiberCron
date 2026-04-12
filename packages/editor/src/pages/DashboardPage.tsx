@@ -479,7 +479,7 @@ export default function DashboardPage() {
 
   const STATS_CONFIG = [
     {
-      label: 'Total Workflows',
+      label: 'Toplam Workflow',
       value: String(stats.totalWorkflows),
       icon: GitBranch,
       accent: 'text-aurora-cyan',
@@ -487,7 +487,7 @@ export default function DashboardPage() {
       iconBg: 'bg-aurora-cyan/10',
     },
     {
-      label: 'Active Workflows',
+      label: 'Aktif Workflow',
       value: String(stats.activeWorkflows),
       icon: Zap,
       accent: 'text-aurora-emerald',
@@ -495,7 +495,7 @@ export default function DashboardPage() {
       iconBg: 'bg-aurora-emerald/10',
     },
     {
-      label: 'Total Executions',
+      label: 'Toplam Çalıştırma',
       value: String(stats.totalExecutions),
       icon: Activity,
       accent: 'text-aurora-indigo',
@@ -503,7 +503,7 @@ export default function DashboardPage() {
       iconBg: 'bg-aurora-indigo/10',
     },
     {
-      label: 'Success Rate',
+      label: 'Başarı Oranı',
       value: stats.successRate,
       icon: TrendingUp,
       accent: 'text-aurora-amber',
@@ -511,7 +511,7 @@ export default function DashboardPage() {
       iconBg: 'bg-aurora-amber/10',
     },
     {
-      label: 'Avg Duration',
+      label: 'Ort. Süre',
       value: stats.avgDuration,
       icon: Clock,
       accent: 'text-aurora-violet',

@@ -26,10 +26,10 @@ import { toast } from '../../store/toastStore';
 const NAV_ITEMS = [
   { to: '/chat', icon: Brain, label: 'AI Sohbet', accent: true },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/workflows', icon: GitBranch, label: 'Workflows' },
-  { to: '/executions', icon: Play, label: 'Executions' },
-  { to: '/credentials', icon: Key, label: 'Credentials' },
-  { to: '/templates', icon: FileCode, label: 'Templates' },
+  { to: '/workflows', icon: GitBranch, label: 'Workflow\'lar' },
+  { to: '/executions', icon: Play, label: 'Çalıştırmalar' },
+  { to: '/credentials', icon: Key, label: 'Kimlik Bilgileri' },
+  { to: '/templates', icon: FileCode, label: 'Şablonlar' },
   { to: '/accounts', icon: Users, label: 'Hesaplar' },
   { to: '/settings', icon: Settings, label: 'Ayarlar' },
 ] as const;
