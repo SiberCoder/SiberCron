@@ -64,7 +64,7 @@ function useRunningCount() {
       if (data?.status === 'error') {
         const name = data?.workflowName ?? 'Workflow';
         const msg = data?.errorMessage ? `: ${data.errorMessage}` : '';
-        toast.error(`${name} başarısız oldu${msg}`, 6000);
+        toast.error(`${name} failed${msg}`, 6000);
       }
     };
     socket.on(WS_EVENTS.WORKFLOW_EXECUTION_STARTED, onStarted);
@@ -247,7 +247,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
           <button
             onClick={handleLogout}
-            title="Çıkış yap"
+            title={t('sidebar.logout')}
             className={clsx(
               'flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0',
               collapsed && 'w-8 h-8',

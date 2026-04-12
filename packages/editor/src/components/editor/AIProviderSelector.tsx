@@ -25,6 +25,7 @@ import clsx from 'clsx';
 import type { AIProviderConfig, AIProviderName, AIAuthMethod, AIModelConfig } from '@sibercron/shared';
 import { AI_PROVIDERS } from '@sibercron/shared';
 import { apiPost, apiGet } from '../../api/client';
+import { useTranslation } from '../../i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Icon mapping                                                       */
@@ -86,7 +87,6 @@ function MaskedInput({
 
 function OAuthSessionFields({
   providerKey,
-  config,
   onTestResult,
   onUpdate,
   onEnable,
@@ -97,6 +97,7 @@ function OAuthSessionFields({
   onUpdate: (patch: Partial<AIProviderConfig['config']>) => void;
   onEnable: () => void;
 }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<'idle' | 'connecting' | 'success'>('idle');
   const [userCode, setUserCode] = useState<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -121,17 +122,13 @@ function OAuthSessionFields({
         pollUrl: string;
       }>('/setup/oauth/start', { provider: providerKey });
 
-      // GitHub Copilot device flow: kullanici kodu goster
       if (res.userCode) {
         setUserCode(res.userCode);
       }
 
-      // Popup pencere ac
       window.open(res.authUrl, 'sibercron_oauth', 'width=700,height=700,left=200,top=100');
-      onTestResult({ ok: true, msg: 'Açılan pencerede giriş yapın. Otomatik bağlanacak...' });
+      onTestResult({ ok: true, msg: t('editor.aiOAuthWindowHint') });
 
-      // Polling başlat - server tamamlanınca yakalayacağız
-      // Server pollUrl'de /api/v1 prefix'i dondurur, apiGet zaten ekler — strip edelim
       const pollPath = res.pollUrl.replace(/^\/api\/v1/, '');
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
@@ -143,7 +140,7 @@ function OAuthSessionFields({
             pollIntervalRef.current = null;
             setStatus('success');
             setUserCode(null);
-            onTestResult({ ok: true, msg: data.message || 'Başarıyla bağlandı!' });
+            onTestResult({ ok: true, msg: data.message || t('editor.aiOAuthConnected') });
             onUpdate({ sessionToken: 'oauth-connected' });
             onEnable();
           } else if (data.status === 'failed') {
@@ -151,20 +148,19 @@ function OAuthSessionFields({
             pollIntervalRef.current = null;
             setStatus('idle');
             setUserCode(null);
-            onTestResult({ ok: false, msg: data.message || 'Bağlantı başarısız' });
+            onTestResult({ ok: false, msg: data.message || t('editor.aiOAuthConnectFailed') });
           }
         } catch { /* continue polling */ }
       }, 2000);
       pollIntervalRef.current = pollInterval;
 
-      // 5dk sonra polling durdur
       pollTimeoutRef.current = setTimeout(() => {
         clearInterval(pollInterval);
         pollIntervalRef.current = null;
         pollTimeoutRef.current = null;
         setStatus((prev) => {
           if (prev === 'connecting') {
-            onTestResult({ ok: false, msg: 'Bağlantı süresi doldu. Tekrar deneyin.' });
+            onTestResult({ ok: false, msg: t('editor.aiOAuthTimeout') });
             return 'idle';
           }
           return prev;
@@ -172,7 +168,7 @@ function OAuthSessionFields({
       }, 300000);
     } catch (e: any) {
       setStatus('idle');
-      onTestResult({ ok: false, msg: e.message || 'OAuth başlatılamadı' });
+      onTestResult({ ok: false, msg: e.message || t('editor.aiOAuthStartFailed') });
     }
   };
 
@@ -181,11 +177,11 @@ function OAuthSessionFields({
       {status === 'idle' && (
         <>
           <p className="text-xs text-obsidian-400 font-body">
-            Tarayıcıda giriş yapmanız yeterli. API anahtarı otomatik alınacak.
+            {t('editor.aiOAuthDesc')}
           </p>
           <button type="button" className="btn-aurora text-xs flex items-center gap-2" onClick={startOAuth}>
             <Globe size={14} />
-            Tarayıcıda Giriş Yap
+            {t('editor.aiOAuthLoginBtn')}
           </button>
         </>
       )}
@@ -194,19 +190,19 @@ function OAuthSessionFields({
         <div className="glass-card rounded-xl p-4 border border-aurora-cyan/20 space-y-3">
           <div className="flex items-center gap-2">
             <Loader2 size={16} className="animate-spin text-aurora-cyan" />
-            <p className="text-sm text-aurora-cyan font-body font-medium">Bağlantı bekleniyor...</p>
+            <p className="text-sm text-aurora-cyan font-body font-medium">{t('editor.aiOAuthWaiting')}</p>
           </div>
           <p className="text-xs text-obsidian-400 font-body">
-            Açılan pencerede giriş yapıp izin verin. Otomatik bağlanacak.
+            {t('editor.aiOAuthWaitingDesc')}
           </p>
           {userCode && (
             <div className="bg-white/[0.06] rounded-lg p-3 text-center">
-              <p className="text-[10px] text-obsidian-500 font-body mb-1">Bu kodu giriş sayfasına girin:</p>
+              <p className="text-[10px] text-obsidian-500 font-body mb-1">{t('editor.aiOAuthUserCodeHint')}</p>
               <p className="text-2xl font-mono font-bold tracking-widest text-white">{userCode}</p>
             </div>
           )}
           <button type="button" className="btn-ghost text-xs" onClick={() => { setStatus('idle'); setUserCode(null); }}>
-            İptal
+            {t('editor.aiOAuthCancel')}
           </button>
         </div>
       )}
@@ -215,7 +211,7 @@ function OAuthSessionFields({
         <div className="glass-card rounded-xl p-3 border border-aurora-emerald/20">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-aurora-emerald" />
-            <p className="text-sm text-aurora-emerald font-body font-medium">Başarıyla bağlandı!</p>
+            <p className="text-sm text-aurora-emerald font-body font-medium">{t('editor.aiOAuthConnected')}</p>
           </div>
         </div>
       )}
@@ -236,6 +232,7 @@ function CliDelegationFields({
   onTestResult: (r: { ok: boolean; msg: string } | null) => void;
   onUpdate: (patch: Partial<AIProviderConfig['config']>) => void;
 }) {
+  const { t } = useTranslation();
   const [checking, setChecking] = useState(false);
   const [testingCli, setTestingCli] = useState(false);
 
@@ -258,14 +255,14 @@ function CliDelegationFields({
         });
         onTestResult({
           ok: true,
-          msg: `Claude CLI bulundu: ${res.version || 'bilinmiyor'}${res.authenticated ? ' (oturum acik)' : ' (oturum acilmamis)'}`,
+          msg: `${t('editor.aiCliFoundMsg')} ${res.version || t('editor.aiCliUnknown')} (${res.authenticated ? t('editor.aiCliSessionLabel') : t('editor.aiCliSessionClosedLabel')})`,
         });
       } else {
         onUpdate({ cliAvailable: false });
-        onTestResult({ ok: false, msg: `Claude CLI bulunamadi: ${res.error || 'Kurulu degil'}` });
+        onTestResult({ ok: false, msg: `${t('editor.aiCliNotFound')} ${res.error || t('editor.aiCliNotInstalled')}` });
       }
     } catch (e: any) {
-      onTestResult({ ok: false, msg: e.message || 'Claude CLI kontrol edilemedi' });
+      onTestResult({ ok: false, msg: e.message || t('editor.aiCliCheckFailed') });
     } finally {
       setChecking(false);
     }
@@ -277,15 +274,15 @@ function CliDelegationFields({
     try {
       const res = await apiPost<{ success: boolean; response?: string; error?: string }>(
         '/setup/test-cli',
-        { prompt: 'Merhaba, kisa bir selam ver.' },
+        { prompt: 'Say a short greeting.' },
       );
       if (res.success) {
-        onTestResult({ ok: true, msg: `Claude yanit verdi: "${(res.response || '').slice(0, 100)}..."` });
+        onTestResult({ ok: true, msg: `${t('editor.aiCliTestReply')} "${(res.response || '').slice(0, 100)}..."` });
       } else {
-        onTestResult({ ok: false, msg: res.error || 'Claude CLI yanıt vermedi' });
+        onTestResult({ ok: false, msg: res.error || t('editor.aiCliTestFailed') });
       }
     } catch (e: any) {
-      onTestResult({ ok: false, msg: e.message || 'Test başarısız' });
+      onTestResult({ ok: false, msg: e.message || t('editor.aiCliTestError') });
     } finally {
       setTestingCli(false);
     }
@@ -294,7 +291,7 @@ function CliDelegationFields({
   return (
     <>
       <p className="text-xs text-obsidian-400 font-body">
-        Bilgisayarında kurulu Claude CLI üzerinden bağlan. API anahtarı gerekmez - Claude'un kendi oturumunu kullanır.
+        {t('editor.aiCliDesc')}
       </p>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -305,7 +302,7 @@ function CliDelegationFields({
           className="btn-ghost text-xs disabled:opacity-40"
         >
           {checking ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
-          CLI Kontrol Et
+          {t('editor.aiCliCheckBtn')}
         </button>
 
         {config.config.cliAvailable && (
@@ -316,7 +313,7 @@ function CliDelegationFields({
             className="btn-ghost text-xs disabled:opacity-40"
           >
             {testingCli ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-            Sohbet Testi
+            {t('editor.aiCliTestBtn')}
           </button>
         )}
       </div>
@@ -325,13 +322,13 @@ function CliDelegationFields({
         <div className="glass-card rounded-xl p-3 space-y-1.5">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={14} className="text-aurora-emerald" />
-            <span className="text-xs text-white font-body font-medium">Claude CLI Hazir</span>
+            <span className="text-xs text-white font-body font-medium">{t('editor.aiCliAvailable')}</span>
           </div>
           {config.config.cliVersion && (
-            <p className="text-[10px] text-obsidian-500 font-body">Versiyon: {config.config.cliVersion}</p>
+            <p className="text-[10px] text-obsidian-500 font-body">{t('editor.aiCliVersion')} {config.config.cliVersion}</p>
           )}
           <p className="text-[10px] text-obsidian-500 font-body">
-            Oturum: {config.config.cliAuthenticated ? '✓ Açık' : '✗ Kapalı - "claude" komutuyla giriş yapın'}
+            {config.config.cliAuthenticated ? t('editor.aiCliSessionOpen') : t('editor.aiCliSessionClosed')}
           </p>
         </div>
       )}
@@ -343,20 +340,20 @@ function CliDelegationFields({
 /*  Auth method badge                                                  */
 /* ------------------------------------------------------------------ */
 
-const AUTH_LABELS: Record<AIAuthMethod, string> = {
-  api_key: 'API Anahtarı',
-  oauth_session: 'Tarayıcı Oturumu',
-  local: 'Yerel Model',
-  custom_endpoint: 'Özel Endpoint',
+const AUTH_METHOD_KEYS: Record<AIAuthMethod, string> = {
+  api_key: 'API Key',
+  oauth_session: 'Browser Session',
+  local: 'Local Model',
+  custom_endpoint: 'Custom Endpoint',
   cli_delegation: 'Claude CLI',
-  env_variable: 'Ortam Degiskeni',
+  env_variable: 'Env Variable',
   setup_token: 'Setup Token',
 };
 
 function AuthBadge({ method }: { method: AIAuthMethod }) {
   return (
     <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/[0.04] text-obsidian-500 font-body">
-      {AUTH_LABELS[method]}
+      {AUTH_METHOD_KEYS[method]}
     </span>
   );
 }
@@ -373,6 +370,7 @@ interface ProviderCardProps {
 }
 
 function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardProps) {
+  const { t } = useTranslation();
   const meta = AI_PROVIDERS[providerKey];
   const Icon = ICON_MAP[meta.icon] ?? Settings;
   const [expanded, setExpanded] = useState(false);
@@ -430,7 +428,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
         update({ enabled: true });
       }
     } catch (e: any) {
-      setTestResult({ ok: false, msg: e.message || 'Bağlantı hatası' });
+      setTestResult({ ok: false, msg: e.message || t('editor.aiConnectionError') });
     } finally {
       setTesting(false);
     }
@@ -468,7 +466,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
         { baseUrl: currentConfig.config.baseUrl || meta.defaultBaseUrl },
       );
       if (res.detected) {
-        setTestResult({ ok: true, msg: `Ollama bulundu${res.version ? ` (v${res.version})` : ''} - ${res.models.length} model` });
+        setTestResult({ ok: true, msg: `${t('editor.aiOllamaFound')}${res.version ? ` (v${res.version})` : ''} - ${res.models.length} ${t('editor.aiListModels').toLowerCase()}` });
         const modelConfigs: AIModelConfig[] = res.models.map((m: { name: string }) => ({
           id: m.name,
           name: m.name,
@@ -481,10 +479,10 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
         updateInnerConfig({ availableModels: res.models.map((m: { name: string }) => m.name) });
         update({ enabled: true });
       } else {
-        setTestResult({ ok: false, msg: 'Ollama bulunamadı' });
+        setTestResult({ ok: false, msg: t('editor.aiOllamaNotFound') });
       }
     } catch {
-      setTestResult({ ok: false, msg: 'Ollama sunucusuna bağlanılamadı' });
+      setTestResult({ ok: false, msg: t('editor.aiOllamaConnectFailed') });
     } finally {
       setScanning(false);
     }
@@ -519,12 +517,12 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
             </h3>
             {currentConfig.enabled && (
               <span className="badge text-[10px] bg-aurora-emerald/10 text-aurora-emerald">
-                <CheckCircle2 size={10} /> Bağlı
+                <CheckCircle2 size={10} /> {t('editor.aiProviderConnected')}
               </span>
             )}
             {currentConfig.isDefault && (
               <span className="badge text-[10px] bg-aurora-cyan/10 text-aurora-cyan">
-                Varsayılan
+                {t('editor.aiProviderDefault')}
               </span>
             )}
           </div>
@@ -548,7 +546,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {meta.authMethods.length > 1 && (
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                Bağlantı Yöntemi
+                {t('editor.aiConnectionMethod')}
               </label>
               <div className="flex gap-2">
                 {meta.authMethods.map((m) => (
@@ -563,7 +561,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                         : 'border-white/[0.06] bg-white/[0.02] text-obsidian-400 hover:text-white',
                     )}
                   >
-                    {AUTH_LABELS[m]}
+                    {AUTH_METHOD_KEYS[m]}
                   </button>
                 ))}
               </div>
@@ -574,12 +572,12 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {selectedAuth === 'api_key' && (
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                API Anahtarı
+                {t('editor.aiApiKey')}
               </label>
               <MaskedInput
                 value={currentConfig.config.apiKey || ''}
                 onChange={(v) => updateInnerConfig({ apiKey: v })}
-                placeholder={providerKey === 'openai' ? 'sk-...' : providerKey === 'anthropic' ? 'sk-ant-...' : 'API anahtarinizi girin'}
+                placeholder={providerKey === 'openai' ? 'sk-...' : providerKey === 'anthropic' ? 'sk-ant-...' : t('editor.aiApiKeyPlaceholder')}
               />
             </div>
           )}
@@ -600,7 +598,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
             <div className="space-y-3">
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                  Ollama URL
+                  {t('editor.aiOllamaUrl')}
                 </label>
                 <input
                   type="text"
@@ -617,7 +615,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 className="btn-ghost text-xs disabled:opacity-40"
               >
                 {scanning ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
-                Modelleri Tara
+                {t('editor.aiScanModels')}
               </button>
             </div>
           )}
@@ -627,7 +625,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
             <div className="space-y-3">
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                  Base URL
+                  {t('editor.aiCustomBaseUrl')}
                 </label>
                 <input
                   type="text"
@@ -639,12 +637,12 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
               </div>
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                  API Anahtarı (isteğe bağlı)
+                  {t('editor.aiCustomApiKey')}
                 </label>
                 <MaskedInput
                   value={currentConfig.config.customApiKey || ''}
                   onChange={(v) => updateInnerConfig({ customApiKey: v })}
-                  placeholder="API anahtarı"
+                  placeholder={t('editor.aiCustomApiKeyPlaceholder')}
                 />
               </div>
             </div>
@@ -668,11 +666,11 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {selectedAuth === 'env_variable' && (
             <div className="space-y-3">
               <p className="text-xs text-obsidian-400 font-body">
-                Sunucudaki ortam degiskeninden API anahtarini oku. Anahtar dosyalara yazilmaz.
+                {t('editor.aiEnvVarDesc')}
               </p>
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                  Degisken Adi
+                  {t('editor.aiEnvVarName')}
                 </label>
                 <input
                   type="text"
@@ -683,7 +681,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 />
               </div>
               <p className="text-[10px] text-obsidian-500 font-body">
-                Sunucu başlatılırken bu değişken tanımlı olmalıdır. Örnek: <code className="text-aurora-cyan">export ANTHROPIC_API_KEY="sk-ant-..."</code>
+                {t('editor.aiSetupTokenHint')} <code className="text-aurora-cyan">export ANTHROPIC_API_KEY="sk-ant-..."</code>
               </p>
             </div>
           )}
@@ -692,11 +690,11 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {selectedAuth === 'setup_token' && (
             <div className="space-y-3">
               <p className="text-xs text-obsidian-400 font-body">
-                Claude.ai aboneliği üzerinden bağlantı. <span className="text-aurora-amber">Not:</span> Anthropic Nisan 2026'da üçüncü parti token erişimini kısıtladı, bu yöntem çalışmayabilir.
+                {t('editor.aiSetupTokenDesc')}
               </p>
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                  Setup Token
+                  {t('editor.aiSetupTokenLabel')}
                 </label>
                 <MaskedInput
                   value={currentConfig.config.setupToken || ''}
@@ -705,7 +703,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 />
               </div>
               <p className="text-[10px] text-obsidian-500 font-body">
-                Token almak için: <code className="text-aurora-cyan">claude setup-token</code> komutunu çalıştırın.
+                {t('editor.aiSetupTokenHint')} <code className="text-aurora-cyan">claude setup-token</code>
               </p>
             </div>
           )}
@@ -714,14 +712,14 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {allModels.length > 0 && (
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                Varsayılan Model
+                {t('editor.aiDefaultModel')}
               </label>
               <select
                 value={currentConfig.config.defaultModel || ''}
                 onChange={(e) => updateInnerConfig({ defaultModel: e.target.value })}
                 className="glass-input"
               >
-                <option value="">Model seçin...</option>
+                <option value="">{t('editor.aiSelectModel')}</option>
                 {allModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} {m.contextWindow ? `(${Math.round(m.contextWindow / 1000)}K)` : ''}
@@ -740,7 +738,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
               className="btn-ghost text-xs disabled:opacity-40"
             >
               {scanning ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
-              Modelleri Listele
+              {t('editor.aiListModels')}
             </button>
           )}
 
@@ -753,7 +751,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 disabled={testing}
                 className="btn-ghost text-xs disabled:opacity-40"
               >
-                {testing ? 'Test ediliyor...' : 'Test Et'}
+                {testing ? t('editor.aiTesting') : t('editor.aiTestConnection')}
               </button>
             )}
             <label className="flex items-center gap-2 text-xs text-obsidian-400 cursor-pointer font-body">
@@ -763,7 +761,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 onChange={(e) => update({ isDefault: e.target.checked })}
                 className="accent-aurora-cyan w-3.5 h-3.5 rounded"
               />
-              Varsayılan sağlayıcı
+              {t('editor.aiDefaultProvider')}
             </label>
           </div>
 

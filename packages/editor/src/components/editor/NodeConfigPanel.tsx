@@ -998,8 +998,8 @@ function WorkflowMetaPanel() {
           <Settings2 size={16} className="text-aurora-violet" />
         </div>
         <div>
-          <div className="text-sm font-display font-semibold text-white">Workflow Ayarları</div>
-          <div className="text-[10px] text-obsidian-500 font-body">Açıklama ve etiketler</div>
+          <div className="text-sm font-display font-semibold text-white">{t('editor.workflowSettings')}</div>
+          <div className="text-[10px] text-obsidian-500 font-body">{t('editor.workflowSettingsDesc')}</div>
         </div>
       </div>
 
@@ -1008,12 +1008,12 @@ function WorkflowMetaPanel() {
         <div className="space-y-2">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-obsidian-400 uppercase tracking-wide font-body">
             <FileText size={11} />
-            Açıklama
+            {t('editor.descriptionLabel')}
           </label>
           <textarea
             value={workflowMeta.description}
             onChange={(e) => updateMeta({ description: e.target.value })}
-            placeholder="Workflow'un ne yaptığını kısaca açıklayın..."
+            placeholder={t('editor.descriptionPlaceholder')}
             rows={3}
             className="glass-input resize-none text-sm font-body"
           />
@@ -1023,20 +1023,20 @@ function WorkflowMetaPanel() {
         <div className="space-y-3">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-obsidian-400 uppercase tracking-wide font-body">
             <Tag size={11} />
-            Etiketler
+            {t('editor.tagsLabel')}
           </label>
 
           {/* Existing tags */}
           {workflowMeta.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {workflowMeta.tags.map((t) => (
+              {workflowMeta.tags.map((tag) => (
                 <span
-                  key={t}
+                  key={tag}
                   className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-aurora-violet/15 border border-aurora-violet/20 text-[11px] font-medium text-aurora-violet font-body"
                 >
-                  {t}
+                  {tag}
                   <button
-                    onClick={() => removeTag(t)}
+                    onClick={() => removeTag(tag)}
                     className="hover:opacity-70 transition-opacity"
                   >
                     <X size={10} />
@@ -1053,7 +1053,7 @@ function WorkflowMetaPanel() {
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-              placeholder="etiket ekle..."
+              placeholder={t('editor.tagPlaceholder')}
               className="glass-input flex-1 text-xs"
               maxLength={50}
             />
@@ -1062,11 +1062,11 @@ function WorkflowMetaPanel() {
               disabled={!tagInput.trim()}
               className="px-3 py-2 rounded-xl bg-aurora-violet/20 hover:bg-aurora-violet/30 text-aurora-violet text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-body"
             >
-              Ekle
+              {t('editor.tagAddBtn')}
             </button>
           </div>
           <p className="text-[10px] text-obsidian-600 font-body">
-            Enter tuşu ile ekle. Etiketler workflow listesinde filtreleme için kullanılır.
+            {t('editor.tagHint')}
           </p>
         </div>
 
@@ -1074,14 +1074,14 @@ function WorkflowMetaPanel() {
         <div className="space-y-3 pt-2 border-t border-white/[0.04]">
           <label className="flex items-center gap-1.5 text-xs font-semibold text-obsidian-400 uppercase tracking-wide font-body">
             <Settings2 size={11} />
-            Çalıştırma Ayarları
+            {t('editor.executionSettings')}
           </label>
 
           {/* Timeout */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 text-[11px] text-obsidian-400 font-body">
               <Timer size={10} />
-              <span>Zaman Aşımı</span>
+              <span>{t('editor.timeoutLabel')}</span>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -1095,16 +1095,16 @@ function WorkflowMetaPanel() {
                 min={10}
                 max={3600}
               />
-              <span className="text-[10px] text-obsidian-500 font-body shrink-0">saniye</span>
+              <span className="text-[10px] text-obsidian-500 font-body shrink-0">{t('editor.timeoutUnit')}</span>
             </div>
-            <p className="text-[10px] text-obsidian-600 font-body">Varsayılan: 300s (5 dakika)</p>
+            <p className="text-[10px] text-obsidian-600 font-body">{t('editor.timeoutDefault')}</p>
           </div>
 
           {/* Continue On Fail */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-[11px] text-obsidian-400 font-body">
               <SkipForward size={10} />
-              <span>Hata sonrası devam et</span>
+              <span>{t('editor.continueOnFail')}</span>
             </div>
             <button
               onClick={() => updateMeta({ continueOnFail: !workflowMeta.continueOnFail })}
@@ -1123,14 +1123,14 @@ function WorkflowMetaPanel() {
           </div>
           {workflowMeta.continueOnFail && (
             <p className="text-[10px] text-aurora-amber/70 font-body">
-              Bir node hata verdiğinde workflow çalışmaya devam eder.
+              {t('editor.continueOnFailDesc')}
             </p>
           )}
 
           {/* Allow concurrent execution toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-[11px] text-obsidian-400 font-body">
-              <span>Eş zamanlı çalışmaya izin ver</span>
+              <span>{t('editor.allowConcurrent')}</span>
             </div>
             <button
               onClick={() => updateMeta({ allowConcurrent: !workflowMeta.allowConcurrent })}
@@ -1149,7 +1149,7 @@ function WorkflowMetaPanel() {
           </div>
           {workflowMeta.allowConcurrent && (
             <p className="text-[10px] text-aurora-blue/70 font-body">
-              Bu workflow aynı anda birden fazla çalışabilir.
+              {t('editor.allowConcurrentDesc')}
             </p>
           )}
         </div>
@@ -1157,7 +1157,7 @@ function WorkflowMetaPanel() {
         {/* Error Webhook URL */}
         <div className="space-y-1.5">
           <label className="text-[11px] text-white/50 uppercase tracking-wider font-body">
-            Hata Bildirimi (Webhook URL)
+            {t('editor.errorWebhook')}
           </label>
           <input
             type="url"
@@ -1167,7 +1167,7 @@ function WorkflowMetaPanel() {
             className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white/80 font-mono placeholder:text-white/25 focus:outline-none focus:border-aurora-blue/50"
           />
           <p className="text-[10px] text-white/30 font-body">
-            Execution hata ile bittiğinde bu URL&apos;e POST isteği gönderilir.
+            {t('editor.errorWebhookDesc')}
           </p>
         </div>
       </div>
@@ -1176,6 +1176,7 @@ function WorkflowMetaPanel() {
 }
 
 export default function NodeConfigPanel() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const nodes = useWorkflowStore((s) => s.nodes);
@@ -1239,7 +1240,7 @@ export default function NodeConfigPanel() {
       .then((res) => setAvailableCredentials(res.data ?? []))
       .catch(() => {
         setAvailableCredentials([]);
-        console.error('[NodeConfigPanel] Kimlik bilgileri yüklenemedi');
+        console.error('[NodeConfigPanel] Failed to load credentials');
       });
   }, [hasCredentials]);
 
@@ -1297,7 +1298,7 @@ export default function NodeConfigPanel() {
             />
           ) : (
             <button
-              title="İsmi düzenlemek için tıkla"
+              title={t('editor.clickToEditName')}
               onClick={() => { setLabelDraft(currentLabel); setEditingLabel(true); }}
               className="text-sm font-display font-semibold text-white truncate hover:text-aurora-cyan transition-colors text-left w-full"
             >
@@ -1309,7 +1310,7 @@ export default function NodeConfigPanel() {
               {definition.description}
             </span>
             <button
-              title={`Node ID: ${selectedNodeId} — Kopyala`}
+              title={`Node ID: ${selectedNodeId}`}
               onClick={() => { void navigator.clipboard.writeText(selectedNodeId); }}
               className="shrink-0 flex items-center gap-0.5 text-[9px] text-obsidian-600 hover:text-obsidian-300 font-mono transition-colors"
             >
@@ -1348,7 +1349,7 @@ export default function NodeConfigPanel() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-obsidian-400 font-body uppercase tracking-wide">
               <KeyRound size={11} />
-              Kimlik Bilgileri
+              {t('editor.credentialsSection')}
             </div>
             {availableCredentials.length === 0 && (
               <button
@@ -1356,7 +1357,7 @@ export default function NodeConfigPanel() {
                 className="flex items-center gap-1.5 text-[10px] text-aurora-cyan/70 hover:text-aurora-cyan transition-colors font-body"
               >
                 <ExternalLink size={10} />
-                Kimlik bilgisi eklemek için tıklayın
+                {t('editor.addCredentialLink')}
               </button>
             )}
             {(definition.credentials ?? []).map((cred) => {
@@ -1384,7 +1385,7 @@ export default function NodeConfigPanel() {
                     onChange={(e) => handleCredentialChange(cred.name, e.target.value)}
                     className="glass-input text-xs"
                   >
-                    <option value="">Seçin...</option>
+                    <option value="">{t('editor.selectCredential')}</option>
                     {credOptions.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} ({c.type})
@@ -1400,7 +1401,7 @@ export default function NodeConfigPanel() {
 
         {definition.properties.length === 0 && !hasCredentials ? (
           <p className="text-xs text-obsidian-600 text-center py-10 font-body">
-            Yapılandırılabilir özellik yok
+            {t('editor.noConfigurableProps')}
           </p>
         ) : (
           definition.properties
@@ -1445,7 +1446,7 @@ export default function NodeConfigPanel() {
           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-semibold text-aurora-rose hover:bg-aurora-rose/10 border border-aurora-rose/15 transition-all font-body"
         >
           <Trash2 size={14} />
-          Node'u Sil
+          {t('editor.deleteNodeBtn')}
         </button>
       </div>
     </div>

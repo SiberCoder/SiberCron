@@ -3,6 +3,7 @@ import { History, RotateCcw, X, Loader2, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 import { apiGet, apiPost } from '../../api/client';
 import { toast } from '../../store/toastStore';
+import { useTranslation } from '../../i18n';
 
 interface WorkflowVersionSummary {
   version: number;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function VersionHistoryPanel({ workflowId, onRestored, onClose }: Props) {
+  const { t } = useTranslation();
   const [versions, setVersions] = useState<WorkflowVersionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [restoring, setRestoring] = useState<number | null>(null);
@@ -33,14 +35,14 @@ export default function VersionHistoryPanel({ workflowId, onRestored, onClose }:
   }, [workflowId]);
 
   const restore = async (version: number) => {
-    if (!window.confirm(`Versiyon ${version}'e geri dönülecek. Mevcut değişiklikler kaybolabilir. Devam?`)) return;
+    if (!window.confirm(t('editor.versionRestoreConfirm').replace('{{version}}', String(version)))) return;
     setRestoring(version);
     try {
       await apiPost(`/workflows/${workflowId}/versions/${version}/restore`, {});
       onRestored();
       onClose();
     } catch (err) {
-      toast.error('Geri yükleme başarısız: ' + (err instanceof Error ? err.message : String(err)));
+      toast.error(t('editor.versionRestoreFailed') + ' ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setRestoring(null);
     }
@@ -54,7 +56,7 @@ export default function VersionHistoryPanel({ workflowId, onRestored, onClose }:
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
           <History size={15} className="text-aurora-cyan" />
-          <span className="flex-1 text-sm font-semibold text-white font-display">Versiyon Geçmişi</span>
+          <span className="flex-1 text-sm font-semibold text-white font-display">{t('editor.versionHistory')}</span>
           <button
             onClick={onClose}
             className="text-obsidian-500 hover:text-white transition-colors"
@@ -71,7 +73,7 @@ export default function VersionHistoryPanel({ workflowId, onRestored, onClose }:
             </div>
           ) : versions.length === 0 ? (
             <p className="text-xs text-obsidian-500 text-center py-8 px-4 font-body">
-              Henüz kayıtlı versiyon yok. Workflow kaydettiğinizde snapshot alınır.
+              {t('editor.versionEmpty')}
             </p>
           ) : (
             versions.map((v, index) => (
@@ -89,27 +91,27 @@ export default function VersionHistoryPanel({ workflowId, onRestored, onClose }:
                     </span>
                     {index === 0 && (
                       <span className="text-[9px] text-aurora-emerald font-semibold uppercase tracking-wide">
-                        Son
+                        {t('editor.versionLatest')}
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-obsidian-300 mt-0.5 font-body truncate">{v.name}</p>
                   <p className="text-[10px] text-obsidian-600 font-body">
-                    {new Date(v.savedAt).toLocaleString('tr-TR')} · {v.nodeCount} node
+                    {new Date(v.savedAt).toLocaleString()} · {v.nodeCount} node
                   </p>
                 </div>
                 <button
                   onClick={() => restore(v.version)}
                   disabled={restoring === v.version}
                   className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-obsidian-400 hover:text-white hover:bg-aurora-cyan/10 transition-all opacity-0 group-hover:opacity-100"
-                  title="Bu versiyona geri dön"
+                  title={t('editor.versionRestoreTitle')}
                 >
                   {restoring === v.version ? (
                     <Loader2 size={10} className="animate-spin" />
                   ) : (
                     <RotateCcw size={10} />
                   )}
-                  Geri Yükle
+                  {t('editor.versionRestore')}
                 </button>
                 <ChevronRight size={12} className="text-obsidian-700 shrink-0 group-hover:text-obsidian-500 transition-colors" />
               </div>
@@ -119,7 +121,7 @@ export default function VersionHistoryPanel({ workflowId, onRestored, onClose }:
 
         <div className="px-4 py-2 border-t border-white/[0.04]">
           <p className="text-[10px] text-obsidian-700 font-body">
-            Son {versions.length} versiyon · Her kayıtta otomatik snapshot alınır
+            {versions.length} {t('editor.versionFooter')}
           </p>
         </div>
       </div>
