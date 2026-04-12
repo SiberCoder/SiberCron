@@ -52,10 +52,10 @@ interface WorkflowState {
   // Undo/Redo
   history: HistoryEntry[];
   historyIndex: number;
+  canUndo: boolean;
+  canRedo: boolean;
   undo: () => void;
   redo: () => void;
-  canUndo: () => boolean;
-  canRedo: () => boolean;
 
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
@@ -81,6 +81,11 @@ interface WorkflowState {
   // Import/Export
   exportWorkflow: () => string;
   importWorkflow: (json: string) => void;
+
+  // Group node operations
+  ungroupNodes: (groupId: string) => void;
+  renameGroup: (groupId: string, label: string) => void;
+  setGroupColor: (groupId: string, color: string) => void;
 
   reset: () => void;
 }
@@ -143,13 +148,19 @@ const MAX_HISTORY = 50;
 
 function pushHistory(state: WorkflowState): Partial<WorkflowState> {
   const entry: HistoryEntry = {
-    nodes: JSON.parse(JSON.stringify(state.nodes)),
-    edges: JSON.parse(JSON.stringify(state.edges)),
+    nodes: structuredClone(state.nodes),
+    edges: structuredClone(state.edges),
   };
   const history = state.history.slice(0, state.historyIndex + 1);
   history.push(entry);
   if (history.length > MAX_HISTORY) history.shift();
-  return { history, historyIndex: history.length - 1 };
+  const historyIndex = history.length - 1;
+  return {
+    history,
+    historyIndex,
+    canUndo: historyIndex > 0,
+    canRedo: false,
+  };
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -161,33 +172,38 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   isSaving: false,
   history: [],
   historyIndex: -1,
+  canUndo: false,
+  canRedo: false,
 
   undo: () => {
     const { history, historyIndex } = get();
     if (historyIndex <= 0) return;
-    const prev = history[historyIndex - 1];
+    const newIndex = historyIndex - 1;
+    const prev = history[newIndex];
     set({
-      nodes: JSON.parse(JSON.stringify(prev.nodes)),
-      edges: JSON.parse(JSON.stringify(prev.edges)),
-      historyIndex: historyIndex - 1,
+      nodes: structuredClone(prev.nodes),
+      edges: structuredClone(prev.edges),
+      historyIndex: newIndex,
       isDirty: true,
+      canUndo: newIndex > 0,
+      canRedo: true,
     });
   },
 
   redo: () => {
     const { history, historyIndex } = get();
     if (historyIndex >= history.length - 1) return;
-    const next = history[historyIndex + 1];
+    const newIndex = historyIndex + 1;
+    const next = history[newIndex];
     set({
-      nodes: JSON.parse(JSON.stringify(next.nodes)),
-      edges: JSON.parse(JSON.stringify(next.edges)),
-      historyIndex: historyIndex + 1,
+      nodes: structuredClone(next.nodes),
+      edges: structuredClone(next.edges),
+      historyIndex: newIndex,
       isDirty: true,
+      canUndo: true,
+      canRedo: newIndex < history.length - 1,
     });
   },
-
-  canUndo: () => get().historyIndex > 0,
-  canRedo: () => get().historyIndex < get().history.length - 1,
 
   onNodesChange: (changes) => {
     // Only push to undo history for meaningful changes:
@@ -333,6 +349,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       // Reset undo/redo history so the freshly loaded state is the baseline
       history: [],
       historyIndex: -1,
+      canUndo: false,
+      canRedo: false,
       workflowMeta: {
         id: workflow.id,
         name: workflow.name,
@@ -441,7 +459,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   executeWorkflow: async () => {
     const { workflowMeta } = get();
     if (!workflowMeta.id) {
-      throw new Error('Çalıştırmadan önce workflow kaydedilmeli');
+      throw new Error('Workflow must be saved before executing');
     }
     const result = await apiPost<{ id: string }>(
       `/workflows/${workflowMeta.id}/execute`,
@@ -469,6 +487,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       nodes,
       edges,
       isDirty: false,
+      history: [],
+      historyIndex: -1,
+      canUndo: false,
+      canRedo: false,
       workflowMeta: {
         id: res.workflow.id,
         name: res.workflow.name,
@@ -564,6 +586,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       isDirty: true,
       history: [],
       historyIndex: -1,
+      canUndo: false,
+      canRedo: false,
       workflowMeta: {
         id: null,
         name: workflow.name,
@@ -582,6 +606,32 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     });
   },
 
+  // Group node operations
+  ungroupNodes: (groupId: string) => {
+    set((state) => ({
+      nodes: state.nodes.filter((n) => n.id !== groupId),
+      isDirty: true,
+    }));
+  },
+
+  renameGroup: (groupId: string, label: string) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === groupId ? { ...n, data: { ...n.data, label } } : n,
+      ),
+      isDirty: true,
+    }));
+  },
+
+  setGroupColor: (groupId: string, color: string) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === groupId ? { ...n, data: { ...n.data, color } } : n,
+      ),
+      isDirty: true,
+    }));
+  },
+
   reset: () => {
     set({
       nodes: [],
@@ -592,6 +642,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       isSaving: false,
       history: [],
       historyIndex: -1,
+      canUndo: false,
+      canRedo: false,
     });
     nodeCounter = 0;
   },

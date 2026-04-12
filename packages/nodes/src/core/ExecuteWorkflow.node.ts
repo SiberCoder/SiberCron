@@ -81,8 +81,17 @@ export const ExecuteWorkflowNode: INodeType = {
     const serverUrl = ((context.getParameter('serverUrl') as string) ?? 'http://localhost:3001').replace(/\/$/, '');
     const apiKey = (context.getParameter('apiKey') as string) ?? '';
 
-    if (!workflowId) {
-      throw new Error('Workflow ID cannot be empty');
+    if (!workflowId || workflowId.trim() === '') {
+      throw new Error('ExecuteWorkflow: workflowId parameter is required');
+    }
+
+    // Self-call protection: detect if target workflow is the same as the currently running one
+    const currentWorkflowId = items[0]?.json?.['_workflowId'] as string | undefined;
+    if (currentWorkflowId && workflowId === currentWorkflowId) {
+      throw new Error(
+        `ExecuteWorkflow: Self-call detected — workflow "${workflowId}" cannot call itself. ` +
+        `This would cause an infinite loop.`,
+      );
     }
 
     // Build trigger data: use parameter JSON or fall back to first input item's json

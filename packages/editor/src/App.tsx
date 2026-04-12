@@ -8,6 +8,7 @@ import WorkflowEditorPage from './pages/WorkflowEditorPage';
 import ExecutionHistoryPage from './pages/ExecutionHistoryPage';
 import CredentialsPage from './pages/CredentialsPage';
 import TemplatesPage from './pages/TemplatesPage';
+import MarketplacePage from './pages/MarketplacePage';
 import SetupWizardPage from './pages/SetupWizardPage';
 import SocialAccountsPage from './pages/SocialAccountsPage';
 import ChatPage from './pages/ChatPage';
@@ -58,10 +59,10 @@ class ErrorBoundary extends React.Component<
             </div>
             <div>
               <h1 className="text-xl font-semibold text-white mb-2">
-                Bir hata olustu
+                An error occurred
               </h1>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Beklenmeyen bir hata meydana geldi. Lutfen sayfayi yenileyerek tekrar deneyin.
+                An unexpected error occurred. Please refresh the page and try again.
               </p>
             </div>
             {this.state.error && (
@@ -75,7 +76,7 @@ class ErrorBoundary extends React.Component<
               onClick={() => window.location.reload()}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-red-500/10 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition-colors"
             >
-              Sayfayi Yenile
+              Refresh Page
             </button>
           </div>
         </div>
@@ -172,6 +173,7 @@ export default function App() {
         <Route path="/executions" element={<ExecutionHistoryPage />} />
         <Route path="/credentials" element={<CredentialsPage />} />
         <Route path="/templates" element={<TemplatesPage />} />
+        <Route path="/marketplace" element={<MarketplacePage />} />
         <Route path="/accounts" element={<SocialAccountsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/server" element={<ServerPage />} />

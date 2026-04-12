@@ -148,17 +148,28 @@ export const CodeNode: INodeType = {
     }
 
     if (!Array.isArray(result)) {
-      throw new Error(
-        'Code node must return an array of items (e.g. return items; or return [{json: {key: "value"}}])',
-      );
+      throw new Error(`Code node must return an array, got: ${typeof result}`);
     }
 
-    // Normalize: if user returns plain objects, wrap them in {json: ...}
-    return result.map((item: unknown) => {
-      if (item && typeof item === 'object' && 'json' in (item as Record<string, unknown>)) {
-        return item as INodeExecutionData;
+    // Validate and normalize each item
+    const validated = (result as unknown[]).map((item, i) => {
+      if (item === null || item === undefined) {
+        // null/undefined → empty json wrapper
+        return { json: {} };
       }
-      return { json: (item ?? {}) as Record<string, unknown> };
+      if (typeof item !== 'object' || Array.isArray(item)) {
+        // primitive (string, number, boolean) or nested array → wrap as { value }
+        return { json: { value: item } };
+      }
+      const obj = item as Record<string, unknown>;
+      if ('json' in obj && obj['json'] !== undefined) {
+        // Already in {json: ...} format
+        return { json: obj['json'] as Record<string, unknown> } as INodeExecutionData;
+      }
+      // Plain object → auto-wrap
+      return { json: obj };
     });
+
+    return validated as INodeExecutionData[];
   },
 };

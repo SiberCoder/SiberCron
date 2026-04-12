@@ -353,11 +353,19 @@ export const AutonomousDevNode: INodeType = {
         ],
       },
       {
-        name: 'maxLoopIterations',
-        displayName: 'Max Loop Iterations',
+        name: 'maxIterations',
+        displayName: 'Max Iterations',
         type: 'number',
         default: 10,
-        description: 'Safety limit - maximum iterations in the loop',
+        required: false,
+        description: 'Maximum number of Claude CLI iterations (1-50). Default: 10.',
+      },
+      {
+        name: 'maxLoopIterations',
+        displayName: 'Max Loop Iterations (deprecated)',
+        type: 'number',
+        default: 10,
+        description: 'Safety limit - maximum iterations in the loop (use Max Iterations instead)',
       },
       {
         name: 'autoAnswerStrategy',
@@ -409,7 +417,9 @@ export const AutonomousDevNode: INodeType = {
     const instruction = context.getParameter<string>('instruction');
     const workingDirectory = context.getParameter<string>('workingDirectory') || '.';
     const model = context.getParameter<string>('model') || 'claude-sonnet-4-6';
-    const maxLoopIterations = context.getParameter<number>('maxLoopIterations') || 10;
+    // maxIterations takes precedence; fall back to legacy maxLoopIterations for backward compat
+    const maxIterationsRaw = context.getParameter<number>('maxIterations') ?? context.getParameter<number>('maxLoopIterations') ?? 10;
+    const maxLoopIterations = Math.min(50, Math.max(1, maxIterationsRaw));
     const autoAnswerStrategy = context.getParameter<string>('autoAnswerStrategy') || 'useDefault';
     const defaultAnswer = context.getParameter<string>('defaultAnswer') || 'Evet, devam et.';
     const cooldownMs = context.getParameter<number>('cooldownMs') || 2000;

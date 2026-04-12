@@ -123,7 +123,7 @@ const PUBLIC_PREFIXES = [
   '/api/v1/auth/',
   '/api/v1/webhook/',
   '/api/v1/setup/status', // public: lets frontend verify setup state without auth
-  '/api/v1/metrics',      // public: monitoring tools poll this without credentials
+  // NOTE: /api/v1/metrics is intentionally NOT public — it contains sensitive data.
 ];
 
 if (config.authEnabled) {
@@ -257,6 +257,7 @@ app.addHook('onRequest', async (request, reply) => {
     const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
     void reply.header('Retry-After', String(retryAfter));
     reply.status(429).send({ error: 'Too many requests', retryAfter });
+    return;
   }
 });
 
@@ -278,13 +279,14 @@ setInterval(() => {
 
 // ── Request logging hook for server monitoring ──────────────────────────
 // Captures HTTP request/response metadata for the admin logs endpoint
-let requestStartTime: number = 0;
-app.addHook('onRequest', async () => {
-  requestStartTime = Date.now();
+// Per-request startTime is stored on the request object to avoid race conditions
+// under concurrent requests (the old module-level variable was overwritten).
+app.addHook('onRequest', async (request) => {
+  (request as any).startTime = Date.now();
 });
 
 app.addHook('onResponse', async (request, reply) => {
-  const durationMs = Date.now() - requestStartTime;
+  const durationMs = Date.now() - ((request as any).startTime ?? Date.now());
   const statusCode = reply.statusCode;
 
   // Log all requests except health checks and WebSocket upgrades
@@ -299,16 +301,14 @@ app.addHook('onResponse', async (request, reply) => {
     });
 
     // Emit via Socket.io for real-time monitoring
-    if ((global as any).__io__) {
-      (global as any).__io__.emit(WS_EVENTS.SERVER_LOG, {
-        timestamp: new Date().toISOString(),
-        method: request.method,
-        url: request.url.split('?')[0],
-        statusCode,
-        durationMs,
-        ip: request.ip,
-      });
-    }
+    io.emit(WS_EVENTS.SERVER_LOG, {
+      timestamp: new Date().toISOString(),
+      method: request.method,
+      url: request.url.split('?')[0],
+      statusCode,
+      durationMs,
+      ip: request.ip,
+    });
   }
 });
 
@@ -347,8 +347,7 @@ const io = new SocketIOServer(app.server, {
   },
 });
 
-// Store io globally for use in request logging hook
-(global as any).__io__ = io;
+// io is used directly via module-level variable — no global pollution needed.
 
 // Socket.io auth middleware — validate JWT when auth is enabled.
 // Allow connection even without valid token (mark as unauthenticated) so
@@ -572,7 +571,7 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
   // Normalize: ensure leading slash and lowercase for case-insensitive matching
   const normalizedPath = ('/' + rawPath).replace(/\/+/g, '/').toLowerCase();
 
-  const { data: workflows } = db.listWorkflows({ isActive: true, triggerType: 'webhook', limit: 200 });
+  const { data: workflows } = db.listWorkflows({ isActive: true, triggerType: 'webhook', limit: 5000 });
   const target = workflows.find(
     (w: IWorkflow) => (w.webhookPath ?? '').toLowerCase() === normalizedPath,
   );

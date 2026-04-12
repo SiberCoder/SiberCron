@@ -399,7 +399,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         {/* Undo/Redo */}
         <button
           onClick={undo}
-          disabled={!canUndo()}
+          disabled={!canUndo}
           className="btn-ghost text-xs disabled:opacity-30"
           title={t('workflowEditor.undoBtn')}
         >
@@ -407,7 +407,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         </button>
         <button
           onClick={redo}
-          disabled={!canRedo()}
+          disabled={!canRedo}
           className="btn-ghost text-xs disabled:opacity-30"
           title={t('workflowEditor.redoBtn')}
         >

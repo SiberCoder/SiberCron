@@ -1,0 +1,29 @@
+{
+  "name": "create-sibercron-node",
+  "version": "0.1.0",
+  "description": "CLI scaffolding tool for creating SiberCron custom nodes",
+  "type": "module",
+  "bin": {
+    "create-sibercron-node": "./bin/create-sibercron-node.js"
+  },
+  "scripts": {
+    "build": "echo \"create-sibercron-node is plain JS, no build needed\"",
+    "dev": "echo \"create-sibercron-node is plain JS, no watch needed\""
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "keywords": [
+    "sibercron",
+    "node",
+    "plugin",
+    "workflow",
+    "automation"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "~5.6.2",
+    "@types/node": "~20.17.0"
+  }
+}

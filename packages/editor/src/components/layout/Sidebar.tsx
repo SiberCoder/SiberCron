@@ -17,6 +17,7 @@ import {
   User,
   Globe,
   Server,
+  Store,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { WS_EVENTS } from '@sibercron/shared';
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { to: '/executions', icon: Play, labelKey: 'sidebar.executions' },
   { to: '/credentials', icon: Key, labelKey: 'sidebar.credentials' },
   { to: '/templates', icon: FileCode, labelKey: 'sidebar.templates' },
+  { to: '/marketplace', icon: Store, labelKey: 'sidebar.marketplace' },
   { to: '/accounts', icon: Users, labelKey: 'sidebar.accounts' },
   { to: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
   { to: '/server', icon: Server, labelKey: 'sidebar.server' },

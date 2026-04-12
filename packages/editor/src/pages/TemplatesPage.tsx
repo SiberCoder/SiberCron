@@ -1,4 +1,6 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWorkflowStore } from '../store/workflowStore';
 import {
   MessageSquare,
   Newspaper,
@@ -8,6 +10,7 @@ import {
   Sparkles,
   Layers,
   Rss,
+  Search,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { Node, Edge } from '@xyflow/react';
@@ -183,14 +186,45 @@ const TEMPLATES: TemplateDefinition[] = [
 export default function TemplatesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const storeNodes = useWorkflowStore((s) => s.nodes);
+
+  const filteredTemplates = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return TEMPLATES;
+    return TEMPLATES.filter(
+      (tpl) =>
+        t(tpl.nameKey).toLowerCase().includes(q) ||
+        t(tpl.descKey).toLowerCase().includes(q) ||
+        t(tpl.categoryKey).toLowerCase().includes(q),
+    );
+  }, [searchQuery, t]);
 
   const handleUseTemplate = (tpl: TemplateDefinition) => {
+    if (storeNodes.length > 0) {
+      if (!window.confirm(t('templates.confirmOverwrite') ?? 'Mevcut workflow silinecek. Devam?')) return;
+    }
+
+    // Remap node IDs to fresh UUIDs to prevent ID collisions
+    const idMap = new Map<string, string>();
+    const freshNodes = tpl.nodes.map((n) => {
+      const newId = crypto.randomUUID();
+      idMap.set(n.id, newId);
+      return { ...n, id: newId };
+    });
+    const freshEdges = tpl.edges.map((e) => ({
+      ...e,
+      id: crypto.randomUUID(),
+      source: idMap.get(e.source) ?? e.source,
+      target: idMap.get(e.target) ?? e.target,
+    }));
+
     navigate('/workflows/new', {
       state: {
         template: {
           name: t(tpl.nameKey),
-          nodes: tpl.nodes,
-          edges: tpl.edges,
+          nodes: freshNodes,
+          edges: freshEdges,
         },
       },
     });
@@ -213,8 +247,26 @@ export default function TemplatesPage() {
         </p>
       </div>
 
+      {/* Search bar */}
+      <div className="relative">
+        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-obsidian-500 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t('templates.searchPlaceholder')}
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-obsidian-500 focus:outline-none focus:border-aurora-cyan/40 transition-colors font-body"
+        />
+      </div>
+
+      {filteredTemplates.length === 0 && (
+        <p className="text-sm text-obsidian-500 text-center py-8 font-body">
+          {t('templates.noSearchResults')}
+        </p>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {TEMPLATES.map((tpl, i) => {
+        {filteredTemplates.map((tpl, i) => {
           const Icon = tpl.icon;
           return (
             <div

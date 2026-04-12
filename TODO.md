@@ -277,12 +277,61 @@ OpenClaw (AI otonom gelistirme) + n8n (visual workflow builder) karisimi, acik k
 - [x] HttpResponse node: sync webhook akışlarında özel HTTP yanıtı döndürme (statusCode, headers, body)
 - [x] iconRegistry: SendHorizonal ikonu eklendi (HttpResponse node)
 
+#### Oncelik 4l: i18n & UX (2026-04-13)
+- [x] en.ts + tr.ts: templates eksik çeviri anahtarları eklendi (previewBtn, connections, readyTemplate, workflowNodes, noTemplatesInCategory, filterCount, searchPlaceholder, noSearchResults)
+- [x] en.ts + tr.ts: dashboard eksik anahtarlar eklendi (last30Days, trendDays7, trendDays30)
+- [x] en.ts + tr.ts: canvas shortcutSelectAll anahtarı eklendi
+- [x] DashboardPage: 7 gün / 30 gün trend chart toggle (API yeniden çekilir, tüm dashboard yenilenmez)
+- [x] TemplatesPage: şablon adı/açıklama/kategori metin araması eklendi (useMemo ile filtreleme)
+- [x] WorkflowCanvas: Ctrl+A ile tüm node'ları seç (klavye kısayolu listesine de eklendi)
+- [x] NodeConfigPanel: node değiştirildiğinde label düzenleme state'i sıfırlanıyor (editingLabel/labelDraft)
+
 #### Oncelik 5: Ekosistem
-- [ ] `create-sibercron-node` CLI araci
-- [ ] Community node marketplace sayfasi
-- [ ] Plugin auto-discovery (`sibercron-node-*` npm taramasi)
-- [ ] Workflow template paylasimi
+- [x] `create-sibercron-node` CLI araci
+- [x] Community node marketplace sayfasi
+- [x] Plugin auto-discovery (`sibercron-node-*` npm taramasi)
+- [ ] Workflow template paylasimi (community sharing)
 - [x] API dokumantasyonu (OpenAPI/Swagger) — @fastify/swagger-ui, /api/docs
+
+---
+
+#### Oncelik 6: Kod Analizi Bulgulari — Kritik Buglar
+
+##### 6a: CRITICAL BUGS (uygulama davranisini bozan)
+- [x] **[BUG-CRITICAL] app.ts requestStartTime race condition** — per-request `(request as any).startTime` ile düzeltildi
+- [x] **[BUG-CRITICAL] MarketplacePage route eksik** — App.tsx + Sidebar NAV_ITEMS'a eklendi, i18n anahtarları yazıldı
+- [x] **[BUG-CRITICAL] Webhook path lookup 200 workflow limiti** — limit: 5000 yapıldı
+- [ ] **[BUG-CRITICAL] WorkflowEngine paralel execution yok** — CLAUDE.md ve TODO "wave-based" diyse de engine hâlâ sequential `for...of`. Bağımsız branch'ler için `Promise.all` wave-based scheduling eklenmeli
+
+##### 6b: BUGS (yanlış/eksik davranış)
+- [x] **[BUG] health.ts /metrics tam kod duplikasyonu** — `buildHealthPayload()` ortak fonksiyonu çıkarıldı
+- [x] **[BUG] ExecuteWorkflow self-call koruması yok** — `_workflowId` input field ile self-call tespiti eklendi
+- [x] **[BUG] Template node ID çakışması** — `crypto.randomUUID()` ile her uygulamada taze ID üretildi, confirmation dialog eklendi
+- [ ] **[BUG] AutonomousDev tamamlanma tespiti kırılgan** — `isDone()` sadece son 5 satırı kontrol ediyor, uzun yanıtlarda görev tamamlanma mesajı öncede kalabilir → son 10 satıra çıkar veya full-text tarama yap
+- [x] **[BUG] canUndo/canRedo reactive değil** — `boolean` state field'larına dönüştürüldü, tüm action'larda güncelleniyor; EditorToolbar fonksiyon çağrısı kaldırıldı
+- [x] **[BUG] Code node output validasyonu yok** — null/primitive/array/plain-object tüm dönüş tipleri güvenli şekilde `{json: ...}` formatına normalize ediliyor
+- [x] **[BUG] Rate limiter Fastify lifecycle sorunu** — `return reply.status(429).send(...)` ile hook erken sonlandırılıyor
+- [ ] **[BUG] IWorkflowSettings canvasGroups tip eksik** — `packages/shared/src/types/workflow.ts`'deki `IWorkflowSettings` interface'ine `canvasGroups?: ICanvasGroup[]` eklenmeli; `ICanvasGroup` tipi de tanımlanmalı
+
+##### 6c: SECURITY (güvenlik açıkları)
+- [x] **[SEC] /api/v1/metrics public ama hassas bilgi döndürüyor** — PUBLIC_PREFIXES'den çıkarıldı, artık auth gerekiyor
+- [x] **[SEC] (global as any).__io__ global namespace kirliliği** — global assignment kaldırıldı, doğrudan modül-scope `io` kullanılıyor
+- [ ] **[SEC] Code node sandbox setTimeout/setInterval event loop bloğu** — VM timeout sonrası timer'lar hâlâ çalışabilir. Sandbox'a özel `setTimeout`/`setInterval` wrapper yazılmalı; timeout dolunca pending timer'lar temizlenmeli
+- [ ] **[SEC] pluginDiscovery arbitrary code execution** — npm paketleri sandboxsuz import ediliyor. `package.json`'da `"sibercron": {"type": "node"}` zorunlu kılınmalı; olmayan paket yüklenmemeli
+
+##### 6d: PERFORMANCE (performans sorunları)
+- [x] **[PERF] workflowStore pushHistory O(n) deep clone** — `JSON.parse(JSON.stringify)` → `structuredClone()` (undo/redo dahil)
+- [ ] **[PERF] Rate limiter Map eviction O(n) scan** — Map 50.000 entry'ye ulaşınca tüm entry'leri iterate ediyor. DDoS durumunda pahalı. Sliding window veya LRU yaklaşımı uygulanmalı
+- [ ] **[PERF] WorkflowCanvas edgesWithAnimation gereksiz recalc** — herhangi bir node status değişince TÜM edge'ler yeniden hesaplanıyor. Edge bazında `memo` veya Map lookup ile optimize edilmeli
+- [ ] **[PERF] ExecutionHistoryPage çok fazla state güncelleme** — her `node:done` socket event'inde `setState`, 100+ node'lu workflow'da yüzlerce re-render. React 18 `startTransition` veya debounce ile batch edilmeli
+
+##### 6e: UX / EKSİK ÖZELLİK
+- [ ] **[UX] MarketplacePage Install butonu sahte** — Backend `/api/v1/plugins/install` endpoint'i yok. Buton disabled + "Yakında" etiketi yapılmalı veya gerçek install endpoint'i eklenmeli
+- [x] **[UX] Template uygulama confirmation dialog yok** — `window.confirm` ile onay alınıyor, ID'ler UUID ile yenileniyor
+- [ ] **[UX] WorkflowEngine concurrent execution guard sadece queueService'te** — direkt `POST /execute` `allowConcurrent=false` ayarını atlıyor; route seviyesinde running execution kontrolü eklenmeli
+- [ ] **[UX] Sidebar running count WebSocket kopunca güncellenmez** — `socket.on('reconnect')` ile yeniden fetch eklenmeli
+- [ ] **[UX] ErrorBoundary sayfası hardcoded Türkçe metin** — class component'ta hook kullanılamıyor; fonksiyon component'a veya static string map'e dönüştürülmeli
+- [x] **[UX] AutonomousDev node max iteration 10 hardcoded** — `maxIterations` parametresi eklendi (1-50, default 10), geriye dönük uyumluluk korundu
 
 ---
 
