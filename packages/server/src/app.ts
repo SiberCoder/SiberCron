@@ -28,6 +28,13 @@ import { executionLogStore } from './services/executionLogStore.js';
 import { db } from './db/database.js';
 import { executionIdMap } from './state/executionIdMap.js';
 import type { IWorkflow } from '@sibercron/shared';
+import type { ExecutionLogEntry } from './services/executionLogStore.js';
+
+/** Coerce an unknown level string into a valid ExecutionLogEntry level. */
+function toLogLevel(level: string): ExecutionLogEntry['level'] {
+  const VALID = new Set<string>(['info', 'ai_request', 'ai_response', 'ai_streaming', 'auto_answer', 'system', 'error', 'iteration']);
+  return VALID.has(level) ? (level as ExecutionLogEntry['level']) : 'info';
+}
 
 // ── Initialize node registry ────────────────────────────────────────────
 
@@ -340,11 +347,11 @@ const engine = new WorkflowEngine(registry);
 
 // ── Live execution log capture ─────────────────────────────────────────
 
-process.on('autonomousDev:log' as any, (data: { executionId: string; level: string; message: string; data?: Record<string, unknown> }) => {
+process.on('autonomousDev:log', (data: { executionId: string; level: string; message: string; data?: Record<string, unknown> }) => {
   if (data.executionId) {
     // Always store under the engine ID so logs are never lost
     executionLogStore.add(data.executionId, {
-      level: data.level as any,
+      level: toLogLevel(data.level),
       message: data.message,
       data: data.data,
     });
@@ -365,7 +372,7 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
     // If we found a distinct API ID, also store under that for direct log lookups
     if (mappedId && mappedId !== data.executionId) {
       executionLogStore.add(mappedId, {
-        level: data.level as any,
+        level: toLogLevel(data.level),
         message: data.message,
         data: data.data,
       });
@@ -379,7 +386,7 @@ process.on('autonomousDev:log' as any, (data: { executionId: string; level: stri
 // ── AutonomousDev session persistence ─────────────────────────────────────────
 // When AutonomousDev discovers/updates its Claude CLI session ID, persist it
 // in the execution record so resume can pick it up after a server restart.
-process.on('autonomousDev:sessionUpdate' as any, (data: { executionId: string; sessionId: string; iteration: number }) => {
+process.on('autonomousDev:sessionUpdate', (data: { executionId: string; sessionId: string; iteration: number }) => {
   if (!data.executionId || !data.sessionId) return;
   // Find the execution by API ID and store session info in nodeResults metadata
   const targetId = executionIdMap.get(data.executionId) ?? data.executionId;
@@ -399,19 +406,19 @@ process.on('autonomousDev:sessionUpdate' as any, (data: { executionId: string; s
 // ── Scheduler auto-deactivation broadcast ─────────────────────────────────────
 // When the scheduler auto-deactivates a workflow after repeated failures,
 // broadcast to all connected clients so the UI updates without a page refresh.
-process.on('scheduler:workflow:deactivated' as any, (data: { workflowId: string; workflow?: unknown }) => {
+process.on('scheduler:workflow:deactivated', (data: { workflowId: string; workflow?: unknown }) => {
   io.emit(WS_EVENTS.WORKFLOW_DEACTIVATED, data);
 });
 
 // ── AI streaming token capture ──────────────────────────────────────────────
 // Forwards per-token streaming events from AIAgent nodes to the execution room.
-process.on('ai:stream' as any, (data: { executionId: string; nodeId: string; nodeName: string; token: string }) => {
+process.on('ai:stream', (data: { executionId: string; nodeId: string; nodeName: string; token: string }) => {
   if (!data.executionId) return;
   const targetId = executionIdMap.get(data.executionId) ?? data.executionId;
 
   // Accumulate streaming tokens in the log store as ai_streaming entries
   executionLogStore.add(targetId, {
-    level: 'ai_streaming' as any,
+    level: 'ai_streaming',
     message: data.token,
     data: { nodeId: data.nodeId, nodeName: data.nodeName },
   });

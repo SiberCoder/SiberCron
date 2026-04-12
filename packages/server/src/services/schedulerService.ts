@@ -110,7 +110,7 @@ class SchedulerService {
             const deactivated = db.updateWorkflow(id, { isActive: false });
             this.unschedule(id);
             // Notify connected clients so their UI reflects the new state immediately
-            process.emit('scheduler:workflow:deactivated' as any, { workflowId: id, workflow: deactivated } as any);
+            process.emit('scheduler:workflow:deactivated', { workflowId: id, workflow: deactivated });
             // Create a visible error execution so the user sees the failure in the UI
             const now = new Date().toISOString();
             db.createExecution({

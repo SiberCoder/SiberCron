@@ -193,12 +193,12 @@ export class WorkflowEngine {
 
         // Build a stream emitter for AI nodes: emits tokens via process events
         const streamEmitter = (token: string) => {
-          process.emit('ai:stream' as any, {
+          process.emit('ai:stream', {
             executionId,
             nodeId,
             nodeName: nodeInstance.name,
             token,
-          } as any);
+          });
         };
 
         const result = await this.executor.execute(

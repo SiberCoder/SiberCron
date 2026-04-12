@@ -405,7 +405,7 @@ export const AutonomousDevNode: INodeType = {
     const emitLog = (level: string, message: string, data?: Record<string, unknown>) => {
       context.helpers.log(`[AutonomousDev] ${message}`);
       try {
-        process.emit('autonomousDev:log' as any, { executionId, level, message, data } as any);
+        process.emit('autonomousDev:log', { executionId, level, message, data });
       } catch { /* */ }
     };
 
@@ -505,9 +505,9 @@ export const AutonomousDevNode: INodeType = {
               emitLog('system', `Session dosyaya kaydedildi: ${sessionFile}`);
             }).catch(() => { /* best-effort */ });
             try {
-              process.emit('autonomousDev:sessionUpdate' as any, {
+              process.emit('autonomousDev:sessionUpdate', {
                 executionId, sessionId: sid, iteration: iterationCount,
-              } as any);
+              });
             } catch { /* */ }
           },
         });
