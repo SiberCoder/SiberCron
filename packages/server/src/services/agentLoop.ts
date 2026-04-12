@@ -347,7 +347,9 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
       if (!validation.valid) {
         return { error: `Command rejected: ${validation.error}` };
       }
-      const cwd = args.cwd ? path.resolve(PROJECT_ROOT, args.cwd as string) : PROJECT_ROOT;
+      const rawCwd = args.cwd ? path.resolve(PROJECT_ROOT, args.cwd as string) : PROJECT_ROOT;
+      // Prevent path traversal: cwd must stay within PROJECT_ROOT
+      const cwd = rawCwd.startsWith(PROJECT_ROOT) ? rawCwd : PROJECT_ROOT;
       const isWindows = process.platform === 'win32';
       return new Promise((resolve) => {
         const proc = isWindows
