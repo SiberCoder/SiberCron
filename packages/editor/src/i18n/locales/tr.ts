@@ -817,6 +817,23 @@ const tr: TranslationKeys = {
     copySuccess: 'Webhook URL kopyalandı',
     copyFailed: 'Kopyalama başarısız',
   },
+
+  // ── UI Strings (Placeholders, Tooltips, etc.) ─────────────────────────
+  ui: {
+    descriptionPlaceholder: 'Workflow\'un ne yaptığını açıklayın...',
+    commandPalettePlaceholder: 'Komut yazın veya arayın...',
+    apiKeyPlaceholder: 'API anahtarı',
+    editNameTooltip: 'İsmi düzenlemek için tıkla',
+    restoreVersionTooltip: 'Bu versiyona geri dön',
+    duplicateSelectedTooltip: 'Seçilileri çoğalt',
+    deleteSelectedTooltip: 'Seçilileri sil',
+    deselectAllTooltip: 'Seçimi kaldır',
+    keyboardShortcutsTooltip: 'Klavye kısayolları',
+    toggleMinimapTooltip: 'Haritayı aç/kapat',
+    logoutTooltip: 'Çıkış yap',
+    clearHistoryTooltip: 'Geçmişi temizle',
+    outputItemsTooltip: (count: number) => `${count} item — çıktıyı görmek için tıkla`,
+  },
 } as const;
 
 export default tr;

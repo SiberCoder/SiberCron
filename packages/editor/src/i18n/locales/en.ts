@@ -815,6 +815,23 @@ const en = {
     copySuccess: 'Webhook URL copied',
     copyFailed: 'Copy failed',
   },
+
+  // ── UI Strings (Placeholders, Tooltips, etc.) ─────────────────────────
+  ui: {
+    descriptionPlaceholder: 'Describe what this workflow does...',
+    commandPalettePlaceholder: 'Type a command or search...',
+    apiKeyPlaceholder: 'API key',
+    editNameTooltip: 'Click to edit name',
+    restoreVersionTooltip: 'Restore to this version',
+    duplicateSelectedTooltip: 'Duplicate selected',
+    deleteSelectedTooltip: 'Delete selected',
+    deselectAllTooltip: 'Deselect all',
+    keyboardShortcutsTooltip: 'Keyboard shortcuts',
+    toggleMinimapTooltip: 'Toggle minimap',
+    logoutTooltip: 'Logout',
+    clearHistoryTooltip: 'Clear history',
+    outputItemsTooltip: (count: number) => `${count} item(s) — click to view output`,
+  },
 } as const;
 
 // Recursively replace all leaf string values with `string` so that
