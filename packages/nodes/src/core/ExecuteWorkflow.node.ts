@@ -65,7 +65,7 @@ export const ExecuteWorkflowNode: INodeType = {
       {
         name: 'apiKey',
         displayName: 'API Anahtarı (opsiyonel)',
-        type: 'string',
+        type: 'password',
         default: '',
         description: 'Auth aktifse kullanılacak scx_... formatında API anahtarı. AUTH_ENABLED=false ise boş bırakın.',
       },

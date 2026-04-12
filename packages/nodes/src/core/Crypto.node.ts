@@ -81,7 +81,7 @@ export const CryptoNode: INodeType = {
       {
         name: 'secret',
         displayName: 'Secret / Key',
-        type: 'string',
+        type: 'password',
         default: '',
         description: 'Secret key for HMAC or AES-256 (exactly 32 characters / 256 bits for AES)',
         placeholder: 'mysecret',

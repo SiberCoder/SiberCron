@@ -2,6 +2,7 @@
 
 export type NodePropertyType =
   | 'string'
+  | 'password'
   | 'number'
   | 'boolean'
   | 'select'

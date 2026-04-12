@@ -642,6 +642,38 @@ function WorkflowPickerField({
   );
 }
 
+// ── Password input with show/hide toggle ─────────────────────────────────────
+function PasswordInput({ value, onChange, onBlur, placeholder, hasError }: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur?: () => void;
+  placeholder?: string;
+  hasError?: boolean;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        autoComplete="new-password"
+        className={clsx('glass-input text-xs pr-8 w-full', hasError && 'border-red-500')}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((s) => !s)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-obsidian-500 hover:text-obsidian-300 transition-colors"
+      >
+        {show ? <EyeOff size={12} /> : <Eye size={12} />}
+      </button>
+    </div>
+  );
+}
+
 interface FieldProps {
   property: INodeProperty;
   value: unknown;
@@ -723,6 +755,18 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
           placeholder={placeholder}
           hasError={hasError}
           contextVars={contextVars}
+        />
+      );
+      break;
+
+    case 'password':
+      input = (
+        <PasswordInput
+          value={(value as string) ?? ''}
+          onChange={(v) => { onChange(name, v); if (touchedRef.current) setFieldError(validateRequired(v)); }}
+          onBlur={() => handleBlur(value)}
+          placeholder={placeholder}
+          hasError={hasError}
         />
       );
       break;

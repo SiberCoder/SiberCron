@@ -53,7 +53,7 @@ export const HttpRequestNode: INodeType = {
       {
         name: 'authValue',
         displayName: 'Auth Value',
-        type: 'string',
+        type: 'password',
         default: '',
         description: 'Bearer token, "user:password" for Basic, or API key value',
         displayOptions: {
