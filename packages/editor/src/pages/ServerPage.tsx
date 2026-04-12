@@ -149,7 +149,7 @@ export default function ServerPage() {
     }, 30000);
 
     return () => clearInterval(metricsInterval);
-  }, [t]);
+  }, []);
 
   // WebSocket connection for real-time logs
   useEffect(() => {

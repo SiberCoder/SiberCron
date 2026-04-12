@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../i18n';
 import {
   ArrowLeft,
   Save,
@@ -39,6 +40,7 @@ interface EditorToolbarProps {
 // ── Workflow Settings Modal ───────────────────────────────────────────────────
 
 function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const meta = useWorkflowStore((s) => s.workflowMeta);
   const updateMeta = useWorkflowStore((s) => s.updateMeta);
   const [tagInput, setTagInput] = useState('');
@@ -59,7 +61,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06]">
           <Settings2 size={15} className="text-aurora-cyan" />
-          <span className="flex-1 text-sm font-semibold text-white font-display">Workflow Ayarları</span>
+          <span className="flex-1 text-sm font-semibold text-white font-display">{t('workflowEditor.settingsTitle')}</span>
           <button onClick={onClose} className="text-obsidian-500 hover:text-white transition-colors">
             <X size={14} />
           </button>
@@ -69,7 +71,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
           {/* Description */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold text-obsidian-400 uppercase tracking-wider font-body flex items-center gap-1.5">
-              <Layers size={11} /> Açıklama
+              <Layers size={11} /> {t('workflowEditor.description')}
             </label>
             <textarea
               value={meta.description}
@@ -83,7 +85,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
           {/* Tags */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold text-obsidian-400 uppercase tracking-wider font-body flex items-center gap-1.5">
-              <Tag size={11} /> Etiketler
+              <Tag size={11} /> {t('workflowEditor.tags')}
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {meta.tags.map((tag) => (
@@ -101,11 +103,11 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-                placeholder="Etiket ekle, Enter'a bas"
+                placeholder={t('workflowEditor.addTag')}
                 className="glass-input text-xs flex-1"
               />
               <button onClick={addTag} className="px-3 py-2 rounded-lg text-xs font-semibold bg-aurora-cyan/10 border border-aurora-cyan/20 text-aurora-cyan hover:bg-aurora-cyan/20 transition-colors">
-                Ekle
+                {t('workflowEditor.addBtn')}
               </button>
             </div>
           </div>
@@ -115,7 +117,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
           {/* Timeout */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold text-obsidian-400 uppercase tracking-wider font-body flex items-center gap-1.5">
-              <Clock size={11} /> Maksimum Süre (ms)
+              <Clock size={11} /> {t('workflowEditor.maxDuration')}
             </label>
             <input
               type="number"
@@ -125,14 +127,14 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
               max={86400000}
               className="glass-input text-sm"
             />
-            <p className="text-[10px] text-obsidian-600 font-body">Varsayılan: 300000ms (5 dk). AutonomousDev gibi uzun süren node'lar bu değeri otomatik genişletir.</p>
+            <p className="text-[10px] text-obsidian-600 font-body">{t('workflowEditor.durationHint')}</p>
           </div>
 
           {/* Toggles */}
           <div className="space-y-3">
             {([
-              { key: 'continueOnFail', label: 'Hata olsa da devam et', icon: SkipForward, desc: 'Bir node hata verirse workflow durmadan sonraki node\'a geçer' },
-              { key: 'allowConcurrent', label: 'Eş zamanlı çalışmaya izin ver', icon: Layers, desc: 'Çalışırken tekrar tetiklenebilir; devre dışıysa aynı anda yalnızca bir çalışma olur' },
+              { key: 'continueOnFail', label: t('workflowEditor.continueOnFail'), icon: SkipForward, desc: t('workflowEditor.continueOnFailDesc') },
+              { key: 'allowConcurrent', label: t('workflowEditor.allowConcurrent'), icon: Layers, desc: t('workflowEditor.allowConcurrentDesc') },
             ] as const).map(({ key, label, icon: Icon, desc }) => (
               <div key={key} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="flex-1 min-w-0">
@@ -155,7 +157,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
           {/* Error Webhook */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold text-obsidian-400 uppercase tracking-wider font-body flex items-center gap-1.5">
-              <Webhook size={11} /> Hata Bildirim URL (opsiyonel)
+              <Webhook size={11} /> {t('workflowEditor.errorWebhookUrl')}
             </label>
             <input
               type="url"
@@ -164,7 +166,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
               placeholder="https://hooks.example.com/on-error"
               className="glass-input text-sm"
             />
-            <p className="text-[10px] text-obsidian-600 font-body">Workflow hata aldığında bu URL'e POST isteği gönderilir.</p>
+            <p className="text-[10px] text-obsidian-600 font-body">{t('workflowEditor.errorWebhookHint')}</p>
           </div>
         </div>
 
@@ -173,7 +175,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-semibold bg-aurora-cyan/10 border border-aurora-cyan/20 text-aurora-cyan hover:bg-aurora-cyan/20 transition-all font-body"
           >
-            Kapat
+            {t('workflowEditor.close')}
           </button>
         </div>
       </div>
@@ -182,6 +184,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps = {}) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -213,7 +216,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
   const handleSave = useCallback(async () => {
     // Validate name
     if (!meta.name.trim()) {
-      toast.error('Workflow adı boş olamaz');
+      toast.error(t('workflowEditor.nameEmpty'));
       return;
     }
 
@@ -221,7 +224,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
     const TRIGGER_TYPES = ['sibercron.cronTrigger', 'sibercron.webhookTrigger', 'sibercron.manualTrigger', 'sibercron.telegramTrigger', 'sibercron.githubTrigger'];
     const hasTrigger = nodes.some((n) => TRIGGER_TYPES.includes(n.data.nodeType as string));
     if (!hasTrigger && nodes.length > 0) {
-      toast.warning('Trigger node yok. Workflow sadece manuel çalıştırılabilir.');
+      toast.warning(t('workflowEditor.triggerMissing'));
     }
 
     setIsSaving(true);
@@ -230,7 +233,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       if (!meta.id) {
         navigate(`/workflows/${id}`, { replace: true });
       } else {
-        toast.success('Workflow kaydedildi');
+        toast.success(t('editorMessages.saveSuccess'));
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Kayıt başarısız. Lütfen tekrar deneyin.';
@@ -243,7 +246,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
   const handleExecute = useCallback(async () => {
     // Fast local checks before any network request
     if (nodes.length === 0) {
-      toast.error('Workflow boş — çalıştırmak için en az bir node ekleyin.');
+      toast.error(t('workflowEditor.emptyWorkflow'));
       return;
     }
 
@@ -273,7 +276,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       connectExecution(executionId);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        toast.warning('Workflow zaten çalışıyor. Bitmesini bekleyin veya "Eş zamanlı çalışmaya izin ver" ayarını açın.');
+        toast.warning(t('workflowEditor.alreadyRunning'));
       } else {
         const msg = err instanceof Error ? err.message : 'Çalıştırma başarısız. Lütfen tekrar deneyin.';
         toast.error(msg);
@@ -336,9 +339,9 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         : `/workflows/${meta.id}/activate`;
       await apiPost(endpoint);
       updateMeta({ isActive: !meta.isActive });
-      toast.success(meta.isActive ? 'Workflow devre dışı bırakıldı' : 'Workflow aktif edildi');
+      toast.success(meta.isActive ? t('workflowEditor.inactiveState') : t('workflowEditor.activeState'));
     } catch (err) {
-      toast.error('Durum değiştirilemedi');
+      toast.error(t('workflowEditor.statusToggleFailed'));
     } finally {
       setIsToggling(false);
     }
@@ -351,7 +354,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       setShowDeleteConfirm(false);
       navigate('/workflows');
     } catch (err) {
-      toast.error('Silme işlemi başarısız');
+      toast.error(t('workflowEditor.deleteFailed'));
     }
   }, [meta.id, navigate]);
 
@@ -363,7 +366,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         className="flex items-center gap-1.5 text-obsidian-400 hover:text-aurora-cyan text-xs transition-colors font-body"
       >
         <ArrowLeft size={14} />
-        <span className="hidden sm:inline">Geri</span>
+        <span className="hidden sm:inline">{t('workflowEditor.backBtn')}</span>
       </button>
 
       <div className="w-px h-6 bg-white/[0.06]" />
@@ -388,7 +391,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
 
       {isDirty && (
         <span className="text-[10px] text-aurora-amber font-semibold font-body animate-fade-in">
-          Kaydedilmedi
+          {t('workflowEditor.unsaved')}
         </span>
       )}
 
@@ -398,7 +401,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
           onClick={undo}
           disabled={!canUndo()}
           className="btn-ghost text-xs disabled:opacity-30"
-          title="Geri Al (Ctrl+Z)"
+          title={t('workflowEditor.undoBtn')}
         >
           <Undo2 size={14} />
         </button>
@@ -406,7 +409,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
           onClick={redo}
           disabled={!canRedo()}
           className="btn-ghost text-xs disabled:opacity-30"
-          title="İleri Al (Ctrl+Shift+Z)"
+          title={t('workflowEditor.redoBtn')}
         >
           <Redo2 size={14} />
         </button>
@@ -424,10 +427,10 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
             a.download = `${meta.name.replace(/\s+/g, '_')}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            toast.success('Workflow dışa aktarıldı');
+            toast.success(t('editorMessages.exported'));
           }}
           className="btn-ghost text-xs"
-          title="Dışa Aktar (JSON)"
+          title={t('workflowEditor.exportBtn')}
         >
           <Download size={14} />
         </button>
@@ -445,9 +448,9 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
               reader.onload = (ev) => {
                 try {
                   importWorkflow(ev.target?.result as string);
-                  toast.success('Workflow içe aktarıldı');
+                  toast.success(t('editorMessages.imported'));
                 } catch {
-                  toast.error('Geçersiz workflow dosyası');
+                  toast.error(t('workflowEditor.invalidFile'));
                 }
               };
               reader.readAsText(file);
@@ -455,7 +458,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
             input.click();
           }}
           className="btn-ghost text-xs"
-          title="İçe Aktar (JSON)"
+          title={t('workflowEditor.importBtn')}
         >
           <Upload size={14} />
         </button>
@@ -466,10 +469,10 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       {/* Active toggle */}
       <div className="flex items-center gap-2.5">
         <span className="text-[10px] text-obsidian-500 uppercase tracking-wider font-body font-semibold">
-          Aktif
+          {t('workflowEditor.active')}
         </span>
         <button
-          onClick={isAdmin ? handleToggleActive : () => toast.error('Bu işlem için admin yetkisi gerekli')}
+          onClick={isAdmin ? handleToggleActive : () => toast.error(t('workflowEditor.adminRequired'))}
           disabled={isToggling}
           className={clsx(
             'relative w-10 h-[22px] rounded-full transition-all duration-300',
@@ -496,13 +499,13 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
             const hookPath = (meta.webhookPath ?? '').replace(/^\/+/, '');
             const url = `${base}/api/v1/webhook/${hookPath}`;
             navigator.clipboard.writeText(url).then(() => {
-              toast.success('Webhook URL kopyalandı');
+              toast.success(t('workflowEditor.webhookCopySuccess'));
             }).catch(() => {
-              toast.error('Kopyalama başarısız');
+              toast.error(t('workflowEditor.copyFailed'));
             });
           }}
           className="btn-ghost text-xs text-obsidian-500 hover:text-aurora-cyan"
-          title={`Webhook URL'yi kopyala: /api/v1/webhook/${(meta.webhookPath ?? '').replace(/^\/+/, '')}`}
+          title={t('workflowEditor.webhookCopyHint')}
         >
           <Link size={14} />
           <Copy size={12} className="-ml-1" />
@@ -514,7 +517,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         <button
           onClick={() => navigate(`/executions?workflowId=${meta.id}`)}
           className="btn-ghost text-xs text-obsidian-500 hover:text-aurora-indigo"
-          title="Bu workflow'un çalışma geçmişi"
+          title={t('workflowEditor.historyBtn')}
         >
           <ListOrdered size={14} />
         </button>
@@ -525,7 +528,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         <button
           onClick={onVersionHistory}
           className="btn-ghost text-xs text-obsidian-500 hover:text-white"
-          title="Versiyon Geçmişi"
+          title={t('workflowEditor.versionHistoryBtn')}
         >
           <History size={14} />
         </button>
@@ -535,7 +538,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       <button
         onClick={() => setShowSettings(true)}
         className="btn-ghost text-xs text-obsidian-500 hover:text-aurora-cyan"
-        title="Workflow Ayarları"
+        title={t('workflowEditor.settingsBtn')}
       >
         <Settings2 size={14} />
       </button>
@@ -546,7 +549,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="btn-ghost text-xs text-obsidian-500 hover:text-aurora-rose disabled:opacity-50"
-            title="Workflow'u sil"
+            title={t('workflowEditor.deleteBtn')}
           >
             <Trash2 size={14} />
           </button>
@@ -566,7 +569,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
           ) : (
             <Save size={14} />
           )}
-          Kaydet
+          {t('workflowEditor.saveBtn')}
         </button>
       )}
 
@@ -581,7 +584,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         ) : (
           <Play size={14} />
         )}
-        Çalıştır
+        {t('workflowEditor.executeBtn')}
       </button>
 
       {/* Workflow settings modal */}
@@ -596,25 +599,25 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
                 <AlertTriangle size={20} className="text-aurora-rose" />
               </div>
               <div>
-                <h3 className="text-sm font-display font-semibold text-white">Workflow Sil</h3>
-                <p className="text-xs text-obsidian-400 font-body">Bu işlem geri alınamaz</p>
+                <h3 className="text-sm font-display font-semibold text-white">{t('workflowEditor.deleteConfirmTitle')}</h3>
+                <p className="text-xs text-obsidian-400 font-body">{t('workflowEditor.deleteConfirmMsg')}</p>
               </div>
             </div>
             <p className="text-xs text-obsidian-300 font-body">
-              <strong className="text-white">{meta.name}</strong> workflow'unu silmek istediğinizden emin misiniz?
+              <strong className="text-white">{meta.name}</strong> {t('workflowEditor.deleteConfirmName')}?
             </p>
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 px-4 py-2.5 text-xs font-semibold text-obsidian-300 border border-white/[0.08] rounded-xl hover:bg-white/[0.04] transition-all font-body"
               >
-                Vazgeç
+                {t('workflowEditor.deleteConfirmCancel')}
               </button>
               <button
                 onClick={handleDelete}
                 className="flex-1 px-4 py-2.5 text-xs font-semibold text-white bg-aurora-rose/80 hover:bg-aurora-rose rounded-xl transition-all font-body"
               >
-                Evet, Sil
+                {t('workflowEditor.deleteConfirmAction')}
               </button>
             </div>
           </div>

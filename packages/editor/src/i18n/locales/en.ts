@@ -689,6 +689,7 @@ const en = {
 
   // ── Workflow Editor / Toolbar ───────────────────────────────────────────
   workflowEditor: {
+    settingsTitle: 'Workflow Settings',
     description: 'Description',
     tags: 'Tags',
     addTag: 'Add tag, press Enter',
@@ -702,6 +703,25 @@ const en = {
     errorWebhookUrl: 'Error Notification URL (optional)',
     errorWebhookHint: 'POST request sent to this URL when workflow errors',
     close: 'Close',
+    back: 'Back',
+    backBtn: 'Back',
+    undoBtn: 'Undo (Ctrl+Z)',
+    redoBtn: 'Redo (Ctrl+Shift+Z)',
+    exportBtn: 'Export (JSON)',
+    importBtn: 'Import (JSON)',
+    active: 'Active',
+    webhookCopyHint: 'Copy webhook URL',
+    historyBtn: 'Execution history',
+    versionHistoryBtn: 'Version History',
+    settingsBtn: 'Workflow Settings',
+    deleteBtn: 'Delete workflow',
+    saveBtn: 'Save',
+    executeBtn: 'Execute',
+    deleteConfirmTitle: 'Delete Workflow',
+    deleteConfirmMsg: 'This action cannot be undone',
+    deleteConfirmName: 'Are you sure you want to delete',
+    deleteConfirmCancel: 'Cancel',
+    deleteConfirmAction: 'Yes, Delete',
     nameEmpty: 'Workflow name cannot be empty',
     triggerMissing: 'No trigger node. Workflow can only be run manually.',
     invalidFile: 'Invalid workflow file',
@@ -717,8 +737,7 @@ const en = {
     webhookCopySuccess: 'Webhook URL copied',
     copyFailed: 'Copy failed',
     adminRequired: 'Admin role required for this action',
-    deleteConfirmTitle: 'Delete Workflow?',
-    deleteConfirmMsg: (name: string) => `Are you sure you want to delete "${name}" workflow?`,
+    unsaved: 'Not saved',
   },
 
   // ── Command Palette ─────────────────────────────────────────────────────
