@@ -21,6 +21,7 @@ import {
   useSocialAccountsStore,
   type SocialAccount,
 } from '../store/socialAccountsStore';
+import { toast } from '../store/toastStore';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -465,8 +466,8 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
     try {
       await addAccount(selected, cfg);
       onClose();
-    } catch {
-      /* toast? */
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Hesap eklenemedi');
     } finally {
       setSaving(false);
     }

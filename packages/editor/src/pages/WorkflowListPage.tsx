@@ -468,7 +468,7 @@ export default function WorkflowListPage() {
             Workflows
           </h1>
           <p className="text-sm text-obsidian-400 mt-1.5 font-body">
-            Build and manage your automation workflows
+            Otomasyon workflow'larınızı oluşturun ve yönetin
           </p>
         </div>
         <div className="flex items-center gap-2">
