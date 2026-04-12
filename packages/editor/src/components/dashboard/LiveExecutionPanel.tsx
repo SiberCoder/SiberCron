@@ -70,7 +70,7 @@ export default function LiveExecutionPanel() {
 
     const socket = getSocket();
 
-    socket.emit('subscribe:execution', activeExecutionId);
+    socket.emit(WS_EVENTS.SUBSCRIBE_EXECUTION, activeExecutionId);
     setIsConnected(socket.connected);
 
     const onConnect = () => setIsConnected(true);

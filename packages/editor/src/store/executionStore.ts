@@ -56,7 +56,7 @@ export const useExecutionStore = create<ExecutionState>((set) => ({
     }
 
     const socket = getSocket();
-    socket.emit('subscribe:execution', executionId);
+    socket.emit(WS_EVENTS.SUBSCRIBE_EXECUTION, executionId);
 
     const appendLog = (state: { executionLog: LogEntry[] }, entry: LogEntry): LogEntry[] => {
       const next = [...state.executionLog, entry];
