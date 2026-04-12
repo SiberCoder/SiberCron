@@ -138,8 +138,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     const payload = { sub: user.id, username: user.username, role: user.role };
     const accessToken = app.jwt.sign(payload, { expiresIn: getAccessTokenTtl() });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const refreshToken = app.jwt.sign({ sub: user.id, type: 'refresh' } as any, { expiresIn: REFRESH_TOKEN_TTL });
+    const refreshToken = app.jwt.sign({ sub: user.id, type: 'refresh' }, { expiresIn: REFRESH_TOKEN_TTL });
 
     return reply.send({
       accessToken,
