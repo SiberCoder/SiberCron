@@ -21,6 +21,10 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
       reply.code(400);
       return { error: 'Mesaj alani bos olamaz' };
     }
+    if (message.length > 50_000) {
+      reply.code(400);
+      return { error: 'Mesaj çok uzun (max 50,000 karakter)' };
+    }
 
     try {
       const response = await aiBrainService.chat(message.trim(), conversationId, undefined, {
@@ -78,6 +82,10 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       reply.code(400);
       return { error: 'Mesaj alani bos olamaz' };
+    }
+    if (message.length > 50_000) {
+      reply.code(400);
+      return { error: 'Mesaj çok uzun (max 50,000 karakter)' };
     }
 
     reply.raw.writeHead(200, {
