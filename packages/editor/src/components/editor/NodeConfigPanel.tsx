@@ -697,7 +697,7 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
   const validateNumber = useCallback((val: string): string | null => {
     if (val === '') return null;
     if (isNaN(Number(val)) || val.trim() === '') {
-      return 'Please enter a valid number';
+      return 'Geçerli bir sayı girin';
     }
     return null;
   }, []);
