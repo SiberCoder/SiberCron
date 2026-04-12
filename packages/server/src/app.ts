@@ -22,6 +22,7 @@ import { commandRoutes } from './routes/commands.js';
 import { chatRoutes } from './routes/chat.js';
 import { metricsRoutes } from './routes/metrics.js';
 import { authRoutes } from './routes/auth.js';
+import { adminRoutes, addRequestLog } from './routes/admin.js';
 import { schedulerService } from './services/schedulerService.js';
 import { queueService } from './services/queueService.js';
 import { executionLogStore } from './services/executionLogStore.js';
@@ -270,6 +271,42 @@ setInterval(() => {
   executionLogStore.cleanup();
 }, 60 * 60_000).unref();
 
+// ── Request logging hook for server monitoring ──────────────────────────
+// Captures HTTP request/response metadata for the admin logs endpoint
+let requestStartTime: number = 0;
+app.addHook('onRequest', async () => {
+  requestStartTime = Date.now();
+});
+
+app.addHook('onResponse', async (request, reply) => {
+  const durationMs = Date.now() - requestStartTime;
+  const statusCode = reply.statusCode;
+
+  // Log all requests except health checks and WebSocket upgrades
+  if (!request.url.includes('/health') && reply.statusCode !== 101) {
+    addRequestLog({
+      timestamp: new Date().toISOString(),
+      method: request.method,
+      url: request.url.split('?')[0], // Exclude query params
+      statusCode,
+      durationMs,
+      ip: request.ip,
+    });
+
+    // Emit via Socket.io for real-time monitoring
+    if ((global as any).__io__) {
+      (global as any).__io__.emit(WS_EVENTS.SERVER_LOG, {
+        timestamp: new Date().toISOString(),
+        method: request.method,
+        url: request.url.split('?')[0],
+        statusCode,
+        durationMs,
+        ip: request.ip,
+      });
+    }
+  }
+});
+
 // CORS
 await app.register(cors, {
   origin: config.corsOrigin,
@@ -304,6 +341,9 @@ const io = new SocketIOServer(app.server, {
     credentials: true,
   },
 });
+
+// Store io globally for use in request logging hook
+(global as any).__io__ = io;
 
 // Socket.io auth middleware — validate JWT when auth is enabled.
 // Allow connection even without valid token (mark as unauthenticated) so
@@ -752,6 +792,7 @@ await app.register(messagingRoutes, { prefix: '/api/v1/messaging/webhook' });
 await app.register(commandRoutes, { prefix: '/api/v1/commands' });
 await app.register(chatRoutes, { prefix: '/api/v1/chat' });
 await app.register(metricsRoutes, { prefix: '/api/v1/metrics' });
+await app.register(adminRoutes, { prefix: '/api/v1/admin' });
 
 // ── Startup stale execution cleanup ────────────────────────────────────
 // Handled in main.ts after server.listen() — stale executions are auto-resumed

@@ -39,4 +39,5 @@ export const WS_EVENTS = {
   WORKFLOW_DEACTIVATED: 'workflow:deactivated',
   WORKFLOW_EXECUTION_STARTED: 'workflow:execution:started',
   WORKFLOW_EXECUTION_COMPLETED: 'workflow:execution:completed',
+  SERVER_LOG: 'server:log',
 } as const;

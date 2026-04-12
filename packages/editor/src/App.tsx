@@ -13,6 +13,7 @@ import SocialAccountsPage from './pages/SocialAccountsPage';
 import ChatPage from './pages/ChatPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
+import ServerPage from './pages/ServerPage';
 import { useAuthStore } from './store/authStore';
 
 class ErrorBoundary extends React.Component<
@@ -173,6 +174,7 @@ export default function App() {
         <Route path="/templates" element={<TemplatesPage />} />
         <Route path="/accounts" element={<SocialAccountsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/server" element={<ServerPage />} />
       </Route>
       <Route path="/workflows/:id" element={<AuthGuard><SetupGuard><WorkflowEditorPage /></SetupGuard></AuthGuard>} />
     </Routes>
