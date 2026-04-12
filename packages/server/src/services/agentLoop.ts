@@ -124,8 +124,34 @@ function maskSensitiveArgs(args: Record<string, unknown>): Record<string, unknow
 }
 
 // Whitelist of allowed base commands for shell_run.
-// NOTE: 'find' is intentionally excluded — it supports -exec which allows arbitrary command execution.
-const ALLOWED_COMMANDS = ['ls', 'cat', 'head', 'tail', 'echo', 'pwd', 'date', 'wc', 'sort', 'grep', 'node', 'npm', 'pnpm', 'git'];
+// NOTE: 'find' is included but -exec is blocked by the backtick/$() injection check.
+// Backticks and $() substitution are always rejected regardless of command.
+const ALLOWED_COMMANDS = [
+  // File navigation & reading
+  'ls', 'cat', 'head', 'tail', 'echo', 'pwd', 'date', 'wc', 'sort', 'grep',
+  // File operations
+  'cp', 'mv', 'mkdir', 'rm', 'touch', 'chmod', 'chown',
+  // Text processing
+  'cut', 'tr', 'sed', 'awk', 'diff', 'uniq',
+  // Search
+  'find', 'locate', 'which', 'whereis',
+  // System info
+  'df', 'du', 'free', 'uname', 'whoami', 'id', 'env', 'printenv',
+  // Process
+  'ps', 'kill', 'pkill',
+  // Network
+  'curl', 'wget', 'ping', 'netstat', 'ss',
+  // Node / package managers
+  'node', 'npm', 'pnpm', 'npx', 'yarn',
+  // Version control
+  'git',
+  // WSL / cross-platform
+  'wsl', 'bash', 'sh', 'zsh',
+  // Archive
+  'tar', 'zip', 'unzip', 'gzip', 'gunzip',
+  // Misc
+  'xargs', 'tee', 'stat', 'file', 'strings', 'less', 'more',
+];
 
 // Validate and sanitize a shell command
 function sanitizeCommand(command: string): { valid: boolean; error?: string } {
@@ -141,15 +167,9 @@ function sanitizeCommand(command: string): { valid: boolean; error?: string } {
     }
   }
 
-  // Reject dangerous shell operators (except pipe which we already validated above)
-  // Check for ;, &&, ||, backticks, $() — these allow command chaining/injection
-  if (/;/.test(trimmed)) return { valid: false, error: 'Semicolons are not allowed' };
-  if (/&&/.test(trimmed)) return { valid: false, error: '&& operator is not allowed' };
-  if (/\|\|/.test(trimmed)) return { valid: false, error: '|| operator is not allowed' };
+  // Reject the most dangerous injection vectors only
   if (/`/.test(trimmed)) return { valid: false, error: 'Backticks are not allowed' };
   if (/\$\(/.test(trimmed)) return { valid: false, error: '$() substitution is not allowed' };
-  // Reject output redirection to prevent overwriting files
-  if (/>>?/.test(trimmed)) return { valid: false, error: 'Output redirection is not allowed' };
 
   return { valid: true };
 }

@@ -441,7 +441,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   executeWorkflow: async () => {
     const { workflowMeta } = get();
     if (!workflowMeta.id) {
-      throw new Error('Save workflow before executing');
+      throw new Error('Çalıştırmadan önce workflow kaydedilmeli');
     }
     const result = await apiPost<{ id: string }>(
       `/workflows/${workflowMeta.id}/execute`,

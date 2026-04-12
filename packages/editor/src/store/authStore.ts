@@ -52,8 +52,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Login failed' }));
-        throw new Error(err.error ?? 'Login failed');
+        const err = await res.json().catch(() => ({ error: 'Giriş başarısız' }));
+        throw new Error(err.error ?? 'Giriş başarısız');
       }
       const data = await res.json() as { accessToken: string; refreshToken: string; user: AuthUser };
       localStorage.setItem(LS_ACCESS, data.accessToken);
