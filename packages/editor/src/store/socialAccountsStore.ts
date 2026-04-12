@@ -53,8 +53,23 @@ export const useSocialAccountsStore = create<SocialAccountsState>(
     },
 
     addAccount: async (platform, config) => {
+      // Derive a human-readable name and unique identifier from the platform config
+      const platformNames: Record<string, string> = {
+        whatsapp: 'WhatsApp',
+        telegram: 'Telegram Bot',
+        discord: 'Discord',
+        slack: 'Slack',
+      };
+      const identifier =
+        (config.phoneNumber as string) ||
+        (config.workspace as string) ||
+        platform;
+      const name = `${platformNames[platform] ?? platform}${identifier !== platform ? ` (${identifier})` : ''}`;
+
       const account = await apiPost<SocialAccount>('/social-accounts', {
         platform,
+        name,
+        identifier,
         config,
       });
       set((s) => ({ accounts: [...s.accounts, account] }));
