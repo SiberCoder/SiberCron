@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   User,
+  Globe,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { WS_EVENTS } from '@sibercron/shared';
@@ -22,16 +23,17 @@ import { useAuthStore } from '../../store/authStore';
 import { getSocket, releaseSocket } from '../../lib/socket';
 import { apiGet } from '../../api/client';
 import { toast } from '../../store/toastStore';
+import { useTranslation, useI18nStore } from '../../i18n';
 
 const NAV_ITEMS = [
-  { to: '/chat', icon: Brain, label: 'AI Sohbet', accent: true },
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/workflows', icon: GitBranch, label: 'Workflow\'lar' },
-  { to: '/executions', icon: Play, label: 'Çalıştırmalar' },
-  { to: '/credentials', icon: Key, label: 'Kimlik Bilgileri' },
-  { to: '/templates', icon: FileCode, label: 'Şablonlar' },
-  { to: '/accounts', icon: Users, label: 'Hesaplar' },
-  { to: '/settings', icon: Settings, label: 'Ayarlar' },
+  { to: '/chat', icon: Brain, labelKey: 'sidebar.aiChat', accent: true },
+  { to: '/dashboard', icon: LayoutDashboard, labelKey: 'sidebar.dashboard' },
+  { to: '/workflows', icon: GitBranch, labelKey: 'sidebar.workflows' },
+  { to: '/executions', icon: Play, labelKey: 'sidebar.executions' },
+  { to: '/credentials', icon: Key, labelKey: 'sidebar.credentials' },
+  { to: '/templates', icon: FileCode, labelKey: 'sidebar.templates' },
+  { to: '/accounts', icon: Users, labelKey: 'sidebar.accounts' },
+  { to: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
 ] as const;
 
 interface SidebarProps {
@@ -80,6 +82,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const runningCount = useRunningCount();
+  const { t } = useTranslation();
+  const { language, setLanguage } = useI18nStore();
+
+  const toggleLanguage = () => setLanguage(language === 'en' ? 'tr' : 'en');
 
   function handleLogout() {
     logout();
@@ -122,7 +128,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-2.5 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map(({ to, icon: Icon, label, ...rest }) => {
+        {NAV_ITEMS.map(({ to, icon: Icon, labelKey, ...rest }) => {
+          const label = t(labelKey);
           const isAccent = 'accent' in rest && rest.accent;
           return (
           <NavLink
@@ -206,6 +213,23 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Bottom section */}
       <div className="mx-3 aurora-divider" />
+
+      {/* Language toggle */}
+      <div className={clsx('flex items-center px-3 py-1.5', collapsed && 'justify-center px-0')}>
+        <button
+          onClick={toggleLanguage}
+          title={t('common.language')}
+          className={clsx(
+            'flex items-center gap-2 rounded-lg text-obsidian-400 hover:text-aurora-cyan hover:bg-white/[0.04] transition-all',
+            collapsed ? 'w-8 h-8 justify-center' : 'px-2.5 py-1.5 w-full',
+          )}
+        >
+          <Globe size={14} />
+          {!collapsed && (
+            <span className="text-xs font-medium">{language === 'en' ? 'EN' : 'TR'}</span>
+          )}
+        </button>
+      </div>
 
       {/* User info + logout */}
       {user && (

@@ -23,6 +23,7 @@ import { apiGet } from '../api/client';
 import { getSocket, releaseSocket } from '../lib/socket';
 import { toast } from '../store/toastStore';
 import LiveExecutionPanel from '../components/dashboard/LiveExecutionPanel';
+import { useTranslation } from '../i18n';
 
 // ── Execution Trend Chart ─────────────────────────────────────────────
 
@@ -34,29 +35,30 @@ interface TrendBucket {
 }
 
 function TrendChart({ data }: { data: TrendBucket[] }) {
+  const { t } = useTranslation();
   const maxVal = Math.max(...data.map((d) => d.total), 1);
 
   return (
     <div className="glass-card rounded-2xl p-5 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-display font-semibold text-white tracking-tight">
-          Son 7 Günlük Çalışma
+          {t('dashboard.last7Days')}
         </h2>
         <div className="flex items-center gap-3 text-[10px] text-obsidian-500 font-body">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-sm bg-aurora-emerald" />
-            Başarılı
+            {t('dashboard.successful')}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-sm bg-aurora-rose" />
-            Hata
+            {t('common.error')}
           </span>
         </div>
       </div>
 
       {data.every((d) => d.total === 0) ? (
         <div className="flex items-center justify-center h-24 text-xs text-obsidian-600 font-body">
-          Henüz execution yok
+          {t('dashboard.noExecutionsYet')}
         </div>
       ) : (
         <div className="flex items-end gap-1.5 h-24">
@@ -66,7 +68,7 @@ function TrendChart({ data }: { data: TrendBucket[] }) {
             const label = bucket.date.slice(5); // MM-DD
             return (
               <div key={bucket.date} className="flex-1 flex flex-col items-center gap-1 group">
-                <div className="relative w-full flex flex-col justify-end h-20" title={`${bucket.date}: ${bucket.success} başarılı, ${bucket.error} hata`}>
+                <div className="relative w-full flex flex-col justify-end h-20" title={`${bucket.date}: ${bucket.success} ${t('dashboard.successful')}, ${bucket.error} ${t('common.error')}`}>
                   <div
                     className="w-full bg-aurora-rose/60 rounded-t transition-all duration-500"
                     style={{ height: `${errorH}%`, minHeight: bucket.error > 0 ? 2 : 0 }}
@@ -104,6 +106,7 @@ interface NodeErrorStat {
 }
 
 function TopFailingNodesPanel({ items }: { items: NodeErrorStat[] }) {
+  const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
     <div className="glass-card rounded-2xl overflow-hidden">
@@ -111,18 +114,18 @@ function TopFailingNodesPanel({ items }: { items: NodeErrorStat[] }) {
         <div className="flex items-center gap-2">
           <AlertTriangle size={14} className="text-aurora-rose" />
           <h2 className="text-base font-display font-semibold text-white tracking-tight">
-            En Çok Hata Veren Node'lar
+            {t('dashboard.topFailingNodes')}
           </h2>
         </div>
-        <span className="text-[10px] text-obsidian-500 font-body">Hata sayısına göre sıralı</span>
+        <span className="text-[10px] text-obsidian-500 font-body">{t('dashboard.sortedByErrorCount')}</span>
       </div>
       <table className="w-full">
         <thead>
           <tr className="border-b border-white/[0.03]">
             <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">Node</th>
-            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Hata</th>
-            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Toplam</th>
-            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">Hata Oranı</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">{t('dashboard.errors')}</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">{t('dashboard.total')}</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">{t('dashboard.errorRate')}</th>
           </tr>
         </thead>
         <tbody>
@@ -182,24 +185,25 @@ interface WorkflowSummary {
 }
 
 function TopWorkflowsPanel({ items }: { items: WorkflowSummary[] }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   if (items.length === 0) return null;
   return (
     <div className="glass-card rounded-2xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04]">
         <h2 className="text-base font-display font-semibold text-white tracking-tight">
-          En Aktif Workflow'lar
+          {t('dashboard.topWorkflows')}
         </h2>
-        <span className="text-[10px] text-obsidian-500 font-body">Son çalışmaya göre sıralı</span>
+        <span className="text-[10px] text-obsidian-500 font-body">{t('dashboard.sortedByLastRun')}</span>
       </div>
       <table className="w-full">
         <thead>
           <tr className="border-b border-white/[0.03]">
             <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">Workflow</th>
-            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Toplam</th>
-            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Başarı</th>
-            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">Hata</th>
-            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">Oran</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">{t('dashboard.total')}</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">{t('dashboard.successCount')}</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-4 py-3 uppercase tracking-wider font-body">{t('dashboard.errors')}</th>
+            <th className="text-right text-[10px] font-semibold text-obsidian-500 px-5 py-3 uppercase tracking-wider font-body">{t('dashboard.rate')}</th>
           </tr>
         </thead>
         <tbody>
@@ -252,29 +256,31 @@ function TopWorkflowsPanel({ items }: { items: WorkflowSummary[] }) {
   );
 }
 
-const STATUS_CONFIG = {
-  success: {
-    icon: CheckCircle2,
-    label: 'Başarılı',
-    dot: 'bg-aurora-emerald',
-    text: 'text-aurora-emerald',
-    bg: 'bg-aurora-emerald/10',
-  },
-  error: {
-    icon: XCircle,
-    label: 'Hata',
-    dot: 'bg-aurora-rose',
-    text: 'text-aurora-rose',
-    bg: 'bg-aurora-rose/10',
-  },
-  running: {
-    icon: Clock,
-    label: 'Çalışıyor',
-    dot: 'bg-aurora-blue',
-    text: 'text-aurora-blue',
-    bg: 'bg-aurora-blue/10',
-  },
-};
+function getStatusConfig(t: (k: string) => string) {
+  return {
+    success: {
+      icon: CheckCircle2,
+      label: t('dashboard.statusSuccess'),
+      dot: 'bg-aurora-emerald',
+      text: 'text-aurora-emerald',
+      bg: 'bg-aurora-emerald/10',
+    },
+    error: {
+      icon: XCircle,
+      label: t('dashboard.statusError'),
+      dot: 'bg-aurora-rose',
+      text: 'text-aurora-rose',
+      bg: 'bg-aurora-rose/10',
+    },
+    running: {
+      icon: Clock,
+      label: t('dashboard.statusRunning'),
+      dot: 'bg-aurora-blue',
+      text: 'text-aurora-blue',
+      bg: 'bg-aurora-blue/10',
+    },
+  };
+}
 
 function formatDuration(ms?: number): string {
   if (!ms) return '-';
@@ -282,16 +288,16 @@ function formatDuration(ms?: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function formatTimeAgo(dateStr?: string): string {
+function formatTimeAgo(dateStr: string | undefined, t: (k: string) => string): string {
   if (!dateStr) return '-';
   const diff = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'Az önce';
-  if (minutes < 60) return `${minutes} dakika önce`;
+  if (minutes < 1) return t('dashboard.justNow');
+  if (minutes < 60) return `${minutes} ${t('dashboard.minutesAgo')}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} saat önce`;
+  if (hours < 24) return `${hours} ${t('dashboard.hoursAgo')}`;
   const days = Math.floor(hours / 24);
-  return `${days} gün önce`;
+  return `${days} ${t('dashboard.daysAgo')}`;
 }
 
 interface WorkflowHealthAlert {
@@ -318,7 +324,9 @@ function formatUptime(seconds: number): string {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const STATUS_CONFIG = getStatusConfig(t);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -479,7 +487,7 @@ export default function DashboardPage() {
 
   const STATS_CONFIG = [
     {
-      label: 'Toplam Workflow',
+      label: t('dashboard.totalWorkflows'),
       value: String(stats.totalWorkflows),
       icon: GitBranch,
       accent: 'text-aurora-cyan',
@@ -487,7 +495,7 @@ export default function DashboardPage() {
       iconBg: 'bg-aurora-cyan/10',
     },
     {
-      label: 'Aktif Workflow',
+      label: t('dashboard.activeWorkflows'),
       value: String(stats.activeWorkflows),
       icon: Zap,
       accent: 'text-aurora-emerald',
@@ -495,7 +503,7 @@ export default function DashboardPage() {
       iconBg: 'bg-aurora-emerald/10',
     },
     {
-      label: 'Toplam Çalıştırma',
+      label: t('dashboard.totalExecutions'),
       value: String(stats.totalExecutions),
       icon: Activity,
       accent: 'text-aurora-indigo',
@@ -503,7 +511,7 @@ export default function DashboardPage() {
       iconBg: 'bg-aurora-indigo/10',
     },
     {
-      label: 'Başarı Oranı',
+      label: t('dashboard.successRate'),
       value: stats.successRate,
       icon: TrendingUp,
       accent: 'text-aurora-amber',
@@ -511,7 +519,7 @@ export default function DashboardPage() {
       iconBg: 'bg-aurora-amber/10',
     },
     {
-      label: 'Ort. Süre',
+      label: t('dashboard.avgDuration'),
       value: stats.avgDuration,
       icon: Clock,
       accent: 'text-aurora-violet',
@@ -556,10 +564,10 @@ export default function DashboardPage() {
               </span>
             </div>
             <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-              SiberCron'a Hoş Geldiniz
+              {t('dashboard.welcome')}
             </h1>
             <p className="text-sm text-obsidian-400 mt-2 font-body">
-              AI destekli workflow otomasyonu parmaklarınızın ucunda
+              {t('dashboard.subtitle')}
             </p>
           </div>
           <button
@@ -568,7 +576,7 @@ export default function DashboardPage() {
             className="flex items-center gap-1.5 text-xs text-obsidian-500 hover:text-aurora-cyan transition-colors font-body disabled:opacity-50"
           >
             <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-            Yenile
+            {t('dashboard.refresh')}
           </button>
         </div>
       </div>
@@ -618,7 +626,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2 mb-1">
             <AlertTriangle size={13} className="text-aurora-amber" />
             <span className="text-xs font-semibold text-aurora-amber font-body tracking-wide">
-              Dikkat: Yüksek Hata Oranlı Workflow'lar
+              {t('dashboard.highErrorAlert')}
             </span>
           </div>
           {healthAlerts.map((alert) => (
@@ -652,14 +660,14 @@ export default function DashboardPage() {
           className="btn-aurora"
         >
           <Plus size={16} />
-          Yeni Workflow
+          {t('dashboard.newWorkflow')}
         </button>
         <button
           onClick={() => navigate('/templates')}
           className="btn-ghost"
         >
           <FileCode size={16} />
-          Şablonlar
+          {t('dashboard.templates')}
         </button>
       </div>
 
@@ -689,13 +697,13 @@ export default function DashboardPage() {
         <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-display font-semibold text-white tracking-tight">
-              Son Düzenlenen Workflow'lar
+              {t('dashboard.recentWorkflows')}
             </h2>
             <button
               onClick={() => navigate('/workflows')}
               className="flex items-center gap-1 text-xs font-medium text-obsidian-500 hover:text-aurora-cyan transition-colors"
             >
-              Tümünü Gör <ArrowUpRight size={12} />
+              {t('dashboard.viewAll')} <ArrowUpRight size={12} />
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -715,7 +723,7 @@ export default function DashboardPage() {
                     <span className={clsx(
                       'shrink-0 w-1.5 h-1.5 rounded-full mt-1.5',
                       wf.isActive ? 'bg-aurora-emerald' : 'bg-obsidian-600',
-                    )} title={wf.isActive ? 'Aktif' : 'Pasif'} />
+                    )} title={wf.isActive ? t('dashboard.active') : t('dashboard.inactive')} />
                   </div>
                   {wf.description && (
                     <p className="text-[11px] text-obsidian-500 font-body truncate mb-2">{wf.description}</p>
@@ -723,7 +731,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3 text-[10px] text-obsidian-600 font-body">
                     <span className="capitalize">{wf.triggerType ?? 'manual'}</span>
                     <span>•</span>
-                    <span>{formatTimeAgo(wf.updatedAt ?? wf.createdAt)}</span>
+                    <span>{formatTimeAgo(wf.updatedAt ?? wf.createdAt, t)}</span>
                     {wf.tags && wf.tags.length > 0 && (
                       <>
                         <span>•</span>
@@ -773,20 +781,20 @@ export default function DashboardPage() {
       <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-display font-semibold text-white tracking-tight">
-            Son Çalışmalar
+            {t('dashboard.recentRuns')}
           </h2>
           <button
             onClick={() => navigate('/executions')}
             className="flex items-center gap-1 text-xs font-medium text-obsidian-500 hover:text-aurora-cyan transition-colors"
           >
-            Tümünü Gör <ArrowUpRight size={12} />
+            {t('dashboard.viewAll')} <ArrowUpRight size={12} />
           </button>
         </div>
 
         <div className="glass-card rounded-2xl overflow-hidden">
           {recentExecutions.length === 0 ? (
             <div className="px-5 py-10 text-center">
-              <p className="text-sm text-obsidian-500 font-body">Henüz çalışma yok</p>
+              <p className="text-sm text-obsidian-500 font-body">{t('dashboard.noRunsYet')}</p>
             </div>
           ) : (
             <table className="w-full">
@@ -796,16 +804,16 @@ export default function DashboardPage() {
                     Workflow
                   </th>
                   <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3.5 uppercase tracking-wider font-body">
-                    Durum
+                    {t('common.status')}
                   </th>
                   <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3.5 uppercase tracking-wider font-body">
-                    Tetikleyici
+                    {t('dashboard.trigger')}
                   </th>
                   <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3.5 uppercase tracking-wider font-body">
-                    Süre
+                    {t('dashboard.duration')}
                   </th>
                   <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3.5 uppercase tracking-wider font-body">
-                    Başlangıç
+                    {t('dashboard.startedAt')}
                   </th>
                 </tr>
               </thead>
@@ -849,7 +857,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-5 py-3.5">
                         <span className="text-xs text-obsidian-500 font-body">
-                          {formatTimeAgo(exec.startedAt ?? exec.createdAt)}
+                          {formatTimeAgo(exec.startedAt ?? exec.createdAt, t)}
                         </span>
                       </td>
                     </tr>

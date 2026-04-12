@@ -31,6 +31,7 @@ import {
 import clsx from 'clsx';
 import type { ChatMessage, ToolCallInfo, SystemState } from '@sibercron/shared';
 import { useChatStore } from '../store/chatStore';
+import { useTranslation } from '../i18n';
 
 // ── Tool call display component ─────────────────────────────────────────
 
@@ -203,15 +204,16 @@ function ChatBubble({ message, settings }: { message: ChatMessage; settings?: Ch
 // ── Streaming indicator ─────────────────────────────────────────────────
 
 function StreamingIndicator({ verbose }: { verbose?: boolean }) {
+  const { t } = useTranslation();
   const { streamPhase, streamingContent, streamingToolCalls } = useChatStore();
 
   const phaseLabel = () => {
     switch (streamPhase) {
-      case 'thinking': return 'Düşünüyor...';
-      case 'tool_running': return 'Araç çalışıyor...';
-      case 'generating': return 'Yanıt oluşturuyor...';
+      case 'thinking': return t('chat.thinking');
+      case 'tool_running': return t('chat.toolRunning');
+      case 'generating': return t('chat.generating');
       case 'content': return null; // content is shown directly
-      default: return 'Bekliyor...';
+      default: return `${t('common.loading')}`;
     }
   };
 
@@ -646,6 +648,7 @@ function ChatSettingsPanel({
 // ── Welcome State ───────────────────────────────────────────────────────
 
 function WelcomeState({ onSuggestion }: { onSuggestion: (text: string) => void }) {
+  const { t } = useTranslation();
   const suggestions = [
     { text: 'Sistem durumunu göster', icon: Activity },
     { text: 'Yeni bir workflow oluştur', icon: Plus },
@@ -663,10 +666,9 @@ function WelcomeState({ onSuggestion }: { onSuggestion: (text: string) => void }
         <div className="absolute inset-0 rounded-2xl bg-purple-500/10 blur-xl" />
       </div>
 
-      <h2 className="text-xl font-semibold text-white mb-2">Merhaba! Ben SiberCron AI</h2>
+      <h2 className="text-xl font-semibold text-white mb-2">{t('chat.welcome')}</h2>
       <p className="text-sm text-slate-400 text-center max-w-md mb-8 leading-relaxed">
-        Workflow'larınızı yönetebilir, mesaj gönderebilir, sistem durumunu kontrol edebilirim.
-        Size nasıl yardımcı olabilirim?
+        {t('chat.welcomeDesc')}
       </p>
 
       {/* Suggestion chips */}
@@ -689,6 +691,7 @@ function WelcomeState({ onSuggestion }: { onSuggestion: (text: string) => void }
 // ── Main ChatPage Component ─────────────────────────────────────────────
 
 export default function ChatPage() {
+  const { t } = useTranslation();
   const {
     messages,
     isLoading,
@@ -805,11 +808,11 @@ export default function ChatPage() {
   const statusText = () => {
     switch (providerStatus) {
       case 'connected':
-        return 'Bağlı';
+        return t('chat.connected');
       case 'no_provider':
-        return 'Sağlayıcı yok';
+        return t('chat.noProvider');
       case 'error':
-        return 'Hata';
+        return t('common.error');
     }
   };
 
@@ -861,30 +864,30 @@ export default function ChatPage() {
                 ? 'text-purple-400 bg-purple-500/10'
                 : 'text-slate-400 hover:text-white hover:bg-white/[0.04]',
             )}
-            title="Chat ayarları"
+            title={t('chat.chatSettings')}
           >
             <Settings2 size={14} />
-            <span className="hidden sm:inline">Ayarlar</span>
+            <span className="hidden sm:inline">{t('common.settings')}</span>
           </button>
 
           {/* System Context button */}
           <button
             onClick={() => setContextDrawerOpen(!contextDrawerOpen)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.04] transition-all"
-            title="Sistem durumu"
+            title={t('chat.systemStatus')}
           >
             <Info size={14} />
-            <span className="hidden sm:inline">Durum</span>
+            <span className="hidden sm:inline">{t('chat.systemStatus')}</span>
           </button>
 
           {/* New conversation */}
           <button
             onClick={newConversation}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/[0.04] transition-all"
-            title="Yeni sohbet"
+            title={t('chat.newChat')}
           >
             <Plus size={14} />
-            <span className="hidden sm:inline">Yeni Sohbet</span>
+            <span className="hidden sm:inline">{t('chat.newChat')}</span>
           </button>
 
           {/* Clear */}
@@ -943,7 +946,7 @@ export default function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={initialLoading ? 'Yukleniyor...' : "SiberCron'a bir sey sor veya yap..."}
+              placeholder={initialLoading ? t('common.loading') : t('chat.placeholder')}
               disabled={initialLoading}
               rows={1}
               className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 resize-none outline-none max-h-[150px] leading-relaxed disabled:opacity-50"
@@ -966,7 +969,7 @@ export default function ChatPage() {
             </button>
           </div>
           <p className="text-[10px] text-slate-600 mt-2 text-center">
-            Enter ile gönder, Shift+Enter ile yeni satır
+            {t('chat.sendHint')}
           </p>
         </div>
       </div>

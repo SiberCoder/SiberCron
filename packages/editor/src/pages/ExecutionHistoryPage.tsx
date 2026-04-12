@@ -32,8 +32,9 @@ import type { IExecution, ExecutionStatus, INodeExecutionResult, WsNodeDone, WsN
 import { apiGet, apiPost, apiDelete } from '../api/client';
 import { toast } from '../store/toastStore';
 import { useAuthStore } from '../store/authStore';
+import { useTranslation } from '../i18n';
 
-const STATUS_CONFIG: Record<
+function getStatusConfig(t: (k: string) => string): Record<
   ExecutionStatus,
   {
     icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -42,52 +43,55 @@ const STATUS_CONFIG: Record<
     text: string;
     bg: string;
   }
-> = {
+> {
+  return {
   pending: {
     icon: Clock,
-    label: 'Bekliyor',
+    label: t('executions.statusPending'),
     dot: 'bg-obsidian-500',
     text: 'text-obsidian-400',
     bg: 'bg-white/[0.04]',
   },
   running: {
     icon: AlertCircle,
-    label: 'Çalışıyor',
+    label: t('executions.statusRunning'),
     dot: 'bg-aurora-blue animate-pulse',
     text: 'text-aurora-blue',
     bg: 'bg-aurora-blue/10',
   },
   success: {
     icon: CheckCircle2,
-    label: 'Başarılı',
+    label: t('executions.statusSuccess'),
     dot: 'bg-aurora-emerald',
     text: 'text-aurora-emerald',
     bg: 'bg-aurora-emerald/10',
   },
   error: {
     icon: XCircle,
-    label: 'Hata',
+    label: t('executions.statusError'),
     dot: 'bg-aurora-rose',
     text: 'text-aurora-rose',
     bg: 'bg-aurora-rose/10',
   },
   cancelled: {
     icon: Ban,
-    label: 'İptal',
+    label: t('executions.statusCancelled'),
     dot: 'bg-aurora-amber',
     text: 'text-aurora-amber',
     bg: 'bg-aurora-amber/10',
   },
-};
+  };
+}
 
-// Node-specific status config (superset of ExecutionStatus — adds 'skipped' and 'running' node states)
-const NODE_STATUS_CONFIG: Record<string, { dot: string; text: string; bg: string; label: string }> = {
-  success: { dot: 'bg-aurora-emerald', text: 'text-aurora-emerald', bg: 'bg-aurora-emerald/10', label: 'Başarılı' },
-  error:   { dot: 'bg-aurora-rose',    text: 'text-aurora-rose',    bg: 'bg-aurora-rose/10',    label: 'Hata'     },
-  skipped: { dot: 'bg-obsidian-500',   text: 'text-obsidian-400',  bg: 'bg-white/[0.04]',      label: 'Atlandı'  },
-  running: { dot: 'bg-aurora-blue animate-pulse', text: 'text-aurora-blue', bg: 'bg-aurora-blue/10', label: 'Çalışıyor' },
-  pending: { dot: 'bg-obsidian-500',   text: 'text-obsidian-400',  bg: 'bg-white/[0.04]',      label: 'Bekliyor' },
-};
+function getNodeStatusConfig(t: (k: string) => string): Record<string, { dot: string; text: string; bg: string; label: string }> {
+  return {
+    success: { dot: 'bg-aurora-emerald', text: 'text-aurora-emerald', bg: 'bg-aurora-emerald/10', label: t('executions.statusSuccess') },
+    error:   { dot: 'bg-aurora-rose',    text: 'text-aurora-rose',    bg: 'bg-aurora-rose/10',    label: t('executions.statusError') },
+    skipped: { dot: 'bg-obsidian-500',   text: 'text-obsidian-400',  bg: 'bg-white/[0.04]',      label: t('executions.statusSkipped') },
+    running: { dot: 'bg-aurora-blue animate-pulse', text: 'text-aurora-blue', bg: 'bg-aurora-blue/10', label: t('executions.statusRunning') },
+    pending: { dot: 'bg-obsidian-500',   text: 'text-obsidian-400',  bg: 'bg-white/[0.04]',      label: t('executions.statusPending') },
+  };
+}
 
 function formatDuration(ms?: number) {
   if (!ms) return '-';
@@ -512,6 +516,8 @@ function ExecutionTimeline({ exec }: { exec: IExecution }) {
 /* ------------------------------------------------------------------ */
 
 function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning: boolean }) {
+  const { t } = useTranslation();
+  const NODE_STATUS_CONFIG = getNodeStatusConfig(t);
   const [expanded, setExpanded] = useState(isRunning);
   const isNodeRunning = nr.status === 'running' || (isRunning && !nr.finishedAt);
   const nodeStatusCfg = isNodeRunning
@@ -565,6 +571,8 @@ function NodeResultRow({ nr, isRunning }: { nr: INodeExecutionResult; isRunning:
 /* ------------------------------------------------------------------ */
 
 export default function ExecutionHistoryPage() {
+  const { t } = useTranslation();
+  const STATUS_CONFIG = getStatusConfig(t);
   const location = useLocation();
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);

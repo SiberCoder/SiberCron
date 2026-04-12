@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, Zap, KeyRound, ChevronDown, ChevronUp, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { apiPost } from '../api/client';
+import { useTranslation } from '../i18n';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -75,13 +77,13 @@ export default function LoginPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">SiberCron</h1>
-            <p className="text-sm text-slate-400 mt-1">Workflow Otomasyon Platformu</p>
+            <p className="text-sm text-slate-400 mt-1">{t('login.subtitle')}</p>
           </div>
         </div>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="bg-obsidian-900/50 border border-white/[0.06] rounded-2xl p-6 space-y-5 shadow-2xl">
-          <h2 className="text-base font-semibold text-white">Giriş Yap</h2>
+          <h2 className="text-base font-semibold text-white">{t('login.title')}</h2>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400 flex items-center gap-2">
@@ -92,7 +94,7 @@ export default function LoginPage() {
 
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-              Kullanıcı Adı
+              {t('credentials.username')}
             </label>
             <input
               type="text"
@@ -107,7 +109,7 @@ export default function LoginPage() {
 
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-              Şifre
+              {t('credentials.password')}
             </label>
             <div className="relative">
               <input
@@ -138,7 +140,7 @@ export default function LoginPage() {
             ) : (
               <LogIn className="w-4 h-4" />
             )}
-            {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+            {isLoading ? `${t('login.loginButton')}...` : t('login.loginButton')}
           </button>
 
           {/* Forgot password toggle */}
@@ -149,7 +151,7 @@ export default function LoginPage() {
               className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors mx-auto"
             >
               <KeyRound className="w-3 h-3" />
-              Şifremi unuttum / Admin sıfırlama
+              {t('login.forgotPassword')}
               {showReset ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
           </div>
@@ -163,7 +165,7 @@ export default function LoginPage() {
           >
             <div className="flex items-center gap-2">
               <KeyRound className="w-4 h-4 text-aurora-amber shrink-0" />
-              <h3 className="text-sm font-semibold text-white">Acil Admin Şifre Sıfırlama</h3>
+              <h3 className="text-sm font-semibold text-white">{t('login.emergencyReset')}</h3>
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">

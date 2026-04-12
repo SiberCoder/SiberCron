@@ -35,6 +35,7 @@ import { toast } from '../store/toastStore';
 import { API_BASE_URL } from '../lib/config';
 import { useAuthStore } from '../store/authStore';
 import { getSocket, releaseSocket } from '../lib/socket';
+import { useTranslation } from '../i18n';
 
 function getNextCronRun(expr: string): string {
   try {
@@ -67,6 +68,7 @@ const TRIGGER_COLORS: Record<TriggerType, string> = {
 };
 
 export default function WorkflowListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
   const isAdmin = !currentUser || currentUser.role === 'admin'; // allow all when auth disabled (user is null)
@@ -175,7 +177,7 @@ export default function WorkflowListPage() {
         setWorkflows(workflowsRes.value.data ?? []);
       } else {
         setWorkflows([]);
-        toast.error('Workflow listesi yüklenemedi');
+        toast.error(t('workflows.loadFailed'));
       }
       if (summaryRes.status === 'fulfilled') {
         setSummary(summaryRes.value ?? {});
@@ -247,9 +249,9 @@ export default function WorkflowListPage() {
       await apiDelete(`/workflows/${id}`);
       setWorkflows((prev) => prev.filter((w) => w.id !== id));
       setDeleteConfirmId(null);
-      toast.success('Workflow silindi');
+      toast.success(t('workflows.deleteSuccess'));
     } catch {
-      toast.error('Silme işlemi başarısız');
+      toast.error(t('workflows.deleteFailed'));
     }
   };
 
@@ -259,9 +261,9 @@ export default function WorkflowListPage() {
     try {
       const copy = await apiPost<IWorkflow>(`/workflows/${wf.id}/duplicate`);
       setWorkflows((prev) => [copy, ...prev]);
-      toast.success(`"${copy.name}" oluşturuldu`);
+      toast.success(`"${copy.name}" ${t('workflows.duplicateSuccess')}`);
     } catch {
-      toast.error('Kopyalama başarısız');
+      toast.error(t('workflows.duplicateFailed'));
     } finally {
       setDuplicatingId(null);
     }
@@ -279,7 +281,7 @@ export default function WorkflowListPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error('Dışa aktarma başarısız');
+      toast.error(t('workflows.exportFailed'));
     }
   };
 
@@ -291,9 +293,9 @@ export default function WorkflowListPage() {
       const json = JSON.parse(text);
       const imported = await apiPost<IWorkflow>('/workflows/import', json);
       setWorkflows((prev) => [imported, ...prev]);
-      toast.success(`"${imported.name}" içe aktarıldı`);
+      toast.success(`"${imported.name}" ${t('workflows.importSuccess')}`);
     } catch {
-      toast.error('İçe aktarma başarısız. Geçerli bir SiberCron workflow dosyası seçin.');
+      toast.error(t('workflows.importFailed'));
     } finally {
       // Reset the input so the same file can be re-imported
       if (importInputRef.current) importInputRef.current.value = '';
@@ -310,7 +312,7 @@ export default function WorkflowListPage() {
           `/workflows/${wf.id}/validate`,
         ).catch(() => null);
         if (validation && !validation.valid && validation.errors.length > 0) {
-          toast.error(`Aktivasyon başarısız: ${validation.errors[0]}`);
+          toast.error(`${t('workflows.statusChangeFailed')}: ${validation.errors[0]}`);
           setTogglingId(null);
           return;
         }
@@ -326,7 +328,7 @@ export default function WorkflowListPage() {
         prev.map((w) => (w.id === wf.id ? { ...w, isActive: updated.isActive } : w)),
       );
     } catch {
-      toast.error('Durum değiştirme başarısız');
+      toast.error(t('workflows.statusChangeFailed'));
     } finally {
       setTogglingId(null);
     }
@@ -465,10 +467,10 @@ export default function WorkflowListPage() {
             </span>
           </div>
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-            Workflows
+            {t('workflows.title')}
           </h1>
           <p className="text-sm text-obsidian-400 mt-1.5 font-body">
-            Otomasyon workflow'larınızı oluşturun ve yönetin
+            {t('workflows.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -484,17 +486,17 @@ export default function WorkflowListPage() {
               <button
                 onClick={() => importInputRef.current?.click()}
                 className="btn-ghost"
-                title="JSON dosyasından içe aktar"
+                title={t('workflows.importTitle')}
               >
                 <Upload size={14} />
-                İçe Aktar
+                {t('workflows.importFrom')}
               </button>
               <button
                 onClick={() => navigate('/workflows/new')}
                 className="btn-aurora"
               >
                 <Plus size={16} />
-                Yeni Workflow
+                {t('workflows.newWorkflow')}
               </button>
             </>
           )}
@@ -512,7 +514,7 @@ export default function WorkflowListPage() {
             <X size={14} />
           </button>
           <span className="text-sm font-semibold text-aurora-cyan font-body">
-            {selectedIds.size} seçili
+            {selectedIds.size} {t('workflows.selected')}
           </span>
           <div className="aurora-divider h-6 w-px bg-white/[0.08]" />
           <button
@@ -521,7 +523,7 @@ export default function WorkflowListPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-emerald hover:bg-aurora-emerald/10 rounded-lg transition-all font-body disabled:opacity-50"
           >
             {bulkToggling ? <Loader2 size={12} className="animate-spin" /> : <Power size={12} />}
-            Tümünü Aktif Et
+            {t('workflows.activateAll')}
           </button>
           <button
             onClick={() => handleBulkToggleActive(false)}
@@ -529,15 +531,15 @@ export default function WorkflowListPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-aurora-amber hover:bg-aurora-amber/10 rounded-lg transition-all font-body disabled:opacity-50"
           >
             {bulkToggling ? <Loader2 size={12} className="animate-spin" /> : <PowerOff size={12} />}
-            Tümünü Durdur
+            {t('workflows.deactivateAll')}
           </button>
           <button
             onClick={handleBulkExport}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-obsidian-300 hover:bg-white/[0.06] rounded-lg transition-all font-body"
-            title="Seçili workflow'ları JSON olarak dışa aktar"
+            title={t('common.export')}
           >
             <Download size={12} />
-            Dışa Aktar
+            {t('common.export')}
           </button>
           {/* Bulk tag popover */}
           <div className="relative">

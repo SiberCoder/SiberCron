@@ -31,6 +31,7 @@ import type { AIProviderConfig } from '@sibercron/shared';
 import AIProviderSelector from '../components/editor/AIProviderSelector';
 import { API_BASE_URL, SOCKET_URL } from '../lib/config';
 import { useAuthStore } from '../store/authStore';
+import { useTranslation } from '../i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -804,6 +805,7 @@ interface HealthStatus {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [config, setConfig] = useState<SetupConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -930,8 +932,8 @@ export default function SettingsPage() {
               <Settings size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-display font-bold text-white">Ayarlar</h1>
-              <p className="text-xs text-obsidian-400 font-body">Sistem yapılandırmasını yönet</p>
+              <h1 className="text-lg font-display font-bold text-white">{t('settings.title')}</h1>
+              <p className="text-xs text-obsidian-400 font-body">{t('settings.subtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -959,7 +961,7 @@ export default function SettingsPage() {
               ) : (
                 <Save size={12} />
               )}
-              {saving ? 'Kaydediliyor...' : saveStatus === 'success' ? 'Kaydedildi' : 'Kaydet'}
+              {saving ? `${t('common.save')}...` : saveStatus === 'success' ? t('common.success') : t('common.save')}
             </button>
           </div>
         </div>

@@ -11,12 +11,13 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { Node, Edge } from '@xyflow/react';
+import { useTranslation } from '../i18n';
 
 interface TemplateDefinition {
   id: string;
-  name: string;
-  description: string;
-  category: string;
+  nameKey: string;
+  descKey: string;
+  categoryKey: string;
   categoryColor: string;
   icon: typeof MessageSquare;
   iconColor: string;
@@ -29,10 +30,9 @@ interface TemplateDefinition {
 const TEMPLATES: TemplateDefinition[] = [
   {
     id: 'ai-customer-support',
-    name: 'AI Müşteri Desteği',
-    description:
-      'OpenAI GPT kullanarak müşteri sorularına otomatik yanıt verir. Webhook tetikleyiciyi AI analizine, duygu tespitine ve aciliyete göre Slack/email yönlendirmesine bağlar.',
-    category: 'AI',
+    nameKey: 'templates.aiCustomerSupport',
+    descKey: 'templates.aiCustomerSupportDesc',
+    categoryKey: 'templates.categoryAI',
     categoryColor: 'text-aurora-violet bg-aurora-violet/10',
     icon: MessageSquare,
     iconColor: 'text-aurora-violet',
@@ -54,10 +54,9 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'daily-news-digest',
-    name: 'Günlük Haber Özeti',
-    description:
-      'Her sabah birden fazla RSS beslemesinden haber çeker, AI ile özetler ve düzenlenmiş bir özeti email ile gönderir. Otomatik pilot modunda güncel kalmak için idealdir.',
-    category: 'Otomasyon',
+    nameKey: 'templates.dailyNewsDigest',
+    descKey: 'templates.dailyNewsDigestDesc',
+    categoryKey: 'templates.categoryAutomation',
     categoryColor: 'text-aurora-cyan bg-aurora-cyan/10',
     icon: Newspaper,
     iconColor: 'text-aurora-cyan',
@@ -77,10 +76,9 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'github-issue-responder',
-    name: 'GitHub Issue Yanıtlayıcı',
-    description:
-      'GitHubTrigger (HMAC doğrulamalı) ile yeni issue\'ları dinler, AI ile kategorize edip yanıt taslağı oluşturur, ilk yorumu atar ve Slack\'te ekibi bildirir.',
-    category: 'DevOps',
+    nameKey: 'templates.githubIssueResponder',
+    descKey: 'templates.githubIssueResponderDesc',
+    categoryKey: 'templates.categoryDevOps',
     categoryColor: 'text-aurora-emerald bg-aurora-emerald/10',
     icon: Github,
     iconColor: 'text-aurora-emerald',
@@ -102,10 +100,9 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'jira-bug-triage',
-    name: 'Jira Hata Triajı',
-    description:
-      'Planlanmış şekilde çalışır, atanmamış Jira hatalarını arar, AI ile ciddiyet tahmin eder, "Devam Ediyor" durumuna geçirir ve Slack\'te özet paylaşır.',
-    category: 'DevOps',
+    nameKey: 'templates.jiraBugTriage',
+    descKey: 'templates.jiraBugTriageDesc',
+    categoryKey: 'templates.categoryDevOps',
     categoryColor: 'text-aurora-emerald bg-aurora-emerald/10',
     icon: Layers,
     iconColor: 'text-aurora-emerald',
@@ -127,10 +124,9 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'rss-to-notion',
-    name: 'RSS → Notion Bilgi Tabanı',
-    description:
-      'RSS beslemelerini planlanmış şekilde izler, AI ile filtreler ve ilgili makaleleri otomatik olarak Notion veritabanına kaydeder. Hiç efor harcamadan canlı bir bilgi tabanı oluşturun.',
-    category: 'Otomasyon',
+    nameKey: 'templates.rssNotionKnowledgeBase',
+    descKey: 'templates.rssNotionKnowledgeBaseDesc',
+    categoryKey: 'templates.categoryAutomation',
     categoryColor: 'text-aurora-cyan bg-aurora-cyan/10',
     icon: Rss,
     iconColor: 'text-aurora-cyan',
@@ -154,10 +150,9 @@ const TEMPLATES: TemplateDefinition[] = [
   },
   {
     id: 'social-media-scheduler',
-    name: 'Sosyal Medya Zamanlayıcı',
-    description:
-      'İçeriği Twitter, LinkedIn ve Instagram\'da cron programıyla planlayıp yayınlar. AI destekli altyazı üretimi ve görsel optimizasyonu içerir.',
-    category: 'Pazarlama',
+    nameKey: 'templates.socialMediaScheduler',
+    descKey: 'templates.socialMediaSchedulerDesc',
+    categoryKey: 'templates.categoryMarketing',
     categoryColor: 'text-aurora-pink bg-aurora-pink/10',
     icon: Calendar,
     iconColor: 'text-aurora-pink',
@@ -186,13 +181,14 @@ const TEMPLATES: TemplateDefinition[] = [
 ];
 
 export default function TemplatesPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleUseTemplate = (tpl: TemplateDefinition) => {
     navigate('/workflows/new', {
       state: {
         template: {
-          name: tpl.name,
+          name: t(tpl.nameKey),
           nodes: tpl.nodes,
           edges: tpl.edges,
         },
@@ -206,14 +202,14 @@ export default function TemplatesPage() {
         <div className="flex items-center gap-3 mb-2">
           <div className="w-2 h-2 rounded-full bg-aurora-violet animate-glow-pulse" />
           <span className="text-[11px] font-semibold text-aurora-violet tracking-widest uppercase font-body">
-            Şablonlar
+            {t('sidebar.templates')}
           </span>
         </div>
         <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-          Şablonlar
+          {t('templates.title')}
         </h1>
         <p className="text-sm text-obsidian-400 mt-1.5 font-body">
-          Hazır workflow şablonlarıyla hızlıca başlayın
+          {t('templates.subtitle')}
         </p>
       </div>
 
@@ -242,14 +238,14 @@ export default function TemplatesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 mb-1.5">
                     <h3 className="text-[15px] font-display font-semibold text-white group-hover:text-aurora-cyan transition-colors">
-                      {tpl.name}
+                      {t(tpl.nameKey)}
                     </h3>
                     <span className={clsx('badge text-[10px]', tpl.categoryColor)}>
-                      {tpl.category}
+                      {t(tpl.categoryKey)}
                     </span>
                   </div>
                   <p className="text-xs text-obsidian-400 leading-relaxed font-body">
-                    {tpl.description}
+                    {t(tpl.descKey)}
                   </p>
                 </div>
               </div>
@@ -263,7 +259,7 @@ export default function TemplatesPage() {
                   onClick={() => handleUseTemplate(tpl)}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-aurora-cyan hover:bg-aurora-cyan/10 transition-all font-body"
                 >
-                  Şablonu Kullan
+                  {t('templates.useTemplate')}
                   <ArrowRight size={12} />
                 </button>
               </div>

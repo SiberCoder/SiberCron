@@ -23,6 +23,7 @@ import {
 import clsx from 'clsx';
 import type { ICredential } from '@sibercron/shared';
 import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
+import { useTranslation } from '../i18n';
 
 // ── Credential type definitions ─────────────────────────────────────────────
 
@@ -581,6 +582,7 @@ function EditCredentialModal({ credential, onClose, onSaved }: EditModalProps) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CredentialsPage() {
+  const { t } = useTranslation();
   const [credentials, setCredentials] = useState<ICredential[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -629,15 +631,15 @@ export default function CredentialsPage() {
             </span>
           </div>
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-            Credentials
+            {t('credentials.title')}
           </h1>
           <p className="text-sm text-obsidian-400 mt-1.5 font-body">
-            API anahtarlarını ve kimlik bilgilerini güvenle saklayın
+            {t('credentials.subtitle')}
           </p>
         </div>
         <button onClick={() => setShowModal(true)} className="btn-aurora">
           <Plus size={16} />
-          Ekle
+          {t('credentials.addCredential')}
         </button>
       </div>
 
@@ -657,14 +659,14 @@ export default function CredentialsPage() {
             <div className="absolute -inset-4 bg-aurora-amber/5 rounded-full blur-2xl pointer-events-none" />
           </div>
           <h3 className="text-xl font-display font-semibold text-white mb-2">
-            Kayıtlı kimlik bilgisi yok
+            {t('credentials.noCredentials')}
           </h3>
           <p className="text-sm text-obsidian-500 mb-8 max-w-sm font-body">
-            Workflow'larınızı dış servislere bağlamak için kimlik bilgisi ekleyin
+            {t('credentials.noCredentialsDesc')}
           </p>
           <button onClick={() => setShowModal(true)} className="btn-aurora">
             <Plus size={16} />
-            Kimlik Bilgisi Ekle
+            {t('credentials.addCredential')}
           </button>
         </div>
       ) : (
