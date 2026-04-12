@@ -34,9 +34,10 @@ interface NodeItemProps {
 function NodeItem({ definition, onUsed, t }: NodeItemProps) {
   const Icon = getNodeIcon(definition.icon);
 
-  // Get translated displayName and description from locale, fall back to definition
-  const displayName = t(`nodes.definitions.${definition.name}.displayName`) || definition.displayName;
-  const description = t(`nodes.definitions.${definition.name}.description`) || definition.description;
+  // Node names contain dots (e.g. 'sibercron.aiAgent') — replace with '_' to form a valid locale key
+  const nodeKey = definition.name.replace(/\./g, '_');
+  const displayName = t(`nodes.definitions.${nodeKey}.displayName`) || definition.displayName;
+  const description = t(`nodes.definitions.${nodeKey}.description`) || definition.description;
 
   const onDragStart = (event: DragEvent) => {
     event.dataTransfer.setData(
@@ -187,8 +188,9 @@ export default function NodePalette() {
           const GroupIcon = getNodeIcon(groupInfo.icon);
 
           // Get translated group label from first node definition's group field, fall back to original
-          const translatedGroupLabel = items.length > 0
-            ? t(`nodes.definitions.${items[0].name}.group`) || groupInfo.label
+          const firstNodeKey = items.length > 0 ? items[0].name.replace(/\./g, '_') : '';
+          const translatedGroupLabel = firstNodeKey
+            ? t(`nodes.definitions.${firstNodeKey}.group`) || groupInfo.label
             : groupInfo.label;
 
           return (

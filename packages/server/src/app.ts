@@ -22,7 +22,7 @@ import { commandRoutes } from './routes/commands.js';
 import { chatRoutes } from './routes/chat.js';
 import { metricsRoutes } from './routes/metrics.js';
 import { authRoutes } from './routes/auth.js';
-import { adminRoutes, addRequestLog } from './routes/admin.js';
+import { adminRoutes, addRequestLog, addAppLog, initAppLogs } from './routes/admin.js';
 import { schedulerService } from './services/schedulerService.js';
 import { queueService } from './services/queueService.js';
 import { executionLogStore } from './services/executionLogStore.js';
@@ -36,6 +36,11 @@ function toLogLevel(level: string): ExecutionLogEntry['level'] {
   const VALID = new Set<string>(['info', 'ai_request', 'ai_response', 'ai_streaming', 'auto_answer', 'system', 'error', 'iteration']);
   return VALID.has(level) ? (level as ExecutionLogEntry['level']) : 'info';
 }
+
+// ── Load persisted app logs from previous session ──────────────────────
+// Must run before any addAppLog() calls so previous crash/restart entries
+// are visible immediately when the server comes back up.
+initAppLogs();
 
 // ── Initialize node registry ────────────────────────────────────────────
 
@@ -843,6 +848,53 @@ function runRetentionCleanup() {
 // Run once on startup and then every hour
 runRetentionCleanup();
 const retentionInterval = setInterval(runRetentionCleanup, RETENTION_INTERVAL_MS);
+
+// ── Server lifecycle logging ────────────────────────────────────────────
+// Log startup, shutdown, and crash events for diagnostics.
+
+// Hook into Fastify listen event to log startup
+app.addHook('onListen', async () => {
+  addAppLog({
+    timestamp: new Date().toISOString(),
+    level: 'startup',
+    message: `Server started on port ${config.port}`,
+    context: 'server',
+  });
+});
+
+// Hook into Fastify close event to log shutdown
+app.addHook('onClose', async () => {
+  addAppLog({
+    timestamp: new Date().toISOString(),
+    level: 'shutdown',
+    message: 'Server shutting down',
+    context: 'server',
+  });
+});
+
+// Catch unhandled exceptions to log crashes
+process.on('uncaughtException', (error) => {
+  addAppLog({
+    timestamp: new Date().toISOString(),
+    level: 'crash',
+    message: 'Uncaught exception',
+    context: 'process',
+    error: error.message || String(error),
+  });
+  console.error('[CRASH] Uncaught exception:', error);
+});
+
+// Catch unhandled promise rejections to log crashes
+process.on('unhandledRejection', (reason) => {
+  addAppLog({
+    timestamp: new Date().toISOString(),
+    level: 'crash',
+    message: 'Unhandled promise rejection',
+    context: 'process',
+    error: reason instanceof Error ? reason.message : String(reason),
+  });
+  console.error('[CRASH] Unhandled rejection:', reason);
+});
 
 // Graceful shutdown: clean up timers and live-log buffers
 const gracefulShutdown = () => {

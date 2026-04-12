@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { AlertCircle, Power, Pause, Play, Trash2, Server, Zap, Database, AlertTriangle } from 'lucide-react';
+import { AlertCircle, Power, Pause, Play, Trash2, Server, Zap, Database, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
 import { WS_EVENTS } from '@sibercron/shared';
 import type { IExecution } from '@sibercron/shared';
@@ -15,6 +15,14 @@ interface RequestLog {
   statusCode: number;
   durationMs: number;
   ip: string;
+}
+
+interface AppLog {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error' | 'startup' | 'shutdown' | 'crash';
+  message: string;
+  context?: string;
+  error?: string;
 }
 
 interface SystemHealth {
@@ -64,16 +72,31 @@ function getMethodColor(method: string): string {
   }
 }
 
+// Get color for app log level
+function getAppLogColor(level: string): string {
+  switch (level) {
+    case 'startup': return 'text-aurora-emerald bg-aurora-emerald/10 border-aurora-emerald/20';
+    case 'shutdown': return 'text-aurora-amber bg-aurora-amber/10 border-aurora-amber/20';
+    case 'crash': return 'text-aurora-rose bg-aurora-rose/10 border-aurora-rose/20';
+    case 'error': return 'text-aurora-rose bg-aurora-rose/10 border-aurora-rose/20';
+    case 'warn': return 'text-aurora-amber bg-aurora-amber/10 border-aurora-amber/20';
+    default: return 'text-obsidian-300 bg-obsidian-800/30 border-obsidian-700/30';
+  }
+}
+
 export default function ServerPage() {
   const { t } = useTranslation();
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [logs, setLogs] = useState<RequestLog[]>([]);
+  const [appLogs, setAppLogs] = useState<AppLog[]>([]);
   const [failedExecutions, setFailedExecutions] = useState<FailedExecution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRestarting, setIsRestarting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showAppLogs, setShowAppLogs] = useState(true);
   const [socketConnected, setSocketConnected] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const appLogsEndRef = useRef<HTMLDivElement>(null);
   const socket = useRef<any>(null);
 
   // Load initial data
@@ -98,12 +121,20 @@ export default function ServerPage() {
           throw error; // Metrics is required
         }
 
-        // Logs (optional)
+        // HTTP Request logs (optional)
         try {
           const logsData = await apiGet<any>('/admin/logs?limit=200');
           setLogs(logsData.logs || []);
         } catch (error) {
           console.warn('Failed to load logs:', error);
+        }
+
+        // Application lifecycle logs (optional)
+        try {
+          const appLogsData = await apiGet<any>('/admin/app-logs?limit=100');
+          setAppLogs(appLogsData.logs || []);
+        } catch (error) {
+          console.warn('Failed to load app logs:', error);
         }
 
         // Executions (optional)
@@ -421,6 +452,57 @@ export default function ServerPage() {
               ))}
               <div ref={logsEndRef} />
             </div>
+          )}
+        </div>
+
+        {/* Application Logs */}
+        <div className="glass-card rounded-2xl overflow-hidden flex flex-col">
+          <div
+            className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.02] transition-colors"
+            onClick={() => setShowAppLogs(!showAppLogs)}
+          >
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-display font-semibold text-white">{t('server.appLogs')}</h2>
+              <span className="text-[10px] text-obsidian-500 font-mono bg-obsidian-800/50 px-2 py-1 rounded">
+                {appLogs.filter(l => l.level === 'crash' || l.level === 'startup' || l.level === 'shutdown').length}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {showAppLogs ? <ChevronUp size={16} className="text-obsidian-400" /> : <ChevronDown size={16} className="text-obsidian-400" />}
+            </div>
+          </div>
+
+          {showAppLogs && (
+            <>
+              {appLogs.length === 0 ? (
+                <div className="flex items-center justify-center py-8 text-obsidian-600 font-body text-sm">
+                  {t('server.noAppLogs')}
+                </div>
+              ) : (
+                <div className="overflow-y-auto max-h-96 font-mono text-[11px]">
+                  {appLogs.map((log, idx) => (
+                    <div
+                      key={idx}
+                      className={clsx(
+                        'px-5 py-3 border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors flex items-start gap-3',
+                        idx === appLogs.length - 1 && 'last:border-0'
+                      )}
+                    >
+                      <span className="text-obsidian-600 flex-shrink-0 w-20">{log.timestamp.split('T')[1].slice(0, 8)}</span>
+                      <span className={clsx(
+                        'px-2 py-0.5 rounded text-[10px] font-semibold border flex-shrink-0',
+                        getAppLogColor(log.level)
+                      )}>
+                        {log.level.toUpperCase()}
+                      </span>
+                      {log.context && <span className="text-obsidian-500 flex-shrink-0">[{log.context}]</span>}
+                      <span className="flex-1 text-obsidian-300">{log.message}</span>
+                      {log.error && <span className="text-aurora-rose flex-shrink-0 max-w-xs truncate" title={log.error}>{log.error}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
