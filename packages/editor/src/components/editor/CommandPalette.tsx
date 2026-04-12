@@ -65,7 +65,7 @@ export default function CommandPalette() {
       // Workflow actions
       {
         id: 'save',
-        label: 'Save Workflow',
+        label: 'Workflow Kaydet',
         category: 'Workflow',
         icon: <Save size={14} />,
         shortcut: 'Ctrl+S',
@@ -78,7 +78,7 @@ export default function CommandPalette() {
       },
       {
         id: 'execute',
-        label: 'Execute Workflow',
+        label: 'Workflow Çalıştır',
         category: 'Workflow',
         icon: <Play size={14} />,
         shortcut: 'Ctrl+E',
@@ -95,7 +95,7 @@ export default function CommandPalette() {
       },
       {
         id: 'export',
-        label: 'Export Workflow (JSON)',
+        label: 'Workflow Dışa Aktar (JSON)',
         category: 'Workflow',
         icon: <Download size={14} />,
         action: () => {
@@ -112,7 +112,7 @@ export default function CommandPalette() {
       },
       {
         id: 'import',
-        label: 'Import Workflow (JSON)',
+        label: 'Workflow İçe Aktar (JSON)',
         category: 'Workflow',
         icon: <Upload size={14} />,
         action: () => {
@@ -135,16 +135,16 @@ export default function CommandPalette() {
       // Edit actions
       {
         id: 'undo',
-        label: 'Undo',
-        category: 'Edit',
+        label: 'Geri Al',
+        category: 'Düzenle',
         icon: <Undo2 size={14} />,
         shortcut: 'Ctrl+Z',
         action: () => { undo(); setOpen(false); },
       },
       {
         id: 'redo',
-        label: 'Redo',
-        category: 'Edit',
+        label: 'İleri Al',
+        category: 'Düzenle',
         icon: <Redo2 size={14} />,
         shortcut: 'Ctrl+Shift+Z',
         action: () => { redo(); setOpen(false); },
@@ -152,29 +152,29 @@ export default function CommandPalette() {
       // Navigation
       {
         id: 'go-dashboard',
-        label: 'Go to Dashboard',
-        category: 'Navigation',
+        label: 'Dashboard\'a Git',
+        category: 'Navigasyon',
         icon: <Zap size={14} />,
         action: () => { navigate('/dashboard'); setOpen(false); },
       },
       {
         id: 'go-workflows',
-        label: 'Go to Workflows',
-        category: 'Navigation',
+        label: 'Workflow Listesine Git',
+        category: 'Navigasyon',
         icon: <Zap size={14} />,
         action: () => { navigate('/workflows'); setOpen(false); },
       },
       {
         id: 'go-executions',
-        label: 'Go to Executions',
-        category: 'Navigation',
+        label: 'Çalıştırma Geçmişine Git',
+        category: 'Navigasyon',
         icon: <Zap size={14} />,
         action: () => { navigate('/executions'); setOpen(false); },
       },
       {
         id: 'go-credentials',
-        label: 'Go to Credentials',
-        category: 'Navigation',
+        label: 'Kimlik Bilgilerine Git',
+        category: 'Navigasyon',
         icon: <Zap size={14} />,
         action: () => { navigate('/credentials'); setOpen(false); },
       },
@@ -184,8 +184,8 @@ export default function CommandPalette() {
     if (selectedNodeId) {
       cmds.push({
         id: 'delete-node',
-        label: 'Delete Selected Node',
-        category: 'Edit',
+        label: 'Seçili Node\'u Sil',
+        category: 'Düzenle',
         icon: <Trash2 size={14} />,
         shortcut: 'Del',
         action: () => { removeNode(selectedNodeId); setOpen(false); },
@@ -196,8 +196,8 @@ export default function CommandPalette() {
     for (const nt of nodeTypes) {
       cmds.push({
         id: `add-node-${nt.name}`,
-        label: `Add ${nt.displayName}`,
-        category: 'Add Node',
+        label: `${nt.displayName} Ekle`,
+        category: 'Node Ekle',
         icon: <Plus size={14} />,
         action: () => {
           addNode(nt.name, nt.displayName, { x: 250 + Math.random() * 200, y: 150 + Math.random() * 200 });
@@ -266,7 +266,7 @@ export default function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a command or search..."
+            placeholder="Komut yazın veya arayın..."
             className="flex-1 bg-transparent text-sm text-white placeholder-obsidian-500 focus:outline-none font-body"
           />
           <kbd className="text-[10px] text-obsidian-600 bg-white/[0.04] px-1.5 py-0.5 rounded font-mono">
@@ -278,7 +278,7 @@ export default function CommandPalette() {
         <div className="max-h-80 overflow-y-auto py-2">
           {filtered.length === 0 ? (
             <p className="text-xs text-obsidian-500 px-4 py-6 text-center font-body">
-              No matching commands
+              Eşleşen komut bulunamadı
             </p>
           ) : (
             Array.from(grouped.entries()).map(([category, cmds]) => (
