@@ -8,6 +8,7 @@ import type {
   INodeInstance,
   IEdge,
 } from '@sibercron/shared';
+import { WS_EVENTS } from '@sibercron/shared';
 
 import { NodeRegistry } from '../nodes/NodeRegistry.js';
 import { NodeExecutor } from './NodeExecutor.js';
@@ -45,7 +46,7 @@ export class WorkflowEngine {
       onEvent?.(event, data);
     };
 
-    emit('execution:started', { executionId, workflowId: workflow.id });
+    emit(WS_EVENTS.EXECUTION_STARTED, { executionId, workflowId: workflow.id });
 
     const execution: IExecution = {
       id: executionId,
@@ -140,7 +141,7 @@ export class WorkflowEngine {
         // Skip nodes already completed in a previous run (resume mode)
         if (resumeFrom?.[nodeId]?.status === 'success' || resumeFrom?.[nodeId]?.status === 'skipped') {
           execution.nodeResults[nodeId] = resumeFrom[nodeId];
-          emit('execution:node:done', {
+          emit(WS_EVENTS.EXECUTION_NODE_DONE, {
             executionId,
             nodeId,
             nodeName: nodeInstance.name,
@@ -160,7 +161,7 @@ export class WorkflowEngine {
             status: 'skipped',
           };
           // Emit so the live UI can immediately show the skipped status
-          emit('execution:node:done', {
+          emit(WS_EVENTS.EXECUTION_NODE_DONE, {
             executionId,
             nodeId,
             nodeName: nodeInstance.name,
@@ -171,7 +172,7 @@ export class WorkflowEngine {
         }
 
         const nodeStartedAt = new Date().toISOString();
-        emit('execution:node:start', { executionId, nodeId, nodeName: nodeInstance.name, startedAt: nodeStartedAt });
+        emit(WS_EVENTS.EXECUTION_NODE_START, { executionId, nodeId, nodeName: nodeInstance.name, startedAt: nodeStartedAt });
 
         // Collect input data from all upstream nodes connected to this node
         const inputData = gatherInputData(
@@ -245,7 +246,7 @@ export class WorkflowEngine {
         storedResult.finishedAt = nodeFinishedAt;
         execution.nodeResults[nodeId] = storedResult;
 
-        emit('execution:node:done', {
+        emit(WS_EVENTS.EXECUTION_NODE_DONE, {
           executionId,
           nodeId,
           nodeName: storedResult.nodeName,
@@ -300,7 +301,7 @@ export class WorkflowEngine {
       if (timeoutHandle !== null) clearTimeout(timeoutHandle);
     }
 
-    emit('execution:completed', {
+    emit(WS_EVENTS.EXECUTION_COMPLETED, {
       executionId,
       status: execution.status,
       durationMs: execution.durationMs ?? 0,
