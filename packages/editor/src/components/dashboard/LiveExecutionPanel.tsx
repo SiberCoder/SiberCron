@@ -73,6 +73,11 @@ export default function LiveExecutionPanel() {
     socket.emit('subscribe:execution', activeExecutionId);
     setIsConnected(socket.connected);
 
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
     const onLog = (data: LiveLogEntry & { executionId?: string }) => {
       setLogs((prev) => {
         const next = [...prev, { timestamp: data.timestamp || new Date().toISOString(), level: data.level, message: data.message, data: data.data }];
@@ -132,6 +137,8 @@ export default function LiveExecutionPanel() {
 
     return () => {
       clearInterval(logPoll);
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
       socket.off('execution:log', onLog);
       socket.off('execution:node:start', onNodeStart);
       socket.off('execution:node:done', onNodeDone);

@@ -170,6 +170,10 @@ export default function WorkflowCanvas() {
   // Ctrl+D: duplicate selected nodes without triggering browser bookmark shortcut
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      if (isInput) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && selectedNodeIds.length > 0) {
         e.preventDefault();
         duplicateNodes(selectedNodeIds);

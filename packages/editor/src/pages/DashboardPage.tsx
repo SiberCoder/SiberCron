@@ -13,6 +13,8 @@ import {
   Activity,
   RefreshCw,
   AlertTriangle,
+  Server,
+  Cpu,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { IWorkflow, IExecution, PaginatedResponse } from '@sibercron/shared';
@@ -298,6 +300,22 @@ interface WorkflowHealthAlert {
   total: number;
 }
 
+interface SystemHealth {
+  uptimeSeconds: number;
+  heapUsedMb: number;
+  heapTotalMb: number;
+  queueConnected: boolean;
+  schedulerActiveJobs: number;
+}
+
+function formatUptime(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -316,17 +334,19 @@ export default function DashboardPage() {
   const [topWorkflows, setTopWorkflows] = useState<WorkflowSummary[]>([]);
   const [topFailingNodes, setTopFailingNodes] = useState<NodeErrorStat[]>([]);
   const [healthAlerts, setHealthAlerts] = useState<WorkflowHealthAlert[]>([]);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
 
   const fetchDashboardData = useCallback(async (silent = false, signal?: AbortSignal) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [workflowsSettled, executionsSettled, trendRes, summaryRes, nodeErrorsRes] = await Promise.all([
+      const [workflowsSettled, executionsSettled, trendRes, summaryRes, nodeErrorsRes, metricsRes] = await Promise.all([
         apiGet<PaginatedResponse<IWorkflow>>('/workflows?limit=100').catch(() => null),
         apiGet<PaginatedResponse<IExecution>>('/executions?limit=100').catch(() => null),
         apiGet<{ days: number; data: TrendBucket[] }>('/executions/trend?days=7').catch(() => null),
         apiGet<Record<string, { lastStatus: string; lastAt: string; total: number; success: number; error: number }>>('/executions/summary').catch(() => null),
         apiGet<{ nodes: NodeErrorStat[] }>('/executions/node-errors?limit=8').catch(() => null),
+        apiGet<{ uptime: number; process: { heapUsedMb: number; heapTotalMb: number }; queue: { connected: boolean }; scheduler: { activeJobs: number } }>('/metrics').catch(() => null),
       ]);
 
       // Don't update state if the component unmounted while we were fetching
@@ -399,6 +419,16 @@ export default function DashboardPage() {
           .sort((a, b) => b.errorRate - a.errorRate)
           .slice(0, 5);
         setHealthAlerts(alerts);
+      }
+
+      if (metricsRes) {
+        setSystemHealth({
+          uptimeSeconds: metricsRes.uptime,
+          heapUsedMb: metricsRes.process.heapUsedMb,
+          heapTotalMb: metricsRes.process.heapTotalMb,
+          queueConnected: metricsRes.queue.connected,
+          schedulerActiveJobs: metricsRes.scheduler.activeJobs,
+        });
       }
     } catch (err) {
       if (signal?.aborted) return;
@@ -543,7 +573,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {STATS_CONFIG.map((stat, i) => {
           const Icon = stat.icon;
           return (
@@ -703,6 +733,38 @@ export default function DashboardPage() {
                 </div>
               ))}
           </div>
+        </div>
+      )}
+
+      {/* System Health Bar */}
+      {systemHealth && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] text-[11px] font-body text-obsidian-500">
+          <span className="flex items-center gap-1.5">
+            <Server size={11} className="text-aurora-cyan" />
+            <span className="text-obsidian-300">Uptime:</span>
+            <span className="text-white font-medium">{formatUptime(systemHealth.uptimeSeconds)}</span>
+          </span>
+          <span className="w-px h-3 bg-white/[0.06]" />
+          <span className="flex items-center gap-1.5">
+            <Cpu size={11} className="text-aurora-violet" />
+            <span className="text-obsidian-300">Heap:</span>
+            <span className="text-white font-medium">{systemHealth.heapUsedMb}MB</span>
+            <span className="text-obsidian-600">/ {systemHealth.heapTotalMb}MB</span>
+          </span>
+          <span className="w-px h-3 bg-white/[0.06]" />
+          <span className="flex items-center gap-1.5">
+            <span className={clsx('w-1.5 h-1.5 rounded-full', systemHealth.queueConnected ? 'bg-aurora-emerald' : 'bg-obsidian-500')} />
+            <span>Queue: {systemHealth.queueConnected ? 'Redis' : 'Direct'}</span>
+          </span>
+          {systemHealth.schedulerActiveJobs > 0 && (
+            <>
+              <span className="w-px h-3 bg-white/[0.06]" />
+              <span className="flex items-center gap-1.5">
+                <Clock size={11} className="text-aurora-amber" />
+                <span>{systemHealth.schedulerActiveJobs} cron job</span>
+              </span>
+            </>
+          )}
         </div>
       )}
 
