@@ -78,7 +78,7 @@ export const useSocialAccountsStore = create<SocialAccountsState>(
     updateAccount: async (id, config) => {
       const updated = await apiPut<SocialAccount>(
         `/social-accounts/${id}`,
-        config,
+        { config },
       );
       set((s) => ({
         accounts: s.accounts.map((a) => (a.id === id ? updated : a)),
