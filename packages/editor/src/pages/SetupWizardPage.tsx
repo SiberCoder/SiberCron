@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useSetupStore } from '../store/setupStore';
+import { useTranslation } from '../i18n';
 import { apiPost, apiGet } from '../api/client';
 import AIProviderSelector from '../components/editor/AIProviderSelector';
 
@@ -57,22 +58,22 @@ function MaskedInput({
   );
 }
 
-const STEP_META = [
-  { label: 'Hoş Geldin', icon: Zap },
-  { label: 'AI Sağlayıcı', icon: Sparkles },
-  { label: 'Mesajlaşma', icon: MessageSquare },
-  { label: 'Zamanlama', icon: Clock },
-  { label: 'Tamamlandı', icon: PartyPopper },
+const getStepMeta = (t: (key: string) => string) => [
+  { label: t('setup.stepWelcome'), icon: Zap },
+  { label: t('setup.stepAIProvider'), icon: Sparkles },
+  { label: t('setup.stepMessaging'), icon: MessageSquare },
+  { label: t('setup.stepScheduling'), icon: Clock },
+  { label: t('setup.stepComplete'), icon: PartyPopper },
 ];
 
 /* ------------------------------------------------------------------ */
 /*  Step indicator                                                     */
 /* ------------------------------------------------------------------ */
 
-function StepIndicator({ current }: { current: number }) {
+function StepIndicator({ current, stepMeta }: { current: number; stepMeta: ReturnType<typeof getStepMeta> }) {
   return (
     <div className="flex items-center justify-center gap-0 mb-3">
-      {STEP_META.map((s, i) => {
+      {stepMeta.map((s, i) => {
         const StepIcon = s.icon;
         return (
           <div key={i} className="flex items-center">
@@ -86,7 +87,7 @@ function StepIndicator({ current }: { current: number }) {
             >
               {i < current ? <CheckCircle2 size={16} /> : <StepIcon size={16} />}
             </div>
-            {i < STEP_META.length - 1 && (
+            {i < stepMeta.length - 1 && (
               <div
                 className={clsx(
                   'w-14 h-[2px] rounded-full transition-all duration-500',
@@ -119,6 +120,7 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
 /* ------------------------------------------------------------------ */
 
 function WelcomeStep({ onNext }: { onNext: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center text-center py-10 animate-fade-in">
       <div className="relative mb-8">
@@ -128,13 +130,13 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         <div className="absolute -inset-6 bg-aurora-cyan/10 rounded-full blur-3xl pointer-events-none" />
       </div>
       <h1 className="text-4xl font-display font-bold text-white mb-4 tracking-tight">
-        SiberCron'a Hoş Geldiniz
+        {t('setup.welcome')}
       </h1>
       <p className="text-obsidian-400 max-w-md mb-10 font-body leading-relaxed">
-        AI destekli workflow otomasyon platformunuzu kuruluma başlayalım
+        {t('setup.welcomeDesc')}
       </p>
       <button onClick={onNext} className="btn-aurora text-base px-8 py-3.5">
-        Başla <ArrowRight size={18} />
+        {t('setup.start')} <ArrowRight size={18} />
       </button>
     </div>
   );
@@ -145,16 +147,17 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 /* ------------------------------------------------------------------ */
 
 function AIProviderStep() {
+  const { t } = useTranslation();
   const { config, updateAIProviders } = useSetupStore();
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-display font-bold text-white tracking-tight">
-          AI Sağlayıcı Yapılandırması
+          {t('setup.aiProviderConfig')}
         </h2>
         <p className="text-sm text-obsidian-400 mt-2 font-body">
-          İsteğe bağlı — daha sonra da yapılandırabilirsiniz
+          {t('setup.aiProviderConfigDesc')}
         </p>
       </div>
 
@@ -184,6 +187,7 @@ interface ChannelDef {
 /* ------------------------------------------------------------------ */
 
 function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name: string) => void }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<string>('idle');
   const [qrImage, setQrImage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -224,7 +228,7 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       setTimeout(() => { stopped = true; clearInterval(poll); }, 300000);
     } catch (e) {
       setStatus('error');
-      setErrorMsg(e instanceof Error ? e.message : 'QR oluşturulamadı');
+      setErrorMsg(e instanceof Error ? e.message : t('setup.whatsappQrError'));
     }
   };
 
@@ -233,11 +237,11 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       {(status === 'idle' || status === 'error') && (
         <>
           <p className="text-xs text-obsidian-400 font-body">
-            WhatsApp'ı QR kod okutarak bağlayın. Telefonunuzdan tarayın, otomatik bağlansın.
+            {t('setup.whatsappQrDesc')}
           </p>
           <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] text-black text-xs font-semibold hover:bg-[#20bd5a] transition-colors" onClick={startPairing}>
             <QrCode size={14} />
-            QR Kod Oluştur
+            {t('setup.whatsappQrButton')}
           </button>
           {errorMsg && <p className="text-xs text-red-400">{errorMsg}</p>}
         </>
@@ -246,7 +250,7 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       {status === 'loading' && (
         <div className="flex items-center gap-2 py-4">
           <Loader2 size={16} className="animate-spin text-[#25D366]" />
-          <span className="text-xs text-slate-400">QR kod oluşturuluyor...</span>
+          <span className="text-xs text-slate-400">{t('setup.whatsappQrLoading')}</span>
         </div>
       )}
 
@@ -256,18 +260,18 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
             <img src={qrImage} alt="WhatsApp QR" width={200} height={200} />
           </div>
           <div className="text-center space-y-1">
-            <p className="text-sm text-white font-semibold">Telefonunuzla Tarayın</p>
+            <p className="text-sm text-white font-semibold">{t('setup.whatsappQrScan')}</p>
             <p className="text-[11px] text-slate-400 flex items-center gap-1 justify-center">
               <Smartphone size={12} />
-              WhatsApp &gt; Ayarlar &gt; Bağlı Cihazlar &gt; Cihaz Bağla
+              {t('setup.whatsappQrInstructions')}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Loader2 size={12} className="animate-spin text-[#25D366]" />
-            <span className="text-xs text-[#25D366]">Tarama bekleniyor...</span>
+            <span className="text-xs text-[#25D366]">{t('setup.whatsappQrWaiting')}</span>
           </div>
           <button type="button" className="text-xs text-slate-500 hover:text-white transition-colors" onClick={() => { setStatus('idle'); setQrImage(''); }}>
-            İptal
+            {t('setup.whatsappQrCancel')}
           </button>
         </div>
       )}
@@ -275,7 +279,7 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       {status === 'connected' && (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 flex items-center gap-2">
           <CheckCircle2 size={16} className="text-emerald-400" />
-          <p className="text-sm text-emerald-400 font-medium">WhatsApp bağlandı!</p>
+          <p className="text-sm text-emerald-400 font-medium">{t('setup.whatsappQrConnected')}</p>
         </div>
       )}
     </div>
@@ -683,6 +687,8 @@ function CompleteStep({ onFinish }: { onFinish: () => void }) {
 /* ------------------------------------------------------------------ */
 
 export default function SetupWizardPage() {
+  const { t } = useTranslation();
+  const stepMeta = getStepMeta(t);
   const navigate = useNavigate();
   const { currentStep, totalSteps, nextStep, prevStep, completeSetup, saveConfig } =
     useSetupStore();
@@ -727,7 +733,7 @@ export default function SetupWizardPage() {
 
         {/* Header */}
         <div className="px-8 pt-8 pb-0">
-          <StepIndicator current={currentStep} />
+          <StepIndicator current={currentStep} stepMeta={stepMeta} />
           <ProgressBar current={currentStep} total={totalSteps} />
         </div>
 

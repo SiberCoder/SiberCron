@@ -319,8 +319,8 @@ function UserManagementSection() {
   // Auto-dismiss messages
   useEffect(() => {
     if (!msg) return;
-    const t = setTimeout(() => setMsg(null), 4000);
-    return () => clearTimeout(t);
+    const timerId = setTimeout(() => setMsg(null), 4000);
+    return () => clearTimeout(timerId);
   }, [msg]);
 
   const handleCreate = async () => {
@@ -526,17 +526,17 @@ function UserManagementSection() {
 /*  Security Section (JWT token TTL)                                   */
 /* ------------------------------------------------------------------ */
 
-const TTL_PRESETS = [
-  { label: '1 Saat', value: '1h' },
-  { label: '4 Saat', value: '4h' },
-  { label: '8 Saat', value: '8h' },
-  { label: '24 Saat', value: '24h' },
-  { label: '7 Gün', value: '7d' },
-  { label: '30 Gün', value: '30d' },
-];
-
 function SecuritySection() {
   const { t } = useTranslation();
+
+  const TTL_PRESETS = [
+    { label: t('settings.ttlPresets.1h'), value: '1h' },
+    { label: t('settings.ttlPresets.4h'), value: '4h' },
+    { label: t('settings.ttlPresets.8h'), value: '8h' },
+    { label: t('settings.ttlPresets.24h'), value: '24h' },
+    { label: t('settings.ttlPresets.7d'), value: '7d' },
+    { label: t('settings.ttlPresets.30d'), value: '30d' },
+  ];
   const user = useAuthStore((s) => s.user);
   const [ttl, setTtl] = useState('8h');
   const [loading, setLoading] = useState(true);
@@ -681,7 +681,7 @@ function AccountSection() {
   }
 
   return (
-    <Section icon={Lock} title="Hesap" description="Kullanıcı hesabı ve güvenlik ayarları">
+    <Section icon={Lock} title={t('settings.accountSection')} description={t('settings.accountDesc')}>
       <div className="space-y-3">
         <div className="glass-panel rounded-xl p-4 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-electric-600/20 flex items-center justify-center">
@@ -693,7 +693,7 @@ function AccountSection() {
           </div>
         </div>
         <form onSubmit={handleChangePassword} className="glass-panel rounded-xl p-4 space-y-3">
-          <p className="text-xs font-semibold text-slate-300">Şifre Değiştir</p>
+          <p className="text-xs font-semibold text-slate-300">{t('settings.changePassword')}</p>
           {msg && (
             <div className={clsx(
               'text-xs px-3 py-2 rounded-lg',
@@ -702,7 +702,7 @@ function AccountSection() {
           )}
           <input
             type="password"
-            placeholder="Mevcut şifre"
+            placeholder={t('settings.currentPassword')}
             value={currentPw}
             onChange={(e) => setCurrentPw(e.target.value)}
             required
@@ -710,7 +710,7 @@ function AccountSection() {
           />
           <input
             type="password"
-            placeholder="Yeni şifre (min 6 karakter)"
+            placeholder={t('settings.newPassword')}
             value={newPw}
             onChange={(e) => setNewPw(e.target.value)}
             required
@@ -718,7 +718,7 @@ function AccountSection() {
           />
           <input
             type="password"
-            placeholder="Yeni şifre (tekrar)"
+            placeholder={t('settings.confirmNewPassword')}
             value={confirmPw}
             onChange={(e) => setConfirmPw(e.target.value)}
             required
@@ -730,7 +730,7 @@ function AccountSection() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-electric-600/20 text-electric-400 text-xs font-semibold hover:bg-electric-600/30 disabled:opacity-50 transition-colors"
           >
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-            Şifreyi Güncelle
+            {t('settings.updatePassword')}
           </button>
         </form>
       </div>
@@ -918,9 +918,9 @@ export default function SettingsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
         <AlertTriangle size={32} className="text-aurora-amber" />
-        <p className="text-sm text-obsidian-400">Yapılandırma yüklenemedi.</p>
+        <p className="text-sm text-obsidian-400">{t('settings.configLoadFailed')}</p>
         <button onClick={loadConfig} className="btn-ghost text-xs">
-          <RefreshCw size={12} /> Tekrar Dene
+          <RefreshCw size={12} /> {t('settings.retry')}
         </button>
       </div>
     );
@@ -944,7 +944,7 @@ export default function SettingsPage() {
             <button
               onClick={loadConfig}
               className="btn-ghost text-xs"
-              title="Yeniden yukle"
+              title={t('settings.reload')}
             >
               <RotateCcw size={12} />
             </button>
@@ -973,8 +973,8 @@ export default function SettingsPage() {
         {/* AI Provider Section */}
         <Section
           icon={Brain}
-          title="AI Sağlayıcı"
-          description="Varsayılan AI sağlayıcı ve model ayarları"
+          title={t('settings.aiProvider')}
+          description={t('settings.aiProviderDesc')}
         >
           <AIProviderSelector
             selectedProviders={config.ai.providers || []}
@@ -985,8 +985,8 @@ export default function SettingsPage() {
         {/* Messaging Section */}
         <Section
           icon={MessageSquare}
-          title="Mesajlaşma Kanalları"
-          description="WhatsApp, Telegram, Discord ve Slack ayarları"
+          title={t('settings.messagingChannels')}
+          description={t('settings.messagingChannelsDesc')}
           defaultOpen={false}
         >
           <div className="space-y-4">
@@ -1001,7 +1001,7 @@ export default function SettingsPage() {
                     onChange={(e) => updateMessaging('telegram', { enabled: e.target.checked })}
                     className="accent-aurora-cyan w-3.5 h-3.5 rounded"
                   />
-                  Aktif
+                  {t('settings.active')}
                 </label>
               </div>
               <Field label="Bot Token">
@@ -1024,7 +1024,7 @@ export default function SettingsPage() {
                     onChange={(e) => updateMessaging('discord', { enabled: e.target.checked })}
                     className="accent-aurora-cyan w-3.5 h-3.5 rounded"
                   />
-                  Aktif
+                  {t('settings.active')}
                 </label>
               </div>
               <Field label="Bot Token">
@@ -1056,7 +1056,7 @@ export default function SettingsPage() {
                     onChange={(e) => updateMessaging('slack', { enabled: e.target.checked })}
                     className="accent-aurora-cyan w-3.5 h-3.5 rounded"
                   />
-                  Aktif
+                  {t('settings.active')}
                 </label>
               </div>
               <Field label="Bot Token">
@@ -1088,10 +1088,10 @@ export default function SettingsPage() {
                     onChange={(e) => updateMessaging('whatsapp', { enabled: e.target.checked })}
                     className="accent-aurora-cyan w-3.5 h-3.5 rounded"
                   />
-                  Aktif
+                  {t('settings.active')}
                 </label>
               </div>
-              <Field label="Telefon Numarası">
+              <Field label={t('settings.phoneNumber')}>
                 <input
                   type="text"
                   value={config.messaging.whatsapp?.phoneNumber || ''}
@@ -1107,12 +1107,12 @@ export default function SettingsPage() {
         {/* Scheduling Section */}
         <Section
           icon={Clock}
-          title="Zamanlama"
-          description="Varsayılan zamanlama ve çalıştırma ayarları"
+          title={t('settings.schedulingSection')}
+          description={t('settings.schedulingDesc')}
           defaultOpen={false}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Saat Dilimi">
+            <Field label={t('settings.timezone')}>
               <select
                 value={config.scheduling.timezone}
                 onChange={(e) => updateScheduling({ timezone: e.target.value })}
@@ -1124,7 +1124,7 @@ export default function SettingsPage() {
               </select>
             </Field>
 
-            <Field label="Varsayılan Cron">
+            <Field label={t('settings.defaultCron')}>
               <input
                 type="text"
                 value={config.scheduling.defaultCron}
@@ -1134,7 +1134,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Zaman Asimi (sn)">
+            <Field label={t('settings.timeout')}>
               <input
                 type="number"
                 min={10}
@@ -1145,7 +1145,7 @@ export default function SettingsPage() {
               />
             </Field>
 
-            <Field label="Maks Eslik">
+            <Field label={t('settings.maxConcurrent')}>
               <input
                 type="number"
                 min={1}
@@ -1173,8 +1173,8 @@ export default function SettingsPage() {
         {/* System Info Section */}
         <Section
           icon={Server}
-          title="Sistem Bilgisi"
-          description="API sunucusu durumu ve bağlantı bilgileri"
+          title={t('settings.systemInfo')}
+          description={t('settings.systemInfoDesc')}
           defaultOpen={false}
         >
           <div className="space-y-3">
@@ -1182,7 +1182,7 @@ export default function SettingsPage() {
             <div className="glass-panel rounded-xl p-4 space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <Activity size={14} className="text-aurora-cyan" />
-                <span className="text-xs font-semibold text-white">Bağlantı</span>
+                <span className="text-xs font-semibold text-white">{t('settings.connection')}</span>
               </div>
               <div className="grid grid-cols-1 gap-1.5 text-xs font-mono">
                 <div className="flex justify-between items-center">
@@ -1205,7 +1205,7 @@ export default function SettingsPage() {
                     health.status === 'ok' ? 'bg-aurora-emerald' : 'bg-red-400',
                   )} />
                   <span className="text-xs font-semibold text-white">
-                    Sunucu {health.status === 'ok' ? 'Aktif' : 'Hata'}
+                    {health.status === 'ok' ? t('settings.serverActive') : t('settings.serverError')}
                   </span>
                   {health.version && (
                     <span className="text-[10px] text-obsidian-600 ml-auto">v{health.version}</span>
@@ -1222,13 +1222,13 @@ export default function SettingsPage() {
                   )}
                   {health.scheduler && (
                     <div className="flex justify-between">
-                      <span className="text-obsidian-500">Zamanlanmış</span>
-                      <span className="text-obsidian-300">{health.scheduler.activeJobs} is</span>
+                      <span className="text-obsidian-500">{t('settings.scheduled')}</span>
+                      <span className="text-obsidian-300">{health.scheduler.activeJobs} {t('settings.jobsUnit')}</span>
                     </div>
                   )}
                   {health.nodeCount !== undefined && (
                     <div className="flex justify-between">
-                      <span className="text-obsidian-500">Node Tipi</span>
+                      <span className="text-obsidian-500">{t('settings.nodeTypes')}</span>
                       <span className="text-obsidian-300">{health.nodeCount}</span>
                     </div>
                   )}
@@ -1252,10 +1252,9 @@ export default function SettingsPage() {
             <div className="glass-panel rounded-xl p-4 flex items-center gap-3">
               <Activity size={14} className="text-aurora-violet shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white">Platform Metrikleri</p>
+                <p className="text-xs font-semibold text-white">{t('settings.platformMetrics')}</p>
                 <p className="text-[10px] text-obsidian-500 mt-0.5">
-                  Execution istatistikleri, bellek kullanımı ve kuyruk durumu.
-                  Monitoring araçları (Grafana, Uptime Kuma) bu endpoint'i kullanabilir.
+                  {t('settings.platformMetricsDesc')}
                 </p>
               </div>
               <a
@@ -1272,11 +1271,11 @@ export default function SettingsPage() {
             <div className="glass-panel rounded-xl p-4 flex items-center gap-3">
               <Shield size={14} className="text-aurora-amber shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white">API Anahtar Koruması</p>
+                <p className="text-xs font-semibold text-white">{t('settings.apiKeyProtection')}</p>
                 <p className="text-[10px] text-obsidian-500 mt-0.5">
-                  API_KEY ortam değişkenini ayarlayarak tüm endpoint'leri koruyabilirsiniz.
-                  Aktifken <code className="font-mono bg-white/[0.04] px-1 rounded">Authorization: Bearer &lt;key&gt;</code> veya{' '}
-                  <code className="font-mono bg-white/[0.04] px-1 rounded">X-API-Key</code> header gerekir.
+                  {t('settings.apiKeyProtectionDesc')}{' '}
+                  <code className="font-mono bg-white/[0.04] px-1 rounded">Authorization: Bearer &lt;key&gt;</code>{' '}
+                  <code className="font-mono bg-white/[0.04] px-1 rounded">X-API-Key</code>
                 </p>
               </div>
             </div>
@@ -1285,14 +1284,14 @@ export default function SettingsPage() {
             <div className="glass-panel rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Gauge size={14} className="text-aurora-indigo" />
-                <span className="text-xs font-semibold text-white">Rate Limiting (IP Başına / Dakika)</span>
+                <span className="text-xs font-semibold text-white">{t('settings.rateLimiting')} ({t('settings.rateLimitingUnit')})</span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                 {[
                   { path: '/api/v1/auth/', limit: 10, label: 'Auth (login/logout)' },
                   { path: '/api/v1/chat', limit: 20, label: 'AI Chat' },
                   { path: '/api/v1/workflows', limit: 60, label: 'Workflows' },
-                  { path: '/api/v1/', limit: 200, label: 'Genel API' },
+                  { path: '/api/v1/', limit: 200, label: t('settings.generalApi') },
                 ].map((b) => (
                   <div key={b.path} className="flex items-center justify-between gap-2">
                     <span className="text-obsidian-400 truncate">{b.label}</span>
@@ -1301,8 +1300,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <p className="text-[10px] text-obsidian-600">
-                Aşıldığında <code className="font-mono bg-white/[0.04] px-1 rounded">429 Too Many Requests</code> döner.
-                Header'larda kalan istek sayısı ve sıfırlanma süresi bildirilir.
+                {t('settings.rateLimitingDesc')}
               </p>
             </div>
           </div>
@@ -1311,18 +1309,18 @@ export default function SettingsPage() {
         {/* Danger Zone */}
         <Section
           icon={AlertTriangle}
-          title="Tehlikeli Bölge"
-          description="Dikkatli kullanın — geri alınamaz işlemler"
+          title={t('settings.dangerZone')}
+          description={t('settings.dangerZoneDesc')}
           defaultOpen={false}
         >
           <div className="flex items-center justify-between glass-panel rounded-xl p-4">
             <div>
-              <p className="text-sm font-semibold text-white">Kurulumu Sıfırla</p>
-              <p className="text-[11px] text-obsidian-400">Tüm ayarları sıfırlar ve kurulum sihirbazını yeniden başlatır.</p>
+              <p className="text-sm font-semibold text-white">{t('settings.resetSetup')}</p>
+              <p className="text-[11px] text-obsidian-400">{t('settings.resetSetupDesc')}</p>
             </div>
             <button
               onClick={() => {
-                if (window.confirm('Tüm ayarlar sıfırlanacak. Emin misiniz?')) {
+                if (window.confirm(t('settings.resetSetupConfirm'))) {
                   localStorage.removeItem('sibercron_setup_complete');
                   window.location.href = '/setup';
                 }
@@ -1330,7 +1328,7 @@ export default function SettingsPage() {
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors"
             >
               <Trash2 size={12} />
-              Sıfırla
+              {t('settings.reset')}
             </button>
           </div>
         </Section>

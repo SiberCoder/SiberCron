@@ -676,7 +676,7 @@ export default function ExecutionHistoryPage() {
       setExecutions(res.data ?? []);
     } catch {
       setExecutions([]);
-      toast.error('Çalıştırma geçmişi yüklenemedi');
+      toast.error(t('executions.loadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -814,7 +814,7 @@ export default function ExecutionHistoryPage() {
       setDeleteConfirmId(null);
       if (expandedId === id) setExpandedId(null);
     } catch {
-      toast.error('Silme işlemi başarısız');
+      toast.error(t('executions.deleteFailed'));
     }
   };
 
@@ -827,7 +827,7 @@ export default function ExecutionHistoryPage() {
       setExecutions((prev) => prev.filter((e) => !selectedIds.has(e.id)));
       setSelectedIds(new Set());
       if (expandedId && selectedIds.has(expandedId)) setExpandedId(null);
-      toast.success(`${result.deleted} kayıt silindi`);
+      toast.success(`${result.deleted} ${t('executions.deleteSuccess')}`);
     } catch {
       toast.error('Toplu silme başarısız');
     } finally {

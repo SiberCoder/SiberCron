@@ -116,6 +116,7 @@ interface ClaudeCallResult {
 async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult> {
   const { prompt, model, cwd, timeoutMs, setupToken, signal, sessionId, onChunk, onSessionId } = options;
   const { spawn, execSync } = await import('child_process');
+  const { existsSync } = await import('node:fs');
 
   const env = { ...process.env };
   if (setupToken) {
@@ -131,14 +132,50 @@ async function callClaude(options: ClaudeCallOptions): Promise<ClaudeCallResult>
   }
   if (model) args.push('--model', model);
 
+  // Detect WSL UNC paths (\\wsl.localhost\...) and Linux absolute paths on Windows
+  const isWindows = process.platform === 'win32';
+  const isWslPath = isWindows && (
+    cwd.startsWith('\\\\wsl.localhost') ||
+    cwd.startsWith('//wsl.localhost') ||
+    cwd.startsWith('\\\\wsl$')
+  );
+
+  // Validate cwd — if it doesn't exist, fall back to process.cwd() to avoid ENOENT
+  let effectiveCwd = cwd;
+  if (!existsSync(cwd)) {
+    effectiveCwd = process.cwd();
+  }
+
+  // For WSL paths: run claude inside WSL so Linux tools work correctly
+  // Convert UNC path \\wsl.localhost\Ubuntu\home\... -> /home/...
+  let spawnCommand = 'claude';
+  let spawnArgs = args;
+  let spawnShell: boolean = isWindows;
+
+  if (isWslPath) {
+    const wslLinuxPath = cwd
+      .replace(/^\\\\wsl\.localhost\\[^\\]+/i, '')
+      .replace(/^\/\/wsl\.localhost\/[^/]+/i, '')
+      .replace(/\\/g, '/') || '/';
+    // Pass CLAUDE_CODE_OAUTH_TOKEN into WSL via WSLENV
+    if (setupToken) {
+      env.WSLENV = (env.WSLENV ? env.WSLENV + ':' : '') + 'CLAUDE_CODE_OAUTH_TOKEN/u';
+    }
+    const claudeCmd = `cd '${wslLinuxPath.replace(/'/g, "'\\''")}' && claude ${args.join(' ')}`;
+    spawnCommand = 'wsl.exe';
+    spawnArgs = ['-e', 'bash', '-lc', claudeCmd];
+    spawnShell = false;
+    effectiveCwd = process.cwd(); // wsl.exe spawns from a Windows cwd
+  }
+
   return new Promise((resolve, reject) => {
     let timedOut = false;
     let aborted = false;
 
-    const proc = spawn('claude', args, {
-      cwd,
+    const proc = spawn(spawnCommand, spawnArgs, {
+      cwd: effectiveCwd,
       env,
-      shell: true,
+      shell: spawnShell,
     });
 
     let rawStdout = '';
@@ -405,7 +442,7 @@ export const AutonomousDevNode: INodeType = {
     const emitLog = (level: string, message: string, data?: Record<string, unknown>) => {
       context.helpers.log(`[AutonomousDev] ${message}`);
       try {
-        process.emit('autonomousDev:log', { executionId, level, message, data });
+        (process.emit as any)('autonomousDev:log', { executionId, level, message, data });
       } catch { /* */ }
     };
 
@@ -505,7 +542,7 @@ export const AutonomousDevNode: INodeType = {
               emitLog('system', `Session dosyaya kaydedildi: ${sessionFile}`);
             }).catch(() => { /* best-effort */ });
             try {
-              process.emit('autonomousDev:sessionUpdate', {
+              (process.emit as any)('autonomousDev:sessionUpdate', {
                 executionId, sessionId: sid, iteration: iterationCount,
               });
             } catch { /* */ }

@@ -22,6 +22,7 @@ import {
   type SocialAccount,
 } from '../store/socialAccountsStore';
 import { toast } from '../store/toastStore';
+import { useTranslation } from '../i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -108,14 +109,14 @@ interface PlatformDef {
   icon: React.ReactNode;
 }
 
-const PLATFORMS: PlatformDef[] = [
+const getPlatformDefinitions = (t: (key: string) => string): PlatformDef[] => [
   {
     key: 'whatsapp',
     name: 'WhatsApp',
     accent: 'text-[#25D366]',
     accentBg: 'bg-[#25D366]',
     icon: <MessageSquare size={20} />,
-    description: 'WhatsApp Business API',
+    description: t('accounts.platform.whatsapp'),
   },
   {
     key: 'telegram',
@@ -123,7 +124,7 @@ const PLATFORMS: PlatformDef[] = [
     accent: 'text-[#0088CC]',
     accentBg: 'bg-[#0088CC]',
     icon: <Send size={20} />,
-    description: 'Telegram Bot API',
+    description: t('accounts.platform.telegram'),
   },
   {
     key: 'discord',
@@ -131,7 +132,7 @@ const PLATFORMS: PlatformDef[] = [
     accent: 'text-[#5865F2]',
     accentBg: 'bg-[#5865F2]',
     icon: <Hash size={20} />,
-    description: 'Discord Bot',
+    description: t('accounts.platform.discord'),
   },
   {
     key: 'slack',
@@ -139,43 +140,46 @@ const PLATFORMS: PlatformDef[] = [
     accent: 'text-[#E01E5A]',
     accentBg: 'bg-[#E01E5A]',
     icon: <MessageSquare size={20} />,
-    description: 'Slack Workspace',
+    description: t('accounts.platform.slack'),
   },
 ];
 
-function getPlatform(key: string) {
-  return PLATFORMS.find((p) => p.key === key)!;
+function getPlatform(key: string, platforms: PlatformDef[]) {
+  return platforms.find((p) => p.key === key)!;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Status badge                                                       */
 /* ------------------------------------------------------------------ */
 
-function StatusBadge({ status }: { status: SocialAccount['status'] }) {
-  const map = {
-    connected: {
-      label: 'Bağlı',
-      dot: 'bg-aurora-emerald',
-      text: 'text-aurora-emerald',
-      bg: 'bg-aurora-emerald/10',
-      icon: <Wifi size={12} />,
-    },
-    disconnected: {
-      label: 'Bağlantı Kesildi',
-      dot: 'bg-aurora-rose',
-      text: 'text-aurora-rose',
-      bg: 'bg-aurora-rose/10',
-      icon: <XCircle size={12} />,
-    },
-    configuring: {
-      label: 'Yapılandırılıyor',
-      dot: 'bg-aurora-amber',
-      text: 'text-aurora-amber',
-      bg: 'bg-aurora-amber/10',
-      icon: <Clock size={12} />,
-    },
+function StatusBadge({ status, t }: { status: SocialAccount['status']; t: (key: string) => string }) {
+  const getStatusConfig = (status: SocialAccount['status']) => {
+    const map = {
+      connected: {
+        label: t('accounts.connected'),
+        dot: 'bg-aurora-emerald',
+        text: 'text-aurora-emerald',
+        bg: 'bg-aurora-emerald/10',
+        icon: <Wifi size={12} />,
+      },
+      disconnected: {
+        label: t('accounts.disconnected'),
+        dot: 'bg-aurora-rose',
+        text: 'text-aurora-rose',
+        bg: 'bg-aurora-rose/10',
+        icon: <XCircle size={12} />,
+      },
+      configuring: {
+        label: t('accounts.configuring'),
+        dot: 'bg-aurora-amber',
+        text: 'text-aurora-amber',
+        bg: 'bg-aurora-amber/10',
+        icon: <Clock size={12} />,
+      },
+    };
+    return map[status];
   };
-  const s = map[status];
+  const s = getStatusConfig(status);
   return (
     <span className={clsx('badge text-[10px]', s.bg, s.text)}>
       {s.icon} {s.label}
@@ -192,13 +196,17 @@ function AccountCard({
   onSettings,
   onTest,
   onDisconnect,
+  platforms,
+  t,
 }: {
   account: SocialAccount;
   onSettings: () => void;
   onTest: () => void;
   onDisconnect: () => void;
+  platforms: PlatformDef[];
+  t: (key: string) => string;
 }) {
-  const p = getPlatform(account.platform);
+  const p = getPlatform(account.platform, platforms);
   return (
     <div className="glass-card rounded-2xl overflow-hidden group hover:shadow-aurora-sm transition-all duration-300">
       {/* Color strip */}
@@ -221,7 +229,7 @@ function AccountCard({
               <p className="text-xs text-obsidian-500 font-body">{account.identifier}</p>
             </div>
           </div>
-          <StatusBadge status={account.status} />
+          <StatusBadge status={account.status} t={t} />
         </div>
 
         {/* Stats */}
@@ -230,26 +238,26 @@ function AccountCard({
             <p className="text-lg font-display font-bold text-white">
               {account.stats.messagesSent}
             </p>
-            <p className="text-[10px] text-obsidian-500 font-body">Gönderilen</p>
+            <p className="text-[10px] text-obsidian-500 font-body">{t('accounts.sent')}</p>
           </div>
           <div className="glass-card rounded-xl p-3 text-center">
             <p className="text-lg font-display font-bold text-white">
               {account.stats.messagesReceived}
             </p>
-            <p className="text-[10px] text-obsidian-500 font-body">Alınan</p>
+            <p className="text-[10px] text-obsidian-500 font-body">{t('accounts.received')}</p>
           </div>
           <div className="glass-card rounded-xl p-3 text-center">
             <p className="text-lg font-display font-bold text-white">
               {account.stats.workflowsTriggered}
             </p>
-            <p className="text-[10px] text-obsidian-500 font-body">Tetiklenen</p>
+            <p className="text-[10px] text-obsidian-500 font-body">{t('accounts.triggered')}</p>
           </div>
         </div>
 
         {/* Last activity */}
         {account.lastActivity && (
           <p className="text-xs text-obsidian-500 font-body">
-            Son aktivite:{' '}
+            {t('accounts.lastActivity')}{' '}
             {new Date(account.lastActivity).toLocaleString('tr-TR')}
           </p>
         )}
@@ -260,13 +268,13 @@ function AccountCard({
             onClick={onTest}
             className="flex-1 btn-ghost text-xs justify-center"
           >
-            <Activity size={14} /> Test
+            <Activity size={14} /> {t('common.test')}
           </button>
           <button
             onClick={onSettings}
             className="flex-1 btn-ghost text-xs justify-center"
           >
-            <Settings size={14} /> Ayarlar
+            <Settings size={14} /> {t('common.settings')}
           </button>
           <button
             onClick={onDisconnect}
@@ -288,13 +296,17 @@ function SettingsModal({
   account,
   onClose,
   onSave,
+  platforms,
+  t,
 }: {
   account: SocialAccount;
   onClose: () => void;
   onSave: (cfg: Record<string, unknown>) => void;
+  platforms: PlatformDef[];
+  t: (key: string) => string;
 }) {
   const [cfg, setCfg] = useState<Record<string, any>>({ ...account.config });
-  const p = getPlatform(account.platform);
+  const p = getPlatform(account.platform, platforms);
 
   const update = (key: string, val: any) =>
     setCfg((c) => ({ ...c, [key]: val }));
@@ -310,7 +322,7 @@ function SettingsModal({
           <div className="flex items-center gap-2.5">
             <span className={p.accent}>{p.icon}</span>
             <h2 className="text-[15px] font-display font-bold text-white">
-              {p.name} Ayarları
+              {p.name} {t('accounts.settingsTitle')}
             </h2>
           </div>
           <button
@@ -327,7 +339,7 @@ function SettingsModal({
             <>
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                  Telefon Numarası
+                  {t('accounts.phoneNumber')}
                 </label>
                 <input readOnly value={account.identifier} className="glass-input opacity-60 cursor-not-allowed" />
               </div>
@@ -335,17 +347,17 @@ function SettingsModal({
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">API Key</label>
                 <MaskedInput value={cfg.apiKey || ''} onChange={(v) => update('apiKey', v)} />
               </div>
-              <CopyableField label="Webhook URL" value={webhookUrl} />
+              <CopyableField label={t('accounts.webhookUrl')} value={webhookUrl} />
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Komut Öneki</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.commandPrefix')}</label>
                 <input value={cfg.commandPrefix || '/'} onChange={(e) => update('commandPrefix', e.target.value)} className="glass-input" />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={cfg.autoReply ?? false} onChange={(e) => update('autoReply', e.target.checked)} className="accent-aurora-cyan w-4 h-4 rounded" />
-                <span className="text-sm text-obsidian-300 font-body">Otomatik Yanıtla</span>
+                <span className="text-sm text-obsidian-300 font-body">{t('accounts.autoReply')}</span>
               </label>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Karşılama Mesajı</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.welcomeMessage')}</label>
                 <textarea value={cfg.welcomeMessage || ''} onChange={(e) => update('welcomeMessage', e.target.value)} rows={3} className="glass-input resize-none" />
               </div>
             </>
@@ -355,24 +367,24 @@ function SettingsModal({
           {account.platform === 'telegram' && (
             <>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Bot Adı</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.botName')}</label>
                 <input readOnly value={account.identifier} className="glass-input opacity-60 cursor-not-allowed" />
               </div>
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">Bot Token</label>
                 <MaskedInput value={cfg.botToken || ''} onChange={(v) => update('botToken', v)} />
               </div>
-              <CopyableField label="Webhook URL" value={webhookUrl} />
+              <CopyableField label={t('accounts.webhookUrl')} value={webhookUrl} />
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Komut Öneki</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.commandPrefix')}</label>
                 <input value={cfg.commandPrefix || '/'} onChange={(e) => update('commandPrefix', e.target.value)} className="glass-input" />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">İzin Verilen Chat ID'leri</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.allowedChatIds')}</label>
                 <textarea value={cfg.allowedChatIds || ''} onChange={(e) => update('allowedChatIds', e.target.value)} rows={3} placeholder="123456789&#10;987654321" className="glass-input resize-none font-mono" />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Parse Modu</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.parseMode')}</label>
                 <select value={cfg.parseMode || 'HTML'} onChange={(e) => update('parseMode', e.target.value)} className="glass-input">
                   <option value="HTML">HTML</option>
                   <option value="Markdown">Markdown</option>
@@ -385,7 +397,7 @@ function SettingsModal({
           {account.platform === 'discord' && (
             <>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Sunucu Adı</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.serverName')}</label>
                 <input readOnly value={account.identifier} className="glass-input opacity-60 cursor-not-allowed" />
               </div>
               <div className="space-y-1.5">
@@ -393,16 +405,16 @@ function SettingsModal({
                 <MaskedInput value={cfg.botToken || ''} onChange={(v) => update('botToken', v)} />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Webhook URL</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.webhookUrl')}</label>
                 <input value={cfg.webhookUrl || ''} onChange={(e) => update('webhookUrl', e.target.value)} className="glass-input" />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">İzin Verilen Kanal ID'leri</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.allowedChannelIds')}</label>
                 <textarea value={cfg.allowedChannelIds || ''} onChange={(e) => update('allowedChannelIds', e.target.value)} rows={3} className="glass-input resize-none font-mono" />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={cfg.embedMessages ?? true} onChange={(e) => update('embedMessages', e.target.checked)} className="accent-aurora-cyan w-4 h-4 rounded" />
-                <span className="text-sm text-obsidian-300 font-body">Embed Mesajları</span>
+                <span className="text-sm text-obsidian-300 font-body">{t('accounts.embedMessages')}</span>
               </label>
             </>
           )}
@@ -411,7 +423,7 @@ function SettingsModal({
           {account.platform === 'slack' && (
             <>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Workspace Adı</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.workspaceName')}</label>
                 <input readOnly value={account.identifier} className="glass-input opacity-60 cursor-not-allowed" />
               </div>
               <div className="space-y-1.5">
@@ -423,12 +435,12 @@ function SettingsModal({
                 <MaskedInput value={cfg.signingSecret || ''} onChange={(v) => update('signingSecret', v)} />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Varsayılan Kanal</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.defaultChannel')}</label>
                 <input value={cfg.defaultChannel || ''} onChange={(e) => update('defaultChannel', e.target.value)} placeholder="#general" className="glass-input" />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={cfg.threadReplies ?? false} onChange={(e) => update('threadReplies', e.target.checked)} className="accent-aurora-cyan w-4 h-4 rounded" />
-                <span className="text-sm text-obsidian-300 font-body">Thread'lere Yanıtla</span>
+                <span className="text-sm text-obsidian-300 font-body">{t('accounts.threadReplies')}</span>
               </label>
             </>
           )}
@@ -436,10 +448,10 @@ function SettingsModal({
 
         <div className="flex justify-end gap-3 px-6 py-5 border-t border-white/[0.04]">
           <button onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-obsidian-400 hover:text-white transition-colors font-body">
-            İptal
+            {t('common.cancel')}
           </button>
           <button onClick={() => onSave(cfg)} className="btn-aurora text-sm">
-            Kaydet
+            {t('common.save')}
           </button>
         </div>
       </div>
@@ -451,7 +463,7 @@ function SettingsModal({
 /*  Add Account Modal                                                  */
 /* ------------------------------------------------------------------ */
 
-function AddAccountModal({ onClose }: { onClose: () => void }) {
+function AddAccountModal({ onClose, t, platforms }: { onClose: () => void; t: (key: string) => string; platforms: PlatformDef[] }) {
   const { addAccount } = useSocialAccountsStore();
   const [selected, setSelected] = useState<SocialAccount['platform'] | null>(null);
   const [cfg, setCfg] = useState<Record<string, any>>({});
@@ -477,7 +489,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
       <div className="w-full max-w-lg glass-card rounded-3xl shadow-glass-lg overflow-hidden animate-scale-in">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.04]">
-          <h2 className="text-[15px] font-display font-bold text-white">Yeni Hesap Ekle</h2>
+          <h2 className="text-[15px] font-display font-bold text-white">{t('accounts.addAccount')}</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-obsidian-500 hover:text-white hover:bg-white/[0.06] transition-all"
@@ -489,7 +501,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
         <div className="px-6 py-6 space-y-5 max-h-[60vh] overflow-y-auto">
           {!selected ? (
             <div className="grid grid-cols-2 gap-3">
-              {PLATFORMS.map((p) => (
+              {platforms.map((p) => (
                 <button
                   key={p.key}
                   onClick={() => setSelected(p.key)}
@@ -514,13 +526,13 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                 onClick={() => setSelected(null)}
                 className="text-xs text-obsidian-500 hover:text-aurora-cyan transition-colors mb-2 font-body"
               >
-                ← Platform seç
+                ← {t('accounts.selectPlatform')}
               </button>
 
               {selected === 'whatsapp' && (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-obsidian-400 font-body">Telefon Numarası</label>
+                    <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.phoneNumber')}</label>
                     <input value={cfg.phoneNumber || ''} onChange={(e) => update('phoneNumber', e.target.value)} placeholder="+90..." className="glass-input" />
                   </div>
                   <div className="space-y-1.5">
@@ -544,7 +556,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                     <MaskedInput value={cfg.botToken || ''} onChange={(v) => update('botToken', v)} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-obsidian-400 font-body">Webhook URL</label>
+                    <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.webhookUrl')}</label>
                     <input value={cfg.webhookUrl || ''} onChange={(e) => update('webhookUrl', e.target.value)} placeholder="https://discord.com/api/webhooks/..." className="glass-input" />
                   </div>
                 </div>
@@ -557,7 +569,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                     <MaskedInput value={cfg.botToken || ''} onChange={(v) => update('botToken', v)} placeholder="xoxb-..." />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-obsidian-400 font-body">Workspace Adı</label>
+                    <label className="block text-xs font-semibold text-obsidian-400 font-body">{t('accounts.workspaceName')}</label>
                     <input value={cfg.workspace || ''} onChange={(e) => update('workspace', e.target.value)} className="glass-input" />
                   </div>
                 </div>
@@ -569,10 +581,10 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
         {selected && (
           <div className="flex justify-end gap-3 px-6 py-5 border-t border-white/[0.04]">
             <button onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-obsidian-400 hover:text-white transition-colors font-body">
-              İptal
+              {t('common.cancel')}
             </button>
             <button onClick={handleConnect} disabled={saving} className="btn-aurora text-sm disabled:opacity-50">
-              {saving ? 'Bağlanıyor...' : 'Bağlan'}
+              {saving ? t('accounts.connecting') : t('accounts.connectButtonLabel')}
             </button>
           </div>
         )}
@@ -586,6 +598,8 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
 /* ------------------------------------------------------------------ */
 
 export default function SocialAccountsPage() {
+  const { t } = useTranslation();
+  const platforms = getPlatformDefinitions(t);
   const { accounts, loading, fetchAccounts, updateAccount, removeAccount, testConnection } =
     useSocialAccountsStore();
   const [settingsAccount, setSettingsAccount] = useState<SocialAccount | null>(null);
@@ -631,21 +645,21 @@ export default function SocialAccountsPage() {
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-aurora-pink animate-glow-pulse" />
             <span className="text-[11px] font-semibold text-aurora-pink tracking-widest uppercase font-body">
-              Accounts
+              {t('sidebar.accounts')}
             </span>
           </div>
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-            Bağlı Hesaplar
+            {t('accounts.title')}
           </h1>
           <p className="text-sm text-obsidian-400 mt-1.5 font-body">
-            Mesajlaşma platformlarını yönetin
+            {t('accounts.subtitle')}
           </p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
           className="btn-aurora"
         >
-          <Plus size={16} /> Yeni Hesap Ekle
+          <Plus size={16} /> {t('accounts.addAccount')}
         </button>
       </div>
 
@@ -680,17 +694,16 @@ export default function SocialAccountsPage() {
             <div className="absolute -inset-4 bg-aurora-pink/5 rounded-full blur-2xl pointer-events-none" />
           </div>
           <h3 className="text-xl font-display font-semibold text-white mb-2">
-            Henüz hesap eklenmedi
+            {t('accounts.noAccounts')}
           </h3>
           <p className="text-sm text-obsidian-500 mb-8 max-w-sm font-body">
-            Mesajlaşma platformlarınızı bağlayarak workflow'larınızı
-            tetikleyebilirsiniz.
+            {t('accounts.noAccountsDesc')}
           </p>
           <button
             onClick={() => setShowAdd(true)}
             className="btn-aurora"
           >
-            <Plus size={16} /> Hesap Ekle
+            <Plus size={16} /> {t('accounts.addAccount')}
           </button>
         </div>
       ) : (
@@ -706,6 +719,8 @@ export default function SocialAccountsPage() {
                 onSettings={() => setSettingsAccount(acc)}
                 onTest={() => handleTest(acc.id)}
                 onDisconnect={() => removeAccount(acc.id)}
+                platforms={platforms}
+                t={t}
               />
             </div>
           ))}
@@ -718,9 +733,11 @@ export default function SocialAccountsPage() {
           account={settingsAccount}
           onClose={() => setSettingsAccount(null)}
           onSave={handleSaveSettings}
+          platforms={platforms}
+          t={t}
         />
       )}
-      {showAdd && <AddAccountModal onClose={() => setShowAdd(false)} />}
+      {showAdd && <AddAccountModal onClose={() => setShowAdd(false)} t={t} platforms={platforms} />}
     </div>
   );
 }

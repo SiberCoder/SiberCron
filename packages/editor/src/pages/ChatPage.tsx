@@ -36,18 +36,19 @@ import { useTranslation } from '../i18n';
 // ── Tool call display component ─────────────────────────────────────────
 
 function ToolCallCard({ tool }: { tool: ToolCallInfo }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const TOOL_LABELS: Record<string, string> = {
-    list_workflows: "Workflow'ları listeledi",
-    execute_workflow: 'Workflow çalıştırıldı',
-    create_workflow: 'Workflow oluşturuldu',
-    get_execution_history: 'Çalıştırma geçmişi getirildi',
-    send_message: 'Mesaj gönderildi',
-    get_system_status: 'Sistem durumu getirildi',
-    manage_account: 'Hesap işlemi yapıldı',
-    activate_workflow: 'Workflow durumu değiştirildi',
-    delete_workflow: "Workflow silindi",
+    list_workflows: t('chat.toolListWorkflows'),
+    execute_workflow: t('chat.toolExecuteWorkflow'),
+    create_workflow: t('chat.toolCreateWorkflow'),
+    get_execution_history: t('chat.toolGetHistory'),
+    send_message: t('chat.toolSendMessage'),
+    get_system_status: t('chat.toolGetStatus'),
+    manage_account: t('chat.toolManageAccount'),
+    activate_workflow: t('chat.toolActivateWorkflow'),
+    delete_workflow: t('chat.toolDeleteWorkflow'),
   };
 
   const TOOL_ICONS: Record<string, typeof GitBranch> = {
@@ -99,6 +100,7 @@ function ToolCallCard({ tool }: { tool: ToolCallInfo }) {
 // ── Chat bubble component ───────────────────────────────────────────────
 
 function ChatBubble({ message, settings }: { message: ChatMessage; settings?: ChatSettings }) {
+  const { t } = useTranslation();
   const isUser = message.role === 'user';
   const [showTime, setShowTime] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -159,7 +161,7 @@ function ChatBubble({ message, settings }: { message: ChatMessage; settings?: Ch
                 // Normal: just show count badge
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1">
                   <Wrench size={10} />
-                  <span>{message.metadata.toolCalls.length} arac kullanildi</span>
+                  <span>{message.metadata.toolCalls.length} {t('chat.toolsUsed')}</span>
                   {settings?.showThinking && (
                     <span className="text-slate-600">
                       ({message.metadata.toolCalls.map(t => t.name).join(', ')})
@@ -190,7 +192,7 @@ function ChatBubble({ message, settings }: { message: ChatMessage; settings?: Ch
             <button
               onClick={handleCopy}
               className="ml-auto p-1 rounded-md hover:bg-white/[0.06] text-slate-600 hover:text-slate-300 transition-colors"
-              title="Kopyala"
+              title={t('common.copy')}
             >
               {copied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
             </button>
@@ -255,7 +257,7 @@ function StreamingIndicator({ verbose }: { verbose?: boolean }) {
           {!verbose && hasToolCalls && (
             <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1">
               <Wrench size={10} />
-              <span>{streamingToolCalls.length} arac kullaniliyor...</span>
+              <span>{streamingToolCalls.length} {t('chat.toolsRunning')}</span>
             </div>
           )}
 
@@ -292,32 +294,33 @@ function ContextDrawer({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   if (!open || !state) return null;
 
   return (
     <div className="fixed inset-y-0 right-0 w-80 bg-slate-900/95 backdrop-blur-xl border-l border-white/[0.06] z-50 overflow-y-auto animate-in slide-in-from-right duration-300">
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-white">Sistem Durumu</h3>
+          <h3 className="text-sm font-semibold text-white">{t('chat.systemStatusTitle')}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
             <X size={16} />
           </button>
         </div>
 
-        <p className="text-[10px] text-purple-400 mb-4">AI bu bilgilere erisebilir</p>
+        <p className="text-[10px] text-purple-400 mb-4">{t('chat.aiCanAccess')}</p>
 
         {/* Workflows */}
         <div className="mb-4">
           <h4 className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
-            <GitBranch size={12} /> Workflow'lar
+            <GitBranch size={12} /> {t('chat.workflows')}
           </h4>
           <div className="bg-white/[0.03] rounded-lg p-3 text-xs text-slate-300 space-y-1">
             <div className="flex justify-between">
-              <span>Toplam</span>
+              <span>{t('chat.total')}</span>
               <span className="text-white font-medium">{state.workflows.total}</span>
             </div>
             <div className="flex justify-between">
-              <span>Aktif</span>
+              <span>{t('common.active')}</span>
               <span className="text-emerald-400 font-medium">{state.workflows.active}</span>
             </div>
           </div>
@@ -342,23 +345,23 @@ function ContextDrawer({
         {/* Executions */}
         <div className="mb-4">
           <h4 className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
-            <Play size={12} /> Çalıştırmalar
+            <Play size={12} /> {t('chat.executions')}
           </h4>
           <div className="bg-white/[0.03] rounded-lg p-3 text-xs text-slate-300 grid grid-cols-2 gap-2">
             <div>
-              <span className="text-slate-500">Toplam</span>
+              <span className="text-slate-500">{t('chat.total')}</span>
               <div className="text-white font-medium">{state.executions.total}</div>
             </div>
             <div>
-              <span className="text-slate-500">Başarılı</span>
+              <span className="text-slate-500">{t('chat.successful')}</span>
               <div className="text-emerald-400 font-medium">{state.executions.success}</div>
             </div>
             <div>
-              <span className="text-slate-500">Başarısız</span>
+              <span className="text-slate-500">{t('chat.failed')}</span>
               <div className="text-red-400 font-medium">{state.executions.failed}</div>
             </div>
             <div>
-              <span className="text-slate-500">Çalışıyor</span>
+              <span className="text-slate-500">{t('chat.running')}</span>
               <div className="text-sky-400 font-medium">{state.executions.running}</div>
             </div>
           </div>
@@ -367,10 +370,10 @@ function ContextDrawer({
         {/* Accounts */}
         <div className="mb-4">
           <h4 className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
-            <Users size={12} /> Bağlı Hesaplar
+            <Users size={12} /> {t('chat.connectedAccounts')}
           </h4>
           {state.accounts.length === 0 ? (
-            <p className="text-[11px] text-slate-600 px-1">Henüz bağlı hesap yok</p>
+            <p className="text-[11px] text-slate-600 px-1">{t('chat.noLinkedAccount')}</p>
           ) : (
             <div className="space-y-1">
               {state.accounts.map((a) => (
@@ -383,7 +386,7 @@ function ContextDrawer({
                   />
                   <span className="text-slate-300">{a.platform}</span>
                   <span className="text-slate-500 truncate flex-1">{a.name}</span>
-                  <span className="text-slate-600">{a.messageCount} mesaj</span>
+                  <span className="text-slate-600">{a.messageCount} {t('chat.messages')}</span>
                 </div>
               ))}
             </div>
@@ -394,11 +397,11 @@ function ContextDrawer({
         {state.aiProvider && (
           <div className="mb-4">
             <h4 className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
-              <Brain size={12} /> AI Sağlayıcı
+              <Brain size={12} /> {t('chat.aiProvider')}
             </h4>
             <div className="bg-white/[0.03] rounded-lg p-3 text-xs text-slate-300 space-y-1">
               <div className="flex justify-between">
-                <span>Sağlayıcı</span>
+                <span>{t('chat.provider')}</span>
                 <span className="text-white font-medium">{state.aiProvider.name}</span>
               </div>
               <div className="flex justify-between">
@@ -460,6 +463,7 @@ function ChatSettingsPanel({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   if (!open) return null;
 
   const update = (patch: Partial<ChatSettings>) => onChange({ ...settings, ...patch });
@@ -469,7 +473,7 @@ function ChatSettingsPanel({
       <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
         <h3 className="text-sm font-semibold text-white flex items-center gap-2">
           <Settings2 size={14} className="text-purple-400" />
-          Chat Ayarları
+          {t('chat.chatSettings')}
         </h3>
         <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
           <X size={14} />
@@ -482,9 +486,9 @@ function ChatSettingsPanel({
           <div>
             <div className="text-xs font-medium text-white flex items-center gap-1.5">
               <Terminal size={12} className="text-sky-400" />
-              Verbose Mod
+              {t('chat.verboseMode')}
             </div>
-            <p className="text-[10px] text-slate-500 mt-0.5">Araç çağrılarını ve arka plan işlemlerini göster</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{t('chat.verboseModeDesc')}</p>
           </div>
           <button
             onClick={() => update({ verbose: !settings.verbose })}
@@ -505,9 +509,9 @@ function ChatSettingsPanel({
           <div>
             <div className="text-xs font-medium text-white flex items-center gap-1.5">
               <Eye size={12} className="text-purple-400" />
-              Düşünce Süreci
+              {t('chat.thinkingProcess')}
             </div>
-            <p className="text-[10px] text-slate-500 mt-0.5">AI'in ne düşündüğünü ve hangi araçları seçtiğini göster</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{t('chat.thinkingProcessDesc')}</p>
           </div>
           <button
             onClick={() => update({ showThinking: !settings.showThinking })}
@@ -527,13 +531,13 @@ function ChatSettingsPanel({
         <div>
           <div className="text-xs font-medium text-white mb-2 flex items-center gap-1.5">
             <FileText size={12} className="text-emerald-400" />
-            Cikti Formati
+            Output Format
           </div>
           <div className="flex gap-1">
             {([
-              { value: 'normal', label: 'Normal', desc: 'Kısa ve öz' },
-              { value: 'detailed', label: 'Detaylı', desc: 'Açıklamalı' },
-              { value: 'developer', label: 'Geliştirici', desc: 'Teknik detay' },
+              { value: 'normal', label: 'Normal', desc: 'Concise' },
+              { value: 'detailed', label: 'Detailed', desc: 'With notes' },
+              { value: 'developer', label: 'Developer', desc: 'Technical' },
             ] as const).map(opt => (
               <button
                 key={opt.value}
@@ -556,7 +560,7 @@ function ChatSettingsPanel({
         <div>
           <div className="text-xs font-medium text-white mb-2 flex items-center gap-1.5">
             <Wrench size={12} className="text-amber-400" />
-            Maks İşlem Sayısı
+            {t('chat.maxOperations')}
           </div>
           <div className="flex items-center gap-3">
             <input
@@ -569,12 +573,11 @@ function ChatSettingsPanel({
             />
             <span className="text-xs text-white font-mono w-6 text-right">{settings.maxIterations}</span>
           </div>
-          <p className="text-[10px] text-slate-500 mt-1">AI'in tek soruda kac arac kullanabilecegi</p>
         </div>
 
         {/* Temperature */}
         <div>
-          <div className="text-xs font-medium text-white mb-2">Yaraticilik (Temperature)</div>
+          <div className="text-xs font-medium text-white mb-2">Temperature</div>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -591,7 +594,7 @@ function ChatSettingsPanel({
         <div className="border-t border-white/[0.06] pt-3 space-y-3">
           {/* Show timestamps */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Zaman damgalarını göster</span>
+            <span className="text-xs text-slate-400">{t('chat.showTimestamps')}</span>
             <button
               onClick={() => update({ showTimestamps: !settings.showTimestamps })}
               className={clsx(
@@ -608,7 +611,7 @@ function ChatSettingsPanel({
 
           {/* Show token count */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Token sayısını göster</span>
+            <span className="text-xs text-slate-400">{t('chat.showTokenCount')}</span>
             <button
               onClick={() => update({ showTokenCount: !settings.showTokenCount })}
               className={clsx(
@@ -625,7 +628,7 @@ function ChatSettingsPanel({
 
           {/* Auto scroll */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Otomatik kaydır</span>
+            <span className="text-xs text-slate-400">{t('chat.autoScroll')}</span>
             <button
               onClick={() => update({ autoScroll: !settings.autoScroll })}
               className={clsx(

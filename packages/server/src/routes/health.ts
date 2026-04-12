@@ -27,6 +27,7 @@ export async function healthRoutes(
       },
       queue: {
         connected: queueStats.connected,
+        provider: queueStats.connected ? 'BullMQ+Redis' : 'Direct',
         waiting: queueStats.waiting,
         active: queueStats.active,
         completed: queueStats.completed,

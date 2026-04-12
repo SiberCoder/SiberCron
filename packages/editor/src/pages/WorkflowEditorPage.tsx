@@ -4,6 +4,7 @@ import { PanelLeft, CheckCircle2, XCircle, Loader2, X, ArrowRight, Clock, AlertT
 import clsx from 'clsx';
 import { ReactFlowProvider } from '@xyflow/react';
 import type { Node, Edge } from '@xyflow/react';
+import { useTranslation } from '../i18n';
 import { useWorkflowStore } from '../store/workflowStore';
 import { useNodeRegistryStore } from '../store/nodeRegistryStore';
 import { useExecutionStore } from '../store/executionStore';
@@ -34,17 +35,22 @@ const TRIGGER_TYPES = new Set([
   'sibercron.githubTrigger',
 ]);
 
-function useWorkflowValidation() {
+type ValidationWarning =
+  | { type: 'noTrigger' }
+  | { type: 'isolated'; names: string; plural: boolean }
+  | { type: 'cycle' };
+
+function useWorkflowValidation(): ValidationWarning[] {
   const nodes = useWorkflowStore((s) => s.nodes);
   const edges = useWorkflowStore((s) => s.edges);
 
   return useMemo(() => {
-    const warnings: string[] = [];
+    const warnings: ValidationWarning[] = [];
     if (nodes.length === 0) return warnings;
 
     const hasTrigger = nodes.some((n) => TRIGGER_TYPES.has(n.data.nodeType as string));
     if (!hasTrigger) {
-      warnings.push('Trigger node yok — workflow yalnızca manuel çalıştırılabilir');
+      warnings.push({ type: 'noTrigger' });
     }
 
     const connectedIds = new Set<string>();
@@ -60,7 +66,7 @@ function useWorkflowValidation() {
       const isolated = nodes.filter((n) => !connectedIds.has(n.id));
       if (isolated.length > 0) {
         const names = isolated.map((n) => (n.data.label as string) || n.id).join(', ');
-        warnings.push(`Bağlantısız node${isolated.length > 1 ? 'lar' : ''}: ${names}`);
+        warnings.push({ type: 'isolated', names, plural: isolated.length > 1 });
       }
     }
 
@@ -80,7 +86,7 @@ function useWorkflowValidation() {
     };
     for (const node of nodes) {
       if (!visited.has(node.id) && detectCycle(node.id)) {
-        warnings.push('Döngüsel bağlantı tespit edildi — workflow sonsuz döngüye girebilir');
+        warnings.push({ type: 'cycle' });
         break;
       }
     }
@@ -90,6 +96,7 @@ function useWorkflowValidation() {
 }
 
 function ValidationBanner() {
+  const { t } = useTranslation();
   const warnings = useWorkflowValidation();
   const [collapsed, setCollapsed] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -105,6 +112,13 @@ function ValidationBanner() {
 
   if (warnings.length === 0 || dismissed) return null;
 
+  const translateWarning = (w: ValidationWarning): string => {
+    if (w.type === 'noTrigger') return t('editor.warnings.noTrigger');
+    if (w.type === 'cycle') return t('editor.warnings.cycleDetected');
+    const key = w.plural ? 'editor.warnings.isolatedNodes' : 'editor.warnings.isolatedNode';
+    return t(key).replace('{{names}}', w.names);
+  };
+
   return (
     <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 animate-fade-in" style={{ minWidth: 320, maxWidth: 560 }}>
       <div className="rounded-xl border border-aurora-amber/30 bg-aurora-amber/8 backdrop-blur-sm shadow-lg overflow-hidden">
@@ -112,7 +126,7 @@ function ValidationBanner() {
         <div className="flex items-center gap-2 px-3 py-2">
           <AlertTriangle size={13} className="text-aurora-amber shrink-0" />
           <span className="text-[11px] font-semibold text-aurora-amber flex-1">
-            {warnings.length} doğrulama uyarısı
+            {t('editor.validationWarningsCount').replace('{{count}}', String(warnings.length))}
           </span>
           <button
             onClick={() => setCollapsed((c) => !c)}
@@ -132,7 +146,7 @@ function ValidationBanner() {
           <div className="px-3 pb-2 space-y-1 border-t border-aurora-amber/15">
             {warnings.map((w, i) => (
               <p key={i} className="text-[10px] text-obsidian-300 font-body py-0.5">
-                • {w}
+                • {translateWarning(w)}
               </p>
             ))}
           </div>

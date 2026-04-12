@@ -12,28 +12,11 @@ import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
 import { useExecutionStore } from '../../store/executionStore';
 import { apiGet } from '../../api/client';
 import { API_BASE_URL } from '../../lib/config';
+import { useTranslation } from '../../i18n';
 
 // ── Visual Cron Builder ──────────────────────────────────────────────
 
 type CronFrequency = 'minute' | 'hour' | 'day' | 'week' | 'month';
-
-const FREQ_OPTIONS: Array<{value: CronFrequency; label: string}> = [
-  { value: 'minute', label: 'Dakika' },
-  { value: 'hour', label: 'Saat' },
-  { value: 'day', label: 'Gün' },
-  { value: 'week', label: 'Hafta' },
-  { value: 'month', label: 'Ay' },
-];
-
-const DAYS_OF_WEEK = [
-  { value: '1', label: 'Pzt' },
-  { value: '2', label: 'Sal' },
-  { value: '3', label: 'Çar' },
-  { value: '4', label: 'Per' },
-  { value: '5', label: 'Cum' },
-  { value: '6', label: 'Cmt' },
-  { value: '0', label: 'Paz' },
-];
 
 function parseCronToUI(expr: string): { freq: CronFrequency; minute: string; hour: string; dayOfMonth: string; dayOfWeek: string[]; everyN: string } {
   const raw = (expr || '* * * * *').trim();
@@ -74,8 +57,27 @@ function buildCronFromUI(state: { freq: CronFrequency; minute: string; hour: str
 }
 
 function CronBuilder({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t, language } = useTranslation();
   const [state, setState] = useState(() => parseCronToUI(value));
   const [showRaw, setShowRaw] = useState(false);
+
+  const FREQ_OPTIONS: Array<{value: CronFrequency; label: string}> = [
+    { value: 'minute', label: t('editor.cronFrequency.minute') },
+    { value: 'hour', label: t('editor.cronFrequency.hour') },
+    { value: 'day', label: t('editor.cronFrequency.day') },
+    { value: 'week', label: t('editor.cronFrequency.week') },
+    { value: 'month', label: t('editor.cronFrequency.month') },
+  ];
+
+  const DAYS_OF_WEEK = [
+    { value: '1', label: t('editor.cronDays.mon') },
+    { value: '2', label: t('editor.cronDays.tue') },
+    { value: '3', label: t('editor.cronDays.wed') },
+    { value: '4', label: t('editor.cronDays.thu') },
+    { value: '5', label: t('editor.cronDays.fri') },
+    { value: '6', label: t('editor.cronDays.sat') },
+    { value: '0', label: t('editor.cronDays.sun') },
+  ];
 
   // Sync internal state when the value prop changes (e.g. switching to a different cron node)
   useEffect(() => {
@@ -113,17 +115,17 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
       <div className="bg-slate-800/40 rounded-lg p-3 space-y-2.5 border border-slate-700/50">
         {state.freq === 'minute' && (
           <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span>Her</span>
+            <span>{t('editor.cronEvery')}</span>
             <select value={state.everyN} onChange={e => update({ everyN: e.target.value })} className="glass-input w-16 text-xs py-1 px-2">
               {[1,2,3,5,10,15,20,30].map(n => <option key={n} value={String(n)}>{n}</option>)}
             </select>
-            <span>dakikada bir</span>
+            <span>{t('editor.cronMinutesInterval')}</span>
           </div>
         )}
 
         {state.freq === 'hour' && (
           <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span>Her saat başında, dakika:</span>
+            <span>{t('editor.cronAtMinute')}</span>
             <select value={state.minute} onChange={e => update({ minute: e.target.value })} className="glass-input w-16 text-xs py-1 px-2">
               {[0,5,10,15,20,25,30,35,40,45,50,55].map(n => <option key={n} value={String(n)}>:{String(n).padStart(2,'0')}</option>)}
             </select>
@@ -132,7 +134,7 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
 
         {state.freq === 'day' && (
           <div className="flex items-center gap-2 text-xs text-slate-300 flex-wrap">
-            <span>Her gün saat</span>
+            <span>{t('editor.cronDailyAt')}</span>
             <select value={state.hour} onChange={e => update({ hour: e.target.value })} className="glass-input w-16 text-xs py-1 px-2">
               {Array.from({length:24},(_,i)=>i).map(h => <option key={h} value={String(h)}>{String(h).padStart(2,'0')}</option>)}
             </select>
@@ -168,7 +170,7 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
               ))}
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-300">
-              <span>Saat</span>
+              <span>{t('editor.cronWeeklyAt')}</span>
               <select value={state.hour} onChange={e => update({ hour: e.target.value })} className="glass-input w-16 text-xs py-1 px-2">
                 {Array.from({length:24},(_,i)=>i).map(h => <option key={h} value={String(h)}>{String(h).padStart(2,'0')}</option>)}
               </select>
@@ -183,14 +185,14 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
         {state.freq === 'month' && (
           <div className="space-y-2.5">
             <div className="flex items-center gap-2 text-xs text-slate-300">
-              <span>Ayin</span>
+              <span>{t('editor.cronDayOfMonth')}</span>
               <select value={state.dayOfMonth} onChange={e => update({ dayOfMonth: e.target.value })} className="glass-input w-16 text-xs py-1 px-2">
                 {Array.from({length:31},(_,i)=>i+1).map(d => <option key={d} value={String(d)}>{d}.</option>)}
               </select>
-              <span>gunu</span>
+              <span>{t('editor.cronOfMonth')}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-300">
-              <span>Saat</span>
+              <span>{t('editor.cronWeeklyAt')}</span>
               <select value={state.hour} onChange={e => update({ hour: e.target.value })} className="glass-input w-16 text-xs py-1 px-2">
                 {Array.from({length:24},(_,i)=>i).map(h => <option key={h} value={String(h)}>{String(h).padStart(2,'0')}</option>)}
               </select>
@@ -205,13 +207,13 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
 
       {/* Preview + raw toggle */}
       <div className="flex items-center justify-between">
-        <CronPreview expression={buildCronFromUI(state)} />
+        <CronPreview expression={buildCronFromUI(state)} language={language} />
         <button
           type="button"
           onClick={() => setShowRaw(!showRaw)}
           className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
         >
-          {showRaw ? 'Gizle' : 'Ham ifade'}
+          {showRaw ? t('editor.cronHide') : t('editor.cronRawExpression')}
         </button>
       </div>
 
@@ -228,14 +230,14 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
   );
 }
 
-function CronPreview({ expression }: { expression: string }) {
+function CronPreview({ expression, language }: { expression: string; language: string }) {
   const human = useMemo(() => {
     try {
-      return cronstrue.toString(expression, { locale: 'tr' });
+      return cronstrue.toString(expression, { locale: language === 'tr' ? 'tr' : 'en' });
     } catch {
       return null;
     }
-  }, [expression]);
+  }, [expression, language]);
 
   if (!human) return null;
 

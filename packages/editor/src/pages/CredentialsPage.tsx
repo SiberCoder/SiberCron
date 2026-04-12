@@ -34,6 +34,7 @@ interface CredentialField {
   secret?: boolean;
   type?: 'text' | 'number';
   required?: boolean;
+  optional?: boolean;
 }
 
 interface CredentialTypeDef {
@@ -52,8 +53,8 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     fields: [
       { key: 'provider', label: 'Provider', placeholder: 'openai / anthropic / ollama / gemini', required: true },
       { key: 'apiKey', label: 'API Key', placeholder: 'sk-...', secret: true },
-      { key: 'model', label: 'Model (opsiyonel)', placeholder: 'gpt-4o / claude-opus-4-6' },
-      { key: 'baseUrl', label: 'Base URL (opsiyonel)', placeholder: 'https://api.openai.com/v1' },
+      { key: 'model', label: 'Model', placeholder: 'gpt-4o / claude-opus-4-6', optional: true },
+      { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api.openai.com/v1', optional: true },
     ],
   },
   {
@@ -62,7 +63,7 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     Icon: Brain,
     fields: [
       { key: 'apiKey', label: 'API Key', placeholder: 'sk-...', secret: true, required: true },
-      { key: 'organizationId', label: 'Organization ID (opsiyonel)', placeholder: 'org-...' },
+      { key: 'organizationId', label: 'Organization ID', placeholder: 'org-...', optional: true },
     ],
   },
   {
@@ -97,7 +98,7 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     Icon: MessageSquare,
     fields: [
       { key: 'botToken', label: 'Bot Token', placeholder: 'xoxb-...', secret: true, required: true },
-      { key: 'signingSecret', label: 'Signing Secret (opsiyonel)', secret: true },
+      { key: 'signingSecret', label: 'Signing Secret', secret: true, optional: true },
     ],
   },
   {
@@ -118,9 +119,9 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     fields: [
       { key: 'host', label: 'SMTP Host', placeholder: 'smtp.gmail.com', required: true },
       { key: 'port', label: 'Port', placeholder: '587', type: 'number', required: true },
-      { key: 'user', label: 'Kullanıcı Adı', placeholder: 'you@example.com', required: true },
-      { key: 'password', label: 'Şifre', secret: true, required: true },
-      { key: 'from', label: 'Gönderen', placeholder: 'YourApp <you@example.com>' },
+      { key: 'user', label: 'Username', placeholder: 'you@example.com', required: true },
+      { key: 'password', label: 'Password', secret: true, required: true },
+      { key: 'from', label: 'Sender', placeholder: 'YourApp <you@example.com>' },
     ],
   },
   // ── Database / Storage ────────────────────────────────────────────────────────
@@ -129,12 +130,12 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     displayName: 'Database (PostgreSQL / MySQL)',
     Icon: Database,
     fields: [
-      { key: 'type', label: 'Tip', placeholder: 'postgres / mysql', required: true },
+      { key: 'type', label: 'Type', placeholder: 'postgres / mysql', required: true },
       { key: 'host', label: 'Host', placeholder: 'localhost', required: true },
       { key: 'port', label: 'Port', placeholder: '5432', type: 'number' },
-      { key: 'database', label: 'Veritabanı Adı', required: true },
-      { key: 'user', label: 'Kullanıcı Adı', required: true },
-      { key: 'password', label: 'Şifre', secret: true },
+      { key: 'database', label: 'Database Name', required: true },
+      { key: 'user', label: 'Username', required: true },
+      { key: 'password', label: 'Password', secret: true },
     ],
   },
   {
@@ -144,8 +145,8 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     fields: [
       { key: 'host', label: 'Host', placeholder: 'localhost', required: true },
       { key: 'port', label: 'Port', placeholder: '6379', type: 'number' },
-      { key: 'password', label: 'Şifre (opsiyonel)', secret: true },
-      { key: 'db', label: 'DB Index (opsiyonel)', placeholder: '0', type: 'number' },
+      { key: 'password', label: 'Password', secret: true, optional: true },
+      { key: 'db', label: 'DB Index', placeholder: '0', type: 'number', optional: true },
     ],
   },
   {
@@ -153,12 +154,12 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     displayName: 'FTP / SFTP',
     Icon: HardDrive,
     fields: [
-      { key: 'protocol', label: 'Protokol', placeholder: 'ftp / sftp', required: true },
+      { key: 'protocol', label: 'Protocol', placeholder: 'ftp / sftp', required: true },
       { key: 'host', label: 'Host', placeholder: 'ftp.example.com', required: true },
       { key: 'port', label: 'Port', placeholder: '21', type: 'number' },
-      { key: 'username', label: 'Kullanıcı Adı', required: true },
-      { key: 'password', label: 'Şifre', secret: true },
-      { key: 'privateKey', label: 'Private Key (SFTP, opsiyonel)', secret: true },
+      { key: 'username', label: 'Username', required: true },
+      { key: 'password', label: 'Password', secret: true },
+      { key: 'privateKey', label: 'Private Key (SFTP)', secret: true, optional: true },
     ],
   },
   // ── Google ────────────────────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     fields: [
       { key: 'clientEmail', label: 'Client Email', placeholder: 'name@project.iam.gserviceaccount.com', required: true },
       { key: 'privateKey', label: 'Private Key', placeholder: '-----BEGIN RSA PRIVATE KEY-----...', secret: true, required: true },
-      { key: 'projectId', label: 'Project ID (opsiyonel)' },
+      { key: 'projectId', label: 'Project ID', optional: true },
     ],
   },
   // ── Source Control / Project Management ─────────────────────────────────────
@@ -186,7 +187,7 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     displayName: 'GitHub Webhook Secret',
     Icon: Github,
     fields: [
-      { key: 'secret', label: 'Webhook Secret', placeholder: 'Minimum 8 karakter', secret: true, required: true },
+      { key: 'secret', label: 'Webhook Secret', placeholder: 'Min. 8 characters', secret: true, required: true },
     ],
   },
   {
@@ -195,8 +196,8 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     Icon: Layers,
     fields: [
       { key: 'domain', label: 'Jira Domain', placeholder: 'yourcompany.atlassian.net', required: true },
-      { key: 'email', label: 'E-posta', placeholder: 'you@company.com', required: true },
-      { key: 'apiToken', label: 'API Token', placeholder: 'Atlassian hesap API token', secret: true, required: true },
+      { key: 'email', label: 'Email', placeholder: 'you@company.com', required: true },
+      { key: 'apiToken', label: 'API Token', placeholder: 'Atlassian account API token', secret: true, required: true },
     ],
   },
   {
