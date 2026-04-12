@@ -556,10 +556,10 @@ export default function DashboardPage() {
               </span>
             </div>
             <h1 className="text-3xl font-display font-bold text-white tracking-tight">
-              Welcome to SiberCron
+              SiberCron'a Hoş Geldiniz
             </h1>
             <p className="text-sm text-obsidian-400 mt-2 font-body">
-              AI-powered workflow automation at your fingertips
+              AI destekli workflow otomasyonu parmaklarınızın ucunda
             </p>
           </div>
           <button
