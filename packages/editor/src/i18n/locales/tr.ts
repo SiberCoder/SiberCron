@@ -838,252 +838,252 @@ const tr: TranslationKeys = {
   // ── Node Definitions (Dynamic Language Support) ────────────────────────
   nodes: {
     definitions: {
-      'sibercron.aiAgent': {
+      sibercron_aiAgent: {
         displayName: 'AI Aracı',
         group: 'AI',
         description: 'AI modellerle etkileşim - OpenAI, Anthropic, Gemini, Ollama, Groq ve özel endpoint\'ler',
       },
-      'sibercron.aiClassifier': {
+      sibercron_aiClassifier: {
         displayName: 'AI Sınıflandırıcı',
         group: 'AI',
         description: 'Metni AI kullanarak kategorilere ayırın',
       },
-      'sibercron.aiSummarizer': {
+      sibercron_aiSummarizer: {
         displayName: 'AI Özeti',
         group: 'AI',
         description: 'Metni AI kullanarak özetleyin',
       },
-      'sibercron.aiWebBrowser': {
+      sibercron_aiWebBrowser: {
         displayName: 'AI Web Tarayıcı',
         group: 'AI',
         description: 'Web sayfasını açın ve AI ile içeriğini çıkarın veya analiz edin',
       },
-      'sibercron.autonomousDev': {
+      sibercron_autonomousDev: {
         displayName: 'Otonom Geliştirme',
         group: 'AI',
         description: 'AI otonom geliştirme döngüsü - talimat verin, AI çalışır, sorarsa cevap verin, bitince yeniden başlayın',
       },
-      'sibercron.aggregate': {
+      sibercron_aggregate: {
         displayName: 'Topla',
         group: 'Temel',
         description: 'Say, toplam, ortalama, grupla gibi matematik işlemleri yapın',
       },
-      'sibercron.airtable': {
+      sibercron_airtable: {
         displayName: 'Airtable',
         group: 'Veri',
         description: 'Airtable base kayıtlarını okuyun ve yazın',
       },
-      'sibercron.csv': {
+      sibercron_csv: {
         displayName: 'CSV',
         group: 'Temel',
         description: 'CSV\'yi JSON\'a ayrıştırın veya JSON\'u CSV\'ye dönüştürün (RFC 4180)',
       },
-      'sibercron.code': {
+      sibercron_code: {
         displayName: 'Kod',
         group: 'Temel',
         description: 'Verileri dönüştürmek için özel JavaScript kodu çalıştırın',
       },
-      'sibercron.conditional': {
+      sibercron_conditional: {
         displayName: 'Koşullu',
         group: 'Temel',
         description: 'Öğeleri koşula göre yönlendirin',
       },
-      'sibercron.crypto': {
+      sibercron_crypto: {
         displayName: 'Kripto',
         group: 'Temel',
         description: 'Hash, HMAC, Base64, rastgele, AES-256 şifrele/şifresi çöz',
       },
-      'sibercron.databaseQuery': {
+      sibercron_databaseQuery: {
         displayName: 'Veritabanı Sorgusu',
         group: 'Veri',
         description: 'MySQL veya PostgreSQL veritabanlarında SQL sorguları çalıştırın',
       },
-      'sibercron.dateTime': {
+      sibercron_dateTime: {
         displayName: 'Tarih/Saat',
         group: 'Temel',
         description: 'Tarih/saat değerlerini ayrıştırın, biçimlendirin ve işleyin',
       },
-      'sibercron.delay': {
+      sibercron_delay: {
         displayName: 'Gecikme',
         group: 'Temel',
         description: 'Belirtilen süre kadar bekledikten sonra verileri ilet',
       },
-      'sibercron.executeWorkflow': {
+      sibercron_executeWorkflow: {
         displayName: 'Workflow\'u Çalıştır',
         group: 'Temel',
         description: 'Başka bir SiberCron workflow\'unu çalıştırın ve sonucunu döndürün',
       },
-      'sibercron.fileOperation': {
+      sibercron_fileOperation: {
         displayName: 'Dosya İşlemi',
         group: 'Temel',
         description: 'Sunucudaki yerel dosyaları okuyun, yazın, ekleyin, silin veya listeleyin',
       },
-      'sibercron.filter': {
+      sibercron_filter: {
         displayName: 'Filtre',
         group: 'Temel',
         description: 'Koşulları eşleşen öğeleri filtreleyin, eşleşmeyenleri kaldırın',
       },
-      'sibercron.ftpSftp': {
+      sibercron_ftpSftp: {
         displayName: 'FTP / SFTP',
         group: 'Veri',
         description: 'FTP veya SFTP sunucusunda dosya işlemleri: listele, indir, yükle, sil, yeniden adlandır',
       },
-      'sibercron.github': {
+      sibercron_github: {
         displayName: 'GitHub',
         group: 'Veri',
         description: 'GitHub ile etkileşim — sorunlar, PR\'lar, depolar, sürümler',
       },
-      'sibercron.googleDrive': {
+      sibercron_googleDrive: {
         displayName: 'Google Drive',
         group: 'Veri',
         description: 'Google Drive\'da dosya ve klasörleri yönetin',
       },
-      'sibercron.googleSheets': {
+      sibercron_googleSheets: {
         displayName: 'Google Sheets',
         group: 'Veri',
         description: 'Hizmet Hesabı kullanarak Google Sheets\'te veri okuyun ve yazın',
       },
-      'sibercron.graphql': {
+      sibercron_graphql: {
         displayName: 'GraphQL',
         group: 'Temel',
         description: 'GraphQL sorguları ve mutasyonlar çalıştırın',
       },
-      'sibercron.httpRequest': {
+      sibercron_httpRequest: {
         displayName: 'HTTP İsteği',
         group: 'Temel',
         description: 'Herhangi bir URL\'ye HTTP isteği gönderin',
       },
-      'sibercron.httpResponse': {
+      sibercron_httpResponse: {
         displayName: 'HTTP Yanıtı',
         group: 'Temel',
         description: 'Senkron webhook workflow\'ları için HTTP yanıtını ayarlayın',
       },
-      'sibercron.jira': {
+      sibercron_jira: {
         displayName: 'Jira',
         group: 'Veri',
         description: 'Jira sorunlarını, projeleri, yorumları ve geçişleri yönetin',
       },
-      'sibercron.log': {
+      sibercron_log: {
         displayName: 'Günlük',
         group: 'Temel',
         description: 'Konsola mesaj yazın ve verileri ilet',
       },
-      'sibercron.loop': {
+      sibercron_loop: {
         displayName: 'Döngü',
         group: 'Temel',
         description: 'Giriş öğeleri üzerinde yineleme yapın, her birini döngü metaveri ile çıkış yapın',
       },
-      'sibercron.merge': {
+      sibercron_merge: {
         displayName: 'Birleştir',
         group: 'Temel',
         description: 'Çeşitli stratejiler kullanarak birden fazla girişten verileri birleştirin',
       },
-      'sibercron.notionDatabase': {
+      sibercron_notionDatabase: {
         displayName: 'Notion Veritabanı',
         group: 'Veri',
         description: 'Notion veritabanı sayfalarını sorgulayın, oluşturun ve güncelleyin',
       },
-      'sibercron.rssFeed': {
+      sibercron_rssFeed: {
         displayName: 'RSS Beslemesi',
         group: 'Veri',
         description: 'RSS/Atom beslemelerini getirin ve ayrıştırın',
       },
-      'sibercron.redis': {
+      sibercron_redis: {
         displayName: 'Redis',
         group: 'Veri',
         description: 'Redis\'te veri okuyun, yazın ve yönetin',
       },
-      'sibercron.retry': {
+      sibercron_retry: {
         displayName: 'Yeniden Dene',
         group: 'Temel',
         description: 'Hata durumunda üstel geri çekilme ile HTTP isteğini yeniden deneyin',
       },
-      'sibercron.sort': {
+      sibercron_sort: {
         displayName: 'Sırala',
         group: 'Temel',
         description: 'Öğeleri alan değerine göre veya rastgele sıralayın',
       },
-      'sibercron.split': {
+      sibercron_split: {
         displayName: 'Böl',
         group: 'Temel',
         description: 'Giriş öğelerini toplu işlere veya alan değerine göre bölün',
       },
-      'sibercron.switch': {
+      sibercron_switch: {
         displayName: 'Değiştir',
         group: 'Temel',
         description: 'Öğeleri alan değerine göre birden fazla çıktıya yönlendirin',
       },
-      'sibercron.text': {
+      sibercron_text: {
         displayName: 'Metin',
         group: 'Temel',
         description: 'Dize işlemleri yapın: büyük harf, trim, değiştir, böl, birleştir, kodla, kısalt ve daha fazlası',
       },
-      'sibercron.transform': {
+      sibercron_transform: {
         displayName: 'Dönüştür',
         group: 'Dönüştür',
         description: 'Alan seçerek, yeniden adlandırarak, kaldırarak veya ayarlayarak giriş verilerini dönüştürün',
       },
-      'sibercron.variables': {
+      sibercron_variables: {
         displayName: 'Değişkenler',
         group: 'Temel',
         description: 'Yürütme başına değişkenleri ayarlayın, alın ve yönetin',
       },
-      'sibercron.xml': {
+      sibercron_xml: {
         displayName: 'XML',
         group: 'Temel',
         description: 'XML\'i JSON\'a ayrıştırın veya JSON\'u XML\'e dönüştürün',
       },
-      'sibercron.discordSend': {
+      sibercron_discordSend: {
         displayName: 'Discord Gönder',
         group: 'Mesajlaşma',
         description: 'Webhook veya Bot API aracılığıyla Discord\'a mesaj gönderin',
       },
-      'sibercron.emailSmtp': {
+      sibercron_emailSmtp: {
         displayName: 'E-posta (SMTP)',
         group: 'Mesajlaşma',
         description: 'SMTP üzerinden e-posta gönderin',
       },
-      'sibercron.slackSend': {
+      sibercron_slackSend: {
         displayName: 'Slack Gönder',
         group: 'Mesajlaşma',
         description: 'Slack kanalına veya başlığa mesaj gönderin',
       },
-      'sibercron.telegramSend': {
+      sibercron_telegramSend: {
         displayName: 'Telegram Gönder',
         group: 'Mesajlaşma',
         description: 'Telegram Bot API aracılığıyla mesaj, fotoğraf veya belge gönderin',
       },
-      'sibercron.whatsappReceive': {
+      sibercron_whatsappReceive: {
         displayName: 'WhatsApp Al',
         group: 'Tetikleyici',
         description: 'Gelen WhatsApp mesajları ile workflow\'u tetikleyin',
       },
-      'sibercron.whatsappSend': {
+      sibercron_whatsappSend: {
         displayName: 'WhatsApp Gönder',
         group: 'Mesajlaşma',
         description: 'WhatsApp Cloud API aracılığıyla mesaj gönderin',
       },
-      'sibercron.cronTrigger': {
+      sibercron_cronTrigger: {
         displayName: 'Cron Tetikleyici',
         group: 'Tetikleyici',
         description: 'Workflow\'u cron zamanlamasında tetikleyin',
       },
-      'sibercron.githubTrigger': {
+      sibercron_githubTrigger: {
         displayName: 'GitHub Tetikleyici',
         group: 'Tetikleyici',
         description: 'Workflow\'u GitHub webhook olaylarından tetikleyin (push, PR, sorunlar, sürüm…)',
       },
-      'sibercron.manualTrigger': {
+      sibercron_manualTrigger: {
         displayName: 'Manuel Tetikleyici',
         group: 'Tetikleyici',
         description: 'Workflow\'u manuel olarak tetikleyin',
       },
-      'sibercron.telegramTrigger': {
+      sibercron_telegramTrigger: {
         displayName: 'Telegram Tetikleyici',
         group: 'Tetikleyici',
         description: 'Gelen Telegram mesajlarında workflow\'u tetikleyin',
       },
-      'sibercron.webhookTrigger': {
+      sibercron_webhookTrigger: {
         displayName: 'Webhook Tetikleyici',
         group: 'Tetikleyici',
         description: 'Workflow\'u gelen webhook aracılığıyla tetikleyin',

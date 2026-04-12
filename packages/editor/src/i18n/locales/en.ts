@@ -685,6 +685,8 @@ const en = {
     connected: 'Connected',
     disconnected: 'Disconnected',
     loadError: 'Failed to load server status',
+    appLogs: 'Server Lifecycle',
+    noAppLogs: 'No lifecycle events yet. Check back after server activity.',
   },
 
   // ── Workflow Editor / Toolbar ───────────────────────────────────────────
@@ -836,252 +838,252 @@ const en = {
   // ── Node Definitions (Dynamic Language Support) ────────────────────────
   nodes: {
     definitions: {
-      'sibercron.aiAgent': {
+      sibercron_aiAgent: {
         displayName: 'AI Agent',
         group: 'AI',
         description: 'Interact with AI models - OpenAI, Anthropic, Gemini, Ollama, Groq and custom endpoints',
       },
-      'sibercron.aiClassifier': {
+      sibercron_aiClassifier: {
         displayName: 'AI Classifier',
         group: 'AI',
         description: 'Classify text into categories using AI',
       },
-      'sibercron.aiSummarizer': {
+      sibercron_aiSummarizer: {
         displayName: 'AI Summarizer',
         group: 'AI',
         description: 'Summarize text using AI',
       },
-      'sibercron.aiWebBrowser': {
+      sibercron_aiWebBrowser: {
         displayName: 'AI Web Browser',
         group: 'AI',
         description: 'Browse a web page and extract or analyze its content with AI',
       },
-      'sibercron.autonomousDev': {
+      sibercron_autonomousDev: {
         displayName: 'Autonomous Development',
         group: 'AI',
         description: 'AI autonomous development loop - give instruction, AI works, answer if asked, restart when done',
       },
-      'sibercron.aggregate': {
+      sibercron_aggregate: {
         displayName: 'Aggregate',
         group: 'Core',
         description: 'Perform math operations on items like count, sum, average, grouping',
       },
-      'sibercron.airtable': {
+      sibercron_airtable: {
         displayName: 'Airtable',
         group: 'Data',
         description: 'Read and write Airtable base records',
       },
-      'sibercron.csv': {
+      sibercron_csv: {
         displayName: 'CSV',
         group: 'Core',
         description: 'Parse CSV to JSON or convert JSON to CSV (RFC 4180)',
       },
-      'sibercron.code': {
+      sibercron_code: {
         displayName: 'Code',
         group: 'Core',
         description: 'Run custom JavaScript code to transform data',
       },
-      'sibercron.conditional': {
+      sibercron_conditional: {
         displayName: 'Conditional',
         group: 'Core',
         description: 'Route items based on a condition',
       },
-      'sibercron.crypto': {
+      sibercron_crypto: {
         displayName: 'Crypto',
         group: 'Core',
         description: 'Hash, HMAC, Base64, random, AES-256 encrypt/decrypt',
       },
-      'sibercron.databaseQuery': {
+      sibercron_databaseQuery: {
         displayName: 'Database Query',
         group: 'Data',
         description: 'Execute SQL queries on MySQL or PostgreSQL databases',
       },
-      'sibercron.dateTime': {
+      sibercron_dateTime: {
         displayName: 'DateTime',
         group: 'Core',
         description: 'Parse, format, and manipulate date/time values',
       },
-      'sibercron.delay': {
+      sibercron_delay: {
         displayName: 'Delay',
         group: 'Core',
         description: 'Wait for a specified duration before passing data through',
       },
-      'sibercron.executeWorkflow': {
+      sibercron_executeWorkflow: {
         displayName: 'Execute Workflow',
         group: 'Core',
         description: 'Execute another SiberCron workflow and return its result',
       },
-      'sibercron.fileOperation': {
+      sibercron_fileOperation: {
         displayName: 'File Operation',
         group: 'Core',
         description: 'Read, write, append, delete, or list local files on the server',
       },
-      'sibercron.filter': {
+      sibercron_filter: {
         displayName: 'Filter',
         group: 'Core',
         description: 'Filter items matching conditions, remove non-matching items',
       },
-      'sibercron.ftpSftp': {
+      sibercron_ftpSftp: {
         displayName: 'FTP / SFTP',
         group: 'Data',
         description: 'File operations on FTP or SFTP server: list, download, upload, delete, rename',
       },
-      'sibercron.github': {
+      sibercron_github: {
         displayName: 'GitHub',
         group: 'Data',
         description: 'Interact with GitHub — issues, PRs, repositories, releases',
       },
-      'sibercron.googleDrive': {
+      sibercron_googleDrive: {
         displayName: 'Google Drive',
         group: 'Data',
         description: 'Manage files and folders in Google Drive',
       },
-      'sibercron.googleSheets': {
+      sibercron_googleSheets: {
         displayName: 'Google Sheets',
         group: 'Data',
         description: 'Read and write data in Google Sheets using a Service Account',
       },
-      'sibercron.graphql': {
+      sibercron_graphql: {
         displayName: 'GraphQL',
         group: 'Core',
         description: 'Execute GraphQL queries and mutations',
       },
-      'sibercron.httpRequest': {
+      sibercron_httpRequest: {
         displayName: 'HTTP Request',
         group: 'Core',
         description: 'Make an HTTP request to any URL',
       },
-      'sibercron.httpResponse': {
+      sibercron_httpResponse: {
         displayName: 'HTTP Response',
         group: 'Core',
         description: 'Set the HTTP response for synchronous webhook workflows',
       },
-      'sibercron.jira': {
+      sibercron_jira: {
         displayName: 'Jira',
         group: 'Data',
         description: 'Manage Jira issues, projects, comments and transitions',
       },
-      'sibercron.log': {
+      sibercron_log: {
         displayName: 'Log',
         group: 'Core',
         description: 'Log a message to the console and pass data through',
       },
-      'sibercron.loop': {
+      sibercron_loop: {
         displayName: 'Loop',
         group: 'Core',
         description: 'Iterate over input items, outputting each one with loop metadata',
       },
-      'sibercron.merge': {
+      sibercron_merge: {
         displayName: 'Merge',
         group: 'Core',
         description: 'Merge data from multiple inputs using various strategies',
       },
-      'sibercron.notionDatabase': {
+      sibercron_notionDatabase: {
         displayName: 'Notion Database',
         group: 'Data',
         description: 'Query, create, and update Notion database pages',
       },
-      'sibercron.rssFeed': {
+      sibercron_rssFeed: {
         displayName: 'RSS Feed',
         group: 'Data',
         description: 'Fetch and parse RSS/Atom feeds',
       },
-      'sibercron.redis': {
+      sibercron_redis: {
         displayName: 'Redis',
         group: 'Data',
         description: 'Read, write, and manage data in Redis',
       },
-      'sibercron.retry': {
+      sibercron_retry: {
         displayName: 'Retry',
         group: 'Core',
         description: 'Retry an HTTP request with exponential backoff on failure',
       },
-      'sibercron.sort': {
+      sibercron_sort: {
         displayName: 'Sort',
         group: 'Core',
         description: 'Sort items by field value or randomly',
       },
-      'sibercron.split': {
+      sibercron_split: {
         displayName: 'Split',
         group: 'Core',
         description: 'Split input items into batches or by field value',
       },
-      'sibercron.switch': {
+      sibercron_switch: {
         displayName: 'Switch',
         group: 'Core',
         description: 'Route items to multiple outputs based on field value',
       },
-      'sibercron.text': {
+      sibercron_text: {
         displayName: 'Text',
         group: 'Core',
         description: 'Perform string operations: case, trim, replace, split, join, encode, truncate, and more',
       },
-      'sibercron.transform': {
+      sibercron_transform: {
         displayName: 'Transform',
         group: 'Transform',
         description: 'Transform input data by picking, renaming, removing, or setting fields',
       },
-      'sibercron.variables': {
+      sibercron_variables: {
         displayName: 'Variables',
         group: 'Core',
         description: 'Set, get, and manage per-execution variables',
       },
-      'sibercron.xml': {
+      sibercron_xml: {
         displayName: 'XML',
         group: 'Core',
         description: 'Parse XML to JSON or convert JSON to XML',
       },
-      'sibercron.discordSend': {
+      sibercron_discordSend: {
         displayName: 'Discord Send',
         group: 'Messaging',
         description: 'Send a message to Discord via webhook or Bot API',
       },
-      'sibercron.emailSmtp': {
+      sibercron_emailSmtp: {
         displayName: 'Email (SMTP)',
         group: 'Messaging',
         description: 'Send emails via SMTP',
       },
-      'sibercron.slackSend': {
+      sibercron_slackSend: {
         displayName: 'Slack Send',
         group: 'Messaging',
         description: 'Send a message to a Slack channel or thread',
       },
-      'sibercron.telegramSend': {
+      sibercron_telegramSend: {
         displayName: 'Telegram Send',
         group: 'Messaging',
         description: 'Send a message, photo, or document via Telegram Bot API',
       },
-      'sibercron.whatsappReceive': {
+      sibercron_whatsappReceive: {
         displayName: 'WhatsApp Receive',
         group: 'Trigger',
         description: 'Trigger workflow with incoming WhatsApp messages',
       },
-      'sibercron.whatsappSend': {
+      sibercron_whatsappSend: {
         displayName: 'WhatsApp Send',
         group: 'Messaging',
         description: 'Send messages via WhatsApp Cloud API',
       },
-      'sibercron.cronTrigger': {
+      sibercron_cronTrigger: {
         displayName: 'Cron Trigger',
         group: 'Trigger',
         description: 'Trigger a workflow on a cron schedule',
       },
-      'sibercron.githubTrigger': {
+      sibercron_githubTrigger: {
         displayName: 'GitHub Trigger',
         group: 'Trigger',
         description: 'Trigger a workflow from GitHub webhook events (push, PR, issues, release…)',
       },
-      'sibercron.manualTrigger': {
+      sibercron_manualTrigger: {
         displayName: 'Manual Trigger',
         group: 'Trigger',
         description: 'Manually trigger a workflow execution',
       },
-      'sibercron.telegramTrigger': {
+      sibercron_telegramTrigger: {
         displayName: 'Telegram Trigger',
         group: 'Trigger',
         description: 'Trigger workflow on incoming Telegram messages',
       },
-      'sibercron.webhookTrigger': {
+      sibercron_webhookTrigger: {
         displayName: 'Webhook Trigger',
         group: 'Trigger',
         description: 'Trigger a workflow via an incoming webhook',
