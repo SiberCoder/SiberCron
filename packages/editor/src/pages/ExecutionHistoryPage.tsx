@@ -213,7 +213,7 @@ function NodeOutputDetail({ output }: { output: Record<string, unknown>[] }) {
                   exitReason === 'error' ? 'text-aurora-rose' : 'text-white',
                 )}
               >
-                {exitReason === 'completed' ? 'Tamamlandi' :
+                {exitReason === 'completed' ? 'Tamamlandı' :
                  exitReason === 'maxIterations' ? 'Max Iterasyon' :
                  exitReason === 'error' ? 'Hata' :
                  exitReason === 'stopped' ? 'Durduruldu' : exitReason}
@@ -1173,10 +1173,10 @@ export default function ExecutionHistoryPage() {
             </div>
           </div>
           <h3 className="text-xl font-display font-semibold text-white mb-2">
-            Henuz calistirma yok
+            Henüz çalıştırma yok
           </h3>
           <p className="text-sm text-obsidian-500 max-w-sm font-body">
-            Bir workflow calistirin, sonuclari burada gorun
+            Bir workflow çalıştırın, sonuçları burada görün
           </p>
         </div>
       ) : filteredExecutions.length === 0 ? (

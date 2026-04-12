@@ -131,9 +131,9 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
       { key: 'type', label: 'Tip', placeholder: 'postgres / mysql', required: true },
       { key: 'host', label: 'Host', placeholder: 'localhost', required: true },
       { key: 'port', label: 'Port', placeholder: '5432', type: 'number' },
-      { key: 'database', label: 'Veritabani Adi', required: true },
-      { key: 'user', label: 'Kullanici Adi', required: true },
-      { key: 'password', label: 'Sifre', secret: true },
+      { key: 'database', label: 'Veritabanı Adı', required: true },
+      { key: 'user', label: 'Kullanıcı Adı', required: true },
+      { key: 'password', label: 'Şifre', secret: true },
     ],
   },
   {
@@ -143,7 +143,7 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
     fields: [
       { key: 'host', label: 'Host', placeholder: 'localhost', required: true },
       { key: 'port', label: 'Port', placeholder: '6379', type: 'number' },
-      { key: 'password', label: 'Sifre (opsiyonel)', secret: true },
+      { key: 'password', label: 'Şifre (opsiyonel)', secret: true },
       { key: 'db', label: 'DB Index (opsiyonel)', placeholder: '0', type: 'number' },
     ],
   },
@@ -155,8 +155,8 @@ const CREDENTIAL_TYPES: CredentialTypeDef[] = [
       { key: 'protocol', label: 'Protokol', placeholder: 'ftp / sftp', required: true },
       { key: 'host', label: 'Host', placeholder: 'ftp.example.com', required: true },
       { key: 'port', label: 'Port', placeholder: '21', type: 'number' },
-      { key: 'username', label: 'Kullanici Adi', required: true },
-      { key: 'password', label: 'Sifre', secret: true },
+      { key: 'username', label: 'Kullanıcı Adı', required: true },
+      { key: 'password', label: 'Şifre', secret: true },
       { key: 'privateKey', label: 'Private Key (SFTP, opsiyonel)', secret: true },
     ],
   },
@@ -632,7 +632,7 @@ export default function CredentialsPage() {
             Credentials
           </h1>
           <p className="text-sm text-obsidian-400 mt-1.5 font-body">
-            API anahtarlarini ve kimlik bilgilerini guvenle saklayin
+            API anahtarlarını ve kimlik bilgilerini güvenle saklayın
           </p>
         </div>
         <button onClick={() => setShowModal(true)} className="btn-aurora">

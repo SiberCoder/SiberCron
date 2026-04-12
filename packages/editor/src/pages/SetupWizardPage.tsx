@@ -58,11 +58,11 @@ function MaskedInput({
 }
 
 const STEP_META = [
-  { label: 'Hos Geldin', icon: Zap },
-  { label: 'AI Saglayici', icon: Sparkles },
-  { label: 'Mesajlasma', icon: MessageSquare },
+  { label: 'Hoş Geldin', icon: Zap },
+  { label: 'AI Sağlayıcı', icon: Sparkles },
+  { label: 'Mesajlaşma', icon: MessageSquare },
   { label: 'Zamanlama', icon: Clock },
-  { label: 'Tamamlandi', icon: PartyPopper },
+  { label: 'Tamamlandı', icon: PartyPopper },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -128,13 +128,13 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         <div className="absolute -inset-6 bg-aurora-cyan/10 rounded-full blur-3xl pointer-events-none" />
       </div>
       <h1 className="text-4xl font-display font-bold text-white mb-4 tracking-tight">
-        SiberCron'a Hos Geldiniz
+        SiberCron'a Hoş Geldiniz
       </h1>
       <p className="text-obsidian-400 max-w-md mb-10 font-body leading-relaxed">
-        AI destekli workflow otomasyon platformunuzu kuruluma baslayalim
+        AI destekli workflow otomasyon platformunuzu kuruluma başlayalım
       </p>
       <button onClick={onNext} className="btn-aurora text-base px-8 py-3.5">
-        Basla <ArrowRight size={18} />
+        Başla <ArrowRight size={18} />
       </button>
     </div>
   );
@@ -151,10 +151,10 @@ function AIProviderStep() {
     <div className="space-y-6 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-display font-bold text-white tracking-tight">
-          AI Saglayici Yapilandirmasi
+          AI Sağlayıcı Yapılandırması
         </h2>
         <p className="text-sm text-obsidian-400 mt-2 font-body">
-          Istege bagli — daha sonra da yapilandirabilirsiniz
+          İsteğe bağlı — daha sonra da yapılandırabilirsiniz
         </p>
       </div>
 
@@ -275,7 +275,7 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       {status === 'connected' && (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 flex items-center gap-2">
           <CheckCircle2 size={16} className="text-emerald-400" />
-          <p className="text-sm text-emerald-400 font-medium">WhatsApp baglandi!</p>
+          <p className="text-sm text-emerald-400 font-medium">WhatsApp bağlandı!</p>
         </div>
       )}
     </div>
@@ -288,7 +288,7 @@ const CHANNELS: ChannelDef[] = [
     name: 'WhatsApp',
     accent: 'text-[#25D366]',
     bg: 'bg-[#25D366]/10',
-    description: 'QR kod okutarak WhatsApp hesabinizi baglayin',
+    description: 'QR kod okutarak WhatsApp hesabınızı bağlayın',
     icon: <MessageSquare size={18} />,
   },
   {
@@ -296,7 +296,7 @@ const CHANNELS: ChannelDef[] = [
     name: 'Telegram',
     accent: 'text-[#0088CC]',
     bg: 'bg-[#0088CC]/10',
-    description: 'Telegram Bot Token ile baglanin',
+    description: 'Telegram Bot Token ile bağlanın',
     icon: <Send size={18} />,
   },
   {
@@ -304,7 +304,7 @@ const CHANNELS: ChannelDef[] = [
     name: 'Discord',
     accent: 'text-[#5865F2]',
     bg: 'bg-[#5865F2]/10',
-    description: 'Discord Bot ile baglanin',
+    description: 'Discord Bot ile bağlanın',
     icon: <Hash size={18} />,
   },
   {
@@ -312,7 +312,7 @@ const CHANNELS: ChannelDef[] = [
     name: 'Slack',
     accent: 'text-[#E01E5A]',
     bg: 'bg-[#E01E5A]/10',
-    description: 'Slack workspace baglantisi',
+    description: 'Slack workspace bağlantısı',
     icon: <MessageSquare size={18} />,
   },
 ];
@@ -568,7 +568,7 @@ function SchedulingStep() {
             className="glass-input font-mono"
           />
           <p className="text-[10px] text-obsidian-500 font-body">
-            Orn: "0 * * * *" = her saat basi, "*/5 * * * *" = her 5 dakikada
+            Örn: "0 * * * *" = her saat başı, "*/5 * * * *" = her 5 dakikada
           </p>
         </div>
 
@@ -652,7 +652,7 @@ function CompleteStep({ onFinish }: { onFinish: () => void }) {
       {connectedItems.length > 0 && (
         <div className="glass-card rounded-2xl p-6 mb-10 w-full max-w-sm">
           <h3 className="text-xs font-semibold text-obsidian-400 mb-4 uppercase tracking-wider font-body">
-            Yapilandirilan Servisler
+            Yapılandırılan Servisler
           </h3>
           <div className="space-y-3">
             {connectedItems.map((item) => (
@@ -667,7 +667,7 @@ function CompleteStep({ onFinish }: { onFinish: () => void }) {
 
       {connectedItems.length === 0 && (
         <p className="text-sm text-obsidian-500 mb-10 font-body">
-          Henuz bir servis yapilandirilmadi — sonra ekleyebilirsiniz.
+          Henüz bir servis yapılandırılmadı — sonra ekleyebilirsiniz.
         </p>
       )}
 
@@ -753,7 +753,7 @@ export default function SetupWizardPage() {
                 Atla
               </button>
               <button onClick={nextStep} className="btn-aurora">
-                Ileri <ArrowRight size={16} />
+                İleri <ArrowRight size={16} />
               </button>
             </div>
           </div>

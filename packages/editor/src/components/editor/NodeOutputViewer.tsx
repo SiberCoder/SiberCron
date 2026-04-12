@@ -45,7 +45,7 @@ export default function NodeOutputViewer() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
         {!output || output.length === 0 ? (
-          <p className="text-xs text-obsidian-500 font-body">No output data</p>
+          <p className="text-xs text-obsidian-500 font-body">Çıktı verisi yok</p>
         ) : (
           <div className="space-y-2">
             {output.map((item, i) => (

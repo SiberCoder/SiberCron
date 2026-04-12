@@ -130,7 +130,7 @@ function OAuthSessionFields({
       window.open(res.authUrl, 'sibercron_oauth', 'width=700,height=700,left=200,top=100');
       onTestResult({ ok: true, msg: 'Açılan pencerede giriş yapın. Otomatik bağlanacak...' });
 
-      // Polling baslat - server tamamlaninca yakalayacagiz
+      // Polling başlat - server tamamlanınca yakalayacağız
       // Server pollUrl'de /api/v1 prefix'i dondurur, apiGet zaten ekler — strip edelim
       const pollPath = res.pollUrl.replace(/^\/api\/v1/, '');
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -282,7 +282,7 @@ function CliDelegationFields({
       if (res.success) {
         onTestResult({ ok: true, msg: `Claude yanit verdi: "${(res.response || '').slice(0, 100)}..."` });
       } else {
-        onTestResult({ ok: false, msg: res.error || 'Claude CLI yanitlamadi' });
+        onTestResult({ ok: false, msg: res.error || 'Claude CLI yanıt vermedi' });
       }
     } catch (e: any) {
       onTestResult({ ok: false, msg: e.message || 'Test başarısız' });
@@ -294,7 +294,7 @@ function CliDelegationFields({
   return (
     <>
       <p className="text-xs text-obsidian-400 font-body">
-        Bilgisayarinda kurulu Claude CLI uzerinden baglan. API anahtari gerekmez - Claude'un kendi oturumunu kullanir.
+        Bilgisayarında kurulu Claude CLI üzerinden bağlan. API anahtarı gerekmez - Claude'un kendi oturumunu kullanır.
       </p>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -481,10 +481,10 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
         updateInnerConfig({ availableModels: res.models.map((m: { name: string }) => m.name) });
         update({ enabled: true });
       } else {
-        setTestResult({ ok: false, msg: 'Ollama bulunamadi' });
+        setTestResult({ ok: false, msg: 'Ollama bulunamadı' });
       }
     } catch {
-      setTestResult({ ok: false, msg: 'Ollama sunucusuna baglanilamadi' });
+      setTestResult({ ok: false, msg: 'Ollama sunucusuna bağlanılamadı' });
     } finally {
       setScanning(false);
     }
@@ -574,7 +574,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {selectedAuth === 'api_key' && (
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                API Anahtari
+                API Anahtarı
               </label>
               <MaskedInput
                 value={currentConfig.config.apiKey || ''}
@@ -639,12 +639,12 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
               </div>
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                  API Anahtari (istege bagli)
+                  API Anahtarı (isteğe bağlı)
                 </label>
                 <MaskedInput
                   value={currentConfig.config.customApiKey || ''}
                   onChange={(v) => updateInnerConfig({ customApiKey: v })}
-                  placeholder="API anahtari"
+                  placeholder="API anahtarı"
                 />
               </div>
             </div>

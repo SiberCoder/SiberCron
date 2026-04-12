@@ -833,7 +833,7 @@ export default function WorkflowListPage() {
                           ? 'bg-aurora-emerald/10 text-aurora-emerald'
                           : 'bg-white/[0.04] text-obsidian-500',
                       )}
-                      title={wf.isActive ? 'Devre disi birak' : 'Aktif et'}
+                      title={wf.isActive ? 'Devre dışı bırak' : 'Aktif et'}
                     >
                       <span className={clsx('w-1.5 h-1.5 rounded-full', wf.isActive ? 'bg-aurora-emerald' : 'bg-obsidian-600')} />
                       {wf.isActive ? 'Aktif' : 'Pasif'}

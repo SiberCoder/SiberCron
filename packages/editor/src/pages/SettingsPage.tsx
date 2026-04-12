@@ -1085,7 +1085,7 @@ export default function SettingsPage() {
                   Aktif
                 </label>
               </div>
-              <Field label="Telefon Numarasi">
+              <Field label="Telefon Numarası">
                 <input
                   type="text"
                   value={config.messaging.whatsapp?.phoneNumber || ''}
@@ -1168,7 +1168,7 @@ export default function SettingsPage() {
         <Section
           icon={Server}
           title="Sistem Bilgisi"
-          description="API sunucusu durumu ve baglanti bilgileri"
+          description="API sunucusu durumu ve bağlantı bilgileri"
           defaultOpen={false}
         >
           <div className="space-y-3">
@@ -1268,7 +1268,7 @@ export default function SettingsPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-white">API Anahtar Koruması</p>
                 <p className="text-[10px] text-obsidian-500 mt-0.5">
-                  API_KEY ortam degiskenini ayarlayarak tum endpoint'leri koruyabilirsiniz.
+                  API_KEY ortam değişkenini ayarlayarak tüm endpoint'leri koruyabilirsiniz.
                   Aktifken <code className="font-mono bg-white/[0.04] px-1 rounded">Authorization: Bearer &lt;key&gt;</code> veya{' '}
                   <code className="font-mono bg-white/[0.04] px-1 rounded">X-API-Key</code> header gerekir.
                 </p>

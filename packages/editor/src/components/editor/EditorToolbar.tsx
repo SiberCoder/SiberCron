@@ -406,7 +406,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
           onClick={redo}
           disabled={!canRedo()}
           className="btn-ghost text-xs disabled:opacity-30"
-          title="Ileri Al (Ctrl+Shift+Z)"
+          title="İleri Al (Ctrl+Shift+Z)"
         >
           <Redo2 size={14} />
         </button>

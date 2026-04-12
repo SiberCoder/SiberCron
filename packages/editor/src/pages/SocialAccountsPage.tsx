@@ -168,7 +168,7 @@ function StatusBadge({ status }: { status: SocialAccount['status'] }) {
       icon: <XCircle size={12} />,
     },
     configuring: {
-      label: 'Yapilandiriliyor',
+      label: 'Yapılandırılıyor',
       dot: 'bg-aurora-amber',
       text: 'text-aurora-amber',
       bg: 'bg-aurora-amber/10',
@@ -236,7 +236,7 @@ function AccountCard({
             <p className="text-lg font-display font-bold text-white">
               {account.stats.messagesReceived}
             </p>
-            <p className="text-[10px] text-obsidian-500 font-body">Alinan</p>
+            <p className="text-[10px] text-obsidian-500 font-body">Alınan</p>
           </div>
           <div className="glass-card rounded-xl p-3 text-center">
             <p className="text-lg font-display font-bold text-white">
@@ -327,7 +327,7 @@ function SettingsModal({
             <>
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
-                  Telefon Numarasi
+                  Telefon Numarası
                 </label>
                 <input readOnly value={account.identifier} className="glass-input opacity-60 cursor-not-allowed" />
               </div>
@@ -342,10 +342,10 @@ function SettingsModal({
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={cfg.autoReply ?? false} onChange={(e) => update('autoReply', e.target.checked)} className="accent-aurora-cyan w-4 h-4 rounded" />
-                <span className="text-sm text-obsidian-300 font-body">Otomatik Yanitla</span>
+                <span className="text-sm text-obsidian-300 font-body">Otomatik Yanıtla</span>
               </label>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Karsilama Mesaji</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">Karşılama Mesajı</label>
                 <textarea value={cfg.welcomeMessage || ''} onChange={(e) => update('welcomeMessage', e.target.value)} rows={3} className="glass-input resize-none" />
               </div>
             </>
@@ -355,7 +355,7 @@ function SettingsModal({
           {account.platform === 'telegram' && (
             <>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Bot Adi</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">Bot Adı</label>
                 <input readOnly value={account.identifier} className="glass-input opacity-60 cursor-not-allowed" />
               </div>
               <div className="space-y-1.5">
@@ -368,7 +368,7 @@ function SettingsModal({
                 <input value={cfg.commandPrefix || '/'} onChange={(e) => update('commandPrefix', e.target.value)} className="glass-input" />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Izin Verilen Chat ID'leri</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">İzin Verilen Chat ID'leri</label>
                 <textarea value={cfg.allowedChatIds || ''} onChange={(e) => update('allowedChatIds', e.target.value)} rows={3} placeholder="123456789&#10;987654321" className="glass-input resize-none font-mono" />
               </div>
               <div className="space-y-1.5">
@@ -385,7 +385,7 @@ function SettingsModal({
           {account.platform === 'discord' && (
             <>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Sunucu Adi</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">Sunucu Adı</label>
                 <input readOnly value={account.identifier} className="glass-input opacity-60 cursor-not-allowed" />
               </div>
               <div className="space-y-1.5">
@@ -397,12 +397,12 @@ function SettingsModal({
                 <input value={cfg.webhookUrl || ''} onChange={(e) => update('webhookUrl', e.target.value)} className="glass-input" />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Izin Verilen Kanal ID'leri</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">İzin Verilen Kanal ID'leri</label>
                 <textarea value={cfg.allowedChannelIds || ''} onChange={(e) => update('allowedChannelIds', e.target.value)} rows={3} className="glass-input resize-none font-mono" />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={cfg.embedMessages ?? true} onChange={(e) => update('embedMessages', e.target.checked)} className="accent-aurora-cyan w-4 h-4 rounded" />
-                <span className="text-sm text-obsidian-300 font-body">Embed Mesajlari</span>
+                <span className="text-sm text-obsidian-300 font-body">Embed Mesajları</span>
               </label>
             </>
           )}
@@ -411,7 +411,7 @@ function SettingsModal({
           {account.platform === 'slack' && (
             <>
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-obsidian-400 font-body">Workspace Adi</label>
+                <label className="block text-xs font-semibold text-obsidian-400 font-body">Workspace Adı</label>
                 <input readOnly value={account.identifier} className="glass-input opacity-60 cursor-not-allowed" />
               </div>
               <div className="space-y-1.5">
@@ -428,7 +428,7 @@ function SettingsModal({
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={cfg.threadReplies ?? false} onChange={(e) => update('threadReplies', e.target.checked)} className="accent-aurora-cyan w-4 h-4 rounded" />
-                <span className="text-sm text-obsidian-300 font-body">Thread'lere Yanitla</span>
+                <span className="text-sm text-obsidian-300 font-body">Thread'lere Yanıtla</span>
               </label>
             </>
           )}
@@ -514,13 +514,13 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                 onClick={() => setSelected(null)}
                 className="text-xs text-obsidian-500 hover:text-aurora-cyan transition-colors mb-2 font-body"
               >
-                ← Platform sec
+                ← Platform seç
               </button>
 
               {selected === 'whatsapp' && (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-obsidian-400 font-body">Telefon Numarasi</label>
+                    <label className="block text-xs font-semibold text-obsidian-400 font-body">Telefon Numarası</label>
                     <input value={cfg.phoneNumber || ''} onChange={(e) => update('phoneNumber', e.target.value)} placeholder="+90..." className="glass-input" />
                   </div>
                   <div className="space-y-1.5">
@@ -557,7 +557,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                     <MaskedInput value={cfg.botToken || ''} onChange={(v) => update('botToken', v)} placeholder="xoxb-..." />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-obsidian-400 font-body">Workspace Adi</label>
+                    <label className="block text-xs font-semibold text-obsidian-400 font-body">Workspace Adı</label>
                     <input value={cfg.workspace || ''} onChange={(e) => update('workspace', e.target.value)} className="glass-input" />
                   </div>
                 </div>
@@ -638,7 +638,7 @@ export default function SocialAccountsPage() {
             Bağlı Hesaplar
           </h1>
           <p className="text-sm text-obsidian-400 mt-1.5 font-body">
-            Mesajlasma platformlarini yonetin
+            Mesajlaşma platformlarını yönetin
           </p>
         </div>
         <button
@@ -680,10 +680,10 @@ export default function SocialAccountsPage() {
             <div className="absolute -inset-4 bg-aurora-pink/5 rounded-full blur-2xl pointer-events-none" />
           </div>
           <h3 className="text-xl font-display font-semibold text-white mb-2">
-            Henuz hesap eklenmedi
+            Henüz hesap eklenmedi
           </h3>
           <p className="text-sm text-obsidian-500 mb-8 max-w-sm font-body">
-            Mesajlasma platformlarinizi baglayarak workflow'larinizi
+            Mesajlaşma platformlarınızı bağlayarak workflow'larınızı
             tetikleyebilirsiniz.
           </p>
           <button

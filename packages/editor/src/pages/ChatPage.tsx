@@ -368,7 +368,7 @@ function ContextDrawer({
             <Users size={12} /> Bağlı Hesaplar
           </h4>
           {state.accounts.length === 0 ? (
-            <p className="text-[11px] text-slate-600 px-1">Henuz bagli hesap yok</p>
+            <p className="text-[11px] text-slate-600 px-1">Henüz bağlı hesap yok</p>
           ) : (
             <div className="space-y-1">
               {state.accounts.map((a) => (
@@ -392,11 +392,11 @@ function ContextDrawer({
         {state.aiProvider && (
           <div className="mb-4">
             <h4 className="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
-              <Brain size={12} /> AI Saglayici
+              <Brain size={12} /> AI Sağlayıcı
             </h4>
             <div className="bg-white/[0.03] rounded-lg p-3 text-xs text-slate-300 space-y-1">
               <div className="flex justify-between">
-                <span>Saglayici</span>
+                <span>Sağlayıcı</span>
                 <span className="text-white font-medium">{state.aiProvider.name}</span>
               </div>
               <div className="flex justify-between">
@@ -482,7 +482,7 @@ function ChatSettingsPanel({
               <Terminal size={12} className="text-sky-400" />
               Verbose Mod
             </div>
-            <p className="text-[10px] text-slate-500 mt-0.5">Arac cagrilarini ve arka plan islemlerini goster</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Araç çağrılarını ve arka plan işlemlerini göster</p>
           </div>
           <button
             onClick={() => update({ verbose: !settings.verbose })}
@@ -503,9 +503,9 @@ function ChatSettingsPanel({
           <div>
             <div className="text-xs font-medium text-white flex items-center gap-1.5">
               <Eye size={12} className="text-purple-400" />
-              Dusunce Sureci
+              Düşünce Süreci
             </div>
-            <p className="text-[10px] text-slate-500 mt-0.5">AI'in ne dusundugunu ve hangi araclari sectigini goster</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">AI'in ne düşündüğünü ve hangi araçları seçtiğini göster</p>
           </div>
           <button
             onClick={() => update({ showThinking: !settings.showThinking })}
@@ -554,7 +554,7 @@ function ChatSettingsPanel({
         <div>
           <div className="text-xs font-medium text-white mb-2 flex items-center gap-1.5">
             <Wrench size={12} className="text-amber-400" />
-            Maks Islem Sayisi
+            Maks İşlem Sayısı
           </div>
           <div className="flex items-center gap-3">
             <input
@@ -589,7 +589,7 @@ function ChatSettingsPanel({
         <div className="border-t border-white/[0.06] pt-3 space-y-3">
           {/* Show timestamps */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Zaman damgalarini goster</span>
+            <span className="text-xs text-slate-400">Zaman damgalarını göster</span>
             <button
               onClick={() => update({ showTimestamps: !settings.showTimestamps })}
               className={clsx(
@@ -606,7 +606,7 @@ function ChatSettingsPanel({
 
           {/* Show token count */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Token sayisini goster</span>
+            <span className="text-xs text-slate-400">Token sayısını göster</span>
             <button
               onClick={() => update({ showTokenCount: !settings.showTokenCount })}
               className={clsx(
@@ -623,7 +623,7 @@ function ChatSettingsPanel({
 
           {/* Auto scroll */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Otomatik kaydir</span>
+            <span className="text-xs text-slate-400">Otomatik kaydır</span>
             <button
               onClick={() => update({ autoScroll: !settings.autoScroll })}
               className={clsx(
@@ -665,8 +665,8 @@ function WelcomeState({ onSuggestion }: { onSuggestion: (text: string) => void }
 
       <h2 className="text-xl font-semibold text-white mb-2">Merhaba! Ben SiberCron AI</h2>
       <p className="text-sm text-slate-400 text-center max-w-md mb-8 leading-relaxed">
-        Workflow'larinizi yonetebilir, mesaj gonderebilir, sistem durumunu kontrol edebilirim.
-        Size nasil yardimci olabilirim?
+        Workflow'larınızı yönetebilir, mesaj gönderebilir, sistem durumunu kontrol edebilirim.
+        Size nasıl yardımcı olabilirim?
       </p>
 
       {/* Suggestion chips */}
@@ -807,7 +807,7 @@ export default function ChatPage() {
       case 'connected':
         return 'Bağlı';
       case 'no_provider':
-        return 'Saglayici yok';
+        return 'Sağlayıcı yok';
       case 'error':
         return 'Hata';
     }
@@ -861,7 +861,7 @@ export default function ChatPage() {
                 ? 'text-purple-400 bg-purple-500/10'
                 : 'text-slate-400 hover:text-white hover:bg-white/[0.04]',
             )}
-            title="Chat ayarlari"
+            title="Chat ayarları"
           >
             <Settings2 size={14} />
             <span className="hidden sm:inline">Ayarlar</span>

@@ -132,7 +132,7 @@ function CronBuilder({ value, onChange }: { value: string; onChange: (v: string)
 
         {state.freq === 'day' && (
           <div className="flex items-center gap-2 text-xs text-slate-300 flex-wrap">
-            <span>Her gun saat</span>
+            <span>Her gün saat</span>
             <select value={state.hour} onChange={e => update({ hour: e.target.value })} className="glass-input w-16 text-xs py-1 px-2">
               {Array.from({length:24},(_,i)=>i).map(h => <option key={h} value={String(h)}>{String(h).padStart(2,'0')}</option>)}
             </select>
@@ -866,7 +866,7 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
               {opt.description && <span className="text-[10px] text-obsidian-600 font-body truncate">{opt.description}</span>}
             </label>
           )) : (
-            <p className="text-[10px] text-obsidian-600 px-1 font-body">No options defined</p>
+            <p className="text-[10px] text-obsidian-600 px-1 font-body">Seçenek tanımlı değil</p>
           )}
         </div>
       );
