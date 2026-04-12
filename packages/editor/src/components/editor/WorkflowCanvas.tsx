@@ -14,6 +14,7 @@ import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '../../store/workflowStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
 import { useExecutionStore } from '../../store/executionStore';
+import { useTranslation } from '../../i18n';
 import BaseNode from '../nodes/BaseNode';
 
 const nodeTypes = {
@@ -33,6 +34,7 @@ function getMinimapNodeColor(node: Node): string {
 }
 
 export default function WorkflowCanvas() {
+  const { t } = useTranslation();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reactFlowInstance = useRef<ReactFlowInstance<any, any> | null>(null);
@@ -189,29 +191,29 @@ export default function WorkflowCanvas() {
       {selectedNodeIds.length > 1 && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-2 rounded-xl bg-obsidian-900/90 border border-white/[0.08] shadow-xl backdrop-blur-sm">
           <span className="text-xs text-slate-400 font-medium pr-1">
-            {selectedNodeIds.length} node seçili
+            {t('canvas.nodesSelected').replace('{{count}}', String(selectedNodeIds.length))}
           </span>
           <div className="w-px h-4 bg-white/10" />
           <button
             onClick={handleBulkDuplicate}
-            title="Seçilileri çoğalt"
+            title={t('canvas.duplicateSelected')}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
           >
             <Copy size={13} />
-            <span>Çoğalt</span>
+            <span>{t('canvas.duplicate')}</span>
           </button>
           <button
             onClick={handleBulkDelete}
-            title="Seçilileri sil"
+            title={t('canvas.deleteSelected')}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
           >
             <Trash2 size={13} />
-            <span>Sil</span>
+            <span>{t('canvas.delete')}</span>
           </button>
           <div className="w-px h-4 bg-white/10" />
           <button
             onClick={() => setSelectedNodeIds([])}
-            title="Seçimi kaldır"
+            title={t('canvas.deselectAll')}
             className="flex items-center justify-center w-6 h-6 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors"
           >
             <X size={12} />
@@ -255,28 +257,28 @@ export default function WorkflowCanvas() {
         {/* Keyboard shortcuts tooltip */}
         <div className="absolute bottom-4 right-[168px] z-10 group">
           <button
-            title="Klavye kısayolları"
+            title={t('ui.keyboardShortcutsTooltip')}
             className="w-8 h-8 flex items-center justify-center rounded-lg border bg-white/[0.04] border-white/[0.08] text-obsidian-400 hover:text-white transition-all"
           >
             <Keyboard size={14} />
           </button>
           {/* Tooltip panel */}
           <div className="absolute bottom-10 right-0 w-56 glass-card rounded-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 pointer-events-none shadow-xl">
-            <p className="text-[10px] font-semibold text-obsidian-400 uppercase tracking-wider mb-2 font-body">Klavye Kısayolları</p>
+            <p className="text-[10px] font-semibold text-obsidian-400 uppercase tracking-wider mb-2 font-body">{t('canvas.keyboardShortcuts')}</p>
             <div className="space-y-1.5">
               {([
-                ['Ctrl+S', 'Kaydet'],
-                ['Ctrl+Enter', 'Çalıştır'],
-                ['Ctrl+E', 'Kaydet & Çalıştır'],
-                ['Ctrl+Z', 'Geri Al'],
-                ['Ctrl+Shift+Z', 'İleri Al'],
-                ['Ctrl+Y', 'İleri Al'],
-                ['Ctrl+D', 'Node kopyala'],
-                ['Ctrl+K', 'Komut paleti'],
-                ['Delete', 'Seçili node sil'],
-                ['Shift+Sürükle', 'Çoklu seçim'],
-                ['Escape', 'Seçimi kaldır'],
-              ] as const).map(([key, desc]) => (
+                ['Ctrl+S', t('canvas.shortcutSave')],
+                ['Ctrl+Enter', t('canvas.shortcutExecute')],
+                ['Ctrl+E', t('canvas.shortcutSaveAndExecute')],
+                ['Ctrl+Z', t('canvas.shortcutUndo')],
+                ['Ctrl+Shift+Z', t('canvas.shortcutRedo')],
+                ['Ctrl+Y', t('canvas.shortcutRedo')],
+                ['Ctrl+D', t('canvas.shortcutDuplicate')],
+                ['Ctrl+K', t('canvas.shortcutCommandPalette')],
+                ['Delete', t('canvas.shortcutDeleteNode')],
+                ['Shift+Drag', t('canvas.shortcutMultiSelect')],
+                ['Escape', t('canvas.shortcutDeselect')],
+              ] as [string, string][]).map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between gap-2">
                   <kbd className="px-1.5 py-0.5 text-[9px] font-mono bg-white/[0.06] border border-white/[0.08] rounded text-obsidian-300 shrink-0">
                     {key}
@@ -292,7 +294,7 @@ export default function WorkflowCanvas() {
         <div className="absolute bottom-4 right-32 z-10">
           <button
             onClick={() => setShowMinimap((v) => !v)}
-            title={showMinimap ? 'Haritayı gizle' : 'Haritayı göster'}
+            title={showMinimap ? t('ui.hideMinimap') : t('ui.showMinimap')}
             className={`
               w-8 h-8 flex items-center justify-center rounded-lg border transition-all
               ${showMinimap

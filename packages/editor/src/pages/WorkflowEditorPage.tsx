@@ -159,6 +159,7 @@ function ValidationBanner() {
 // ── Inline execution status bar ──────────────────────────────────────────────
 
 function ExecutionStatusBar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const execution = useExecutionStore((s) => s.currentExecution);
   const executionLog = useExecutionStore((s) => s.executionLog);
@@ -221,9 +222,9 @@ function ExecutionStatusBar() {
             isError && 'text-aurora-rose',
           )}
         >
-          {isRunning && `Çalışıyor… ${doneCount}/${nodeCount} node`}
-          {isSuccess && 'Başarıyla tamamlandı'}
-          {isError && 'Hata oluştu'}
+          {isRunning && t('executionStatus.running').replace('{{done}}', String(doneCount)).replace('{{total}}', String(nodeCount))}
+          {isSuccess && t('executionStatus.completed')}
+          {isError && t('executionStatus.failed')}
         </p>
         {lastLog && (
           <p className="text-[10px] text-obsidian-500 font-body truncate mt-0.5">
@@ -257,7 +258,7 @@ function ExecutionStatusBar() {
               : 'text-aurora-rose hover:bg-aurora-rose/10',
           )}
         >
-          Detaylar <ArrowRight size={10} />
+          {t('executionStatus.details')} <ArrowRight size={10} />
         </button>
       )}
 
@@ -278,6 +279,7 @@ function ExecutionStatusBar() {
 // ── Execution log drawer (shows when execution is running) ───────────────────
 
 function ExecutionLogDrawer() {
+  const { t } = useTranslation();
   const executionLog = useExecutionStore((s) => s.executionLog);
   const execution = useExecutionStore((s) => s.currentExecution);
   const [open, setOpen] = useState(false);
@@ -303,10 +305,10 @@ function ExecutionLogDrawer() {
       >
         <Clock size={12} className="text-obsidian-500" />
         <span className="text-[11px] font-semibold text-obsidian-400 font-body flex-1">
-          Çalıştırma Logu
+          {t('executionStatus.logTitle')}
           {execution.status === 'running' && (
             <span className="ml-2 inline-flex items-center gap-1 text-aurora-blue">
-              <Loader2 size={9} className="animate-spin" /> Çalışıyor
+              <Loader2 size={9} className="animate-spin" /> {t('executionStatus.logRunning')}
             </span>
           )}
         </span>
@@ -344,6 +346,7 @@ function ExecutionLogDrawer() {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function WorkflowEditorPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -382,7 +385,7 @@ export default function WorkflowEditorPage() {
           await loadWorkflow(id);
         } catch (err) {
           if (!cancelled) {
-            setLoadError(err instanceof Error ? err.message : 'Workflow yüklenemedi');
+            setLoadError(err instanceof Error ? err.message : t('editorPage.loadFailed'));
           }
         } finally {
           if (!cancelled) setIsLoading(false);
@@ -484,13 +487,13 @@ export default function WorkflowEditorPage() {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 bg-obsidian-950 bg-mesh-gradient">
         <XCircle size={40} className="text-aurora-rose" />
-        <p className="text-sm font-semibold text-white">Workflow Yüklenemedi</p>
+        <p className="text-sm font-semibold text-white">{t('editorPage.loadFailedTitle')}</p>
         <p className="text-xs text-obsidian-400 max-w-xs text-center">{loadError}</p>
         <button
           onClick={() => navigate('/workflows')}
           className="mt-2 px-4 py-2 rounded-xl text-xs font-semibold bg-aurora-rose/10 border border-aurora-rose/20 text-aurora-rose hover:bg-aurora-rose/20 transition-all"
         >
-          Workflow Listesine Dön
+          {t('editorPage.backToList')}
         </button>
       </div>
     );
@@ -532,7 +535,7 @@ export default function WorkflowEditorPage() {
         {showVersionHistory && id && id !== 'new' && (
           <VersionHistoryPanel
             workflowId={id}
-            onRestored={() => { loadWorkflow(id).catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Workflow yüklenemedi')); }}
+            onRestored={() => { loadWorkflow(id).catch((err: unknown) => toast.error(err instanceof Error ? err.message : t('editorPage.loadFailed'))); }}
             onClose={() => setShowVersionHistory(false)}
           />
         )}

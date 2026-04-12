@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { X, ChevronRight, ChevronDown, Copy, Check } from 'lucide-react';
 import clsx from 'clsx';
 import { useExecutionStore } from '../../store/executionStore';
+import { useTranslation } from '../../i18n';
 
 /**
  * Collapsible JSON tree viewer for node execution output.
  * Opens as a panel when a node with output is clicked after execution.
  */
 export default function NodeOutputViewer() {
+  const { t } = useTranslation();
   const selectedNodeId = useExecutionStore((s) => s.selectedOutputNodeId);
   const setSelectedOutputNode = useExecutionStore((s) => s.setSelectedOutputNode);
   const execution = useExecutionStore((s) => s.currentExecution);
@@ -31,7 +33,7 @@ export default function NodeOutputViewer() {
             )}
           />
           <span className="text-xs font-semibold text-obsidian-200 font-body truncate">
-            Node Output
+            {t('nodeOutput.title')}
           </span>
         </div>
         <button
@@ -45,7 +47,7 @@ export default function NodeOutputViewer() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
         {!output || output.length === 0 ? (
-          <p className="text-xs text-obsidian-500 font-body">Çıktı verisi yok</p>
+          <p className="text-xs text-obsidian-500 font-body">{t('nodeOutput.noData')}</p>
         ) : (
           <div className="space-y-2">
             {output.map((item, i) => (
@@ -165,6 +167,7 @@ function CollapsibleArray({ data, depth }: { data: unknown[]; depth: number }) {
 }
 
 function CopyButton({ text }: { text: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -179,7 +182,7 @@ function CopyButton({ text }: { text: string }) {
       className="flex items-center gap-1.5 text-[10px] font-semibold text-obsidian-400 hover:text-obsidian-200 transition-colors font-body"
     >
       {copied ? <Check size={10} className="text-aurora-emerald" /> : <Copy size={10} />}
-      {copied ? 'Kopyalandi' : 'JSON Kopyala'}
+      {copied ? t('nodeOutput.copied') : t('nodeOutput.copyJson')}
     </button>
   );
 }

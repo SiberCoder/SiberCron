@@ -76,7 +76,7 @@ function WorkflowSettingsModal({ onClose }: { onClose: () => void }) {
             <textarea
               value={meta.description}
               onChange={(e) => updateMeta({ description: e.target.value })}
-              placeholder="Workflow'un ne yaptığını açıklayın..."
+              placeholder={t('ui.descriptionPlaceholder')}
               rows={3}
               className="glass-input text-sm resize-none w-full"
             />
@@ -236,7 +236,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         toast.success(t('editorMessages.saveSuccess'));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Kayıt başarısız. Lütfen tekrar deneyin.';
+      const msg = err instanceof Error ? err.message : t('editorPage.saveFailed');
       toast.error(msg);
     } finally {
       setIsSaving(false);
@@ -263,7 +263,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
         ).catch(() => null);
 
         if (validation && !validation.valid && validation.errors.length > 0) {
-          toast.error(`Workflow çalıştırılamaz: ${validation.errors[0]}`);
+          toast.error(t('editorPage.executionCannotRun').replace('{{error}}', validation.errors[0]));
           setIsExecuting(false);
           return;
         }
@@ -278,7 +278,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
       if (err instanceof ApiError && err.status === 409) {
         toast.warning(t('workflowEditor.alreadyRunning'));
       } else {
-        const msg = err instanceof Error ? err.message : 'Çalıştırma başarısız. Lütfen tekrar deneyin.';
+        const msg = err instanceof Error ? err.message : t('editorPage.executeFailed');
         toast.error(msg);
       }
     } finally {

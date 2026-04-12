@@ -5,6 +5,7 @@ import { getNodeIcon } from '../../lib/iconRegistry';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
 import { useExecutionStore } from '../../store/executionStore';
 import { useWorkflowStore } from '../../store/workflowStore';
+import { useTranslation } from '../../i18n';
 
 const GROUP_ACCENT_COLORS: Record<string, string> = {
   trigger: '#f59e0b',
@@ -33,6 +34,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 function BaseNode({ id, data, selected }: NodeProps) {
+  const { t } = useTranslation();
   const nodeType = data.nodeType as string;
   const label = data.label as string;
 
@@ -121,7 +123,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
               <button
                 onClick={handleOutputClick}
                 className="text-[9px] font-mono text-aurora-cyan/70 hover:text-aurora-cyan bg-aurora-cyan/10 hover:bg-aurora-cyan/20 px-1.5 py-0.5 rounded transition-colors"
-                title={`${outputCount} item — çıktıyı görmek için tıkla`}
+                title={t('ui.outputItemsTooltip').replace('{{count}}', String(outputCount))}
               >
                 {outputCount}
               </button>

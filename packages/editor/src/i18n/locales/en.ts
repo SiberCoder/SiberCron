@@ -944,7 +944,7 @@ const en = {
     toggleMinimapTooltip: 'Toggle minimap',
     logoutTooltip: 'Logout',
     clearHistoryTooltip: 'Clear history',
-    outputItemsTooltip: (count: number) => `${count} item(s) — click to view output`,
+    outputItemsTooltip: '{{count}} item(s) — click to view output',
     showMinimap: 'Show minimap',
     hideMinimap: 'Hide minimap',
   },

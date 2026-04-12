@@ -946,7 +946,7 @@ const tr: TranslationKeys = {
     toggleMinimapTooltip: 'Haritayı aç/kapat',
     logoutTooltip: 'Çıkış yap',
     clearHistoryTooltip: 'Geçmişi temizle',
-    outputItemsTooltip: (count: number) => `${count} item — çıktıyı görmek için tıkla`,
+    outputItemsTooltip: '{{count}} item — çıktıyı görmek için tıkla',
     showMinimap: 'Haritayı göster',
     hideMinimap: 'Haritayı gizle',
   },
