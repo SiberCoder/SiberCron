@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { History, RotateCcw, X, Loader2, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 import { apiGet, apiPost } from '../../api/client';
+import { toast } from '../../store/toastStore';
 
 interface WorkflowVersionSummary {
   version: number;
@@ -39,7 +40,7 @@ export default function VersionHistoryPanel({ workflowId, onRestored, onClose }:
       onRestored();
       onClose();
     } catch (err) {
-      alert('Geri yükleme başarısız: ' + String(err));
+      toast.error('Geri yükleme başarısız: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setRestoring(null);
     }
