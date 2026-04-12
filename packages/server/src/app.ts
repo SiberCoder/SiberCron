@@ -540,9 +540,8 @@ async function webhookHandler(request: import('fastify').FastifyRequest, reply: 
   // ── HMAC signature verification (optional) ──────────────────────────
   // If the workflow has a webhookSecret in settings, verify the request signature.
   // Supports: X-Hub-Signature-256 (GitHub), X-Signature-256, X-Webhook-Signature headers.
-  const rawWebhookSecret = (target.settings as Record<string, unknown> | undefined)?.webhookSecret;
-  const webhookSecret = typeof rawWebhookSecret === 'string' && rawWebhookSecret.trim().length >= 8
-    ? rawWebhookSecret.trim()
+  const webhookSecret = typeof target.settings?.webhookSecret === 'string' && target.settings.webhookSecret.trim().length >= 8
+    ? target.settings.webhookSecret.trim()
     : undefined;
   if (webhookSecret) {
     const crypto = await import('node:crypto');

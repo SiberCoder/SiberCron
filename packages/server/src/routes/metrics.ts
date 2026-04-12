@@ -74,12 +74,10 @@ export async function metricsRoutes(fastify: FastifyInstance): Promise<void> {
     for (const exec of allExec.data) {
       if (!exec.nodeResults) continue;
       for (const result of Object.values(exec.nodeResults)) {
-        const key = (result as { nodeName?: string; nodeId?: string; status?: string }).nodeName
-          ?? (result as { nodeName?: string; nodeId?: string }).nodeId
-          ?? 'unknown';
+        const key = result.nodeName ?? result.nodeId ?? 'unknown';
         const entry = nodeErrorMap.get(key) ?? { errorCount: 0, total: 0 };
         entry.total++;
-        if ((result as { status?: string }).status === 'error') entry.errorCount++;
+        if (result.status === 'error') entry.errorCount++;
         nodeErrorMap.set(key, entry);
       }
     }
