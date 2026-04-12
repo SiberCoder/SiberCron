@@ -255,21 +255,21 @@ function TopWorkflowsPanel({ items }: { items: WorkflowSummary[] }) {
 const STATUS_CONFIG = {
   success: {
     icon: CheckCircle2,
-    label: 'Success',
+    label: 'Başarılı',
     dot: 'bg-aurora-emerald',
     text: 'text-aurora-emerald',
     bg: 'bg-aurora-emerald/10',
   },
   error: {
     icon: XCircle,
-    label: 'Error',
+    label: 'Hata',
     dot: 'bg-aurora-rose',
     text: 'text-aurora-rose',
     bg: 'bg-aurora-rose/10',
   },
   running: {
     icon: Clock,
-    label: 'Running',
+    label: 'Çalışıyor',
     dot: 'bg-aurora-blue',
     text: 'text-aurora-blue',
     bg: 'bg-aurora-blue/10',
@@ -652,14 +652,14 @@ export default function DashboardPage() {
           className="btn-aurora"
         >
           <Plus size={16} />
-          New Workflow
+          Yeni Workflow
         </button>
         <button
           onClick={() => navigate('/templates')}
           className="btn-ghost"
         >
           <FileCode size={16} />
-          Browse Templates
+          Şablonlar
         </button>
       </div>
 
@@ -773,20 +773,20 @@ export default function DashboardPage() {
       <div className="animate-slide-up stagger-5" style={{ animationFillMode: 'both' }}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-display font-semibold text-white tracking-tight">
-            Recent Executions
+            Son Çalışmalar
           </h2>
           <button
             onClick={() => navigate('/executions')}
             className="flex items-center gap-1 text-xs font-medium text-obsidian-500 hover:text-aurora-cyan transition-colors"
           >
-            View all <ArrowUpRight size={12} />
+            Tümünü Gör <ArrowUpRight size={12} />
           </button>
         </div>
 
         <div className="glass-card rounded-2xl overflow-hidden">
           {recentExecutions.length === 0 ? (
             <div className="px-5 py-10 text-center">
-              <p className="text-sm text-obsidian-500 font-body">No executions yet</p>
+              <p className="text-sm text-obsidian-500 font-body">Henüz çalışma yok</p>
             </div>
           ) : (
             <table className="w-full">
@@ -796,16 +796,16 @@ export default function DashboardPage() {
                     Workflow
                   </th>
                   <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3.5 uppercase tracking-wider font-body">
-                    Status
+                    Durum
                   </th>
                   <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3.5 uppercase tracking-wider font-body">
-                    Trigger
+                    Tetikleyici
                   </th>
                   <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3.5 uppercase tracking-wider font-body">
-                    Duration
+                    Süre
                   </th>
                   <th className="text-left text-[10px] font-semibold text-obsidian-500 px-5 py-3.5 uppercase tracking-wider font-body">
-                    Started
+                    Başlangıç
                   </th>
                 </tr>
               </thead>

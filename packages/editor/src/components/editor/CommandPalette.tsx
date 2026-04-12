@@ -3,6 +3,7 @@ import { Search, Play, Save, Zap, Download, Upload, Undo2, Redo2, Plus, Trash2 }
 import clsx from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { useWorkflowStore } from '../../store/workflowStore';
+import { useExecutionStore } from '../../store/executionStore';
 import { useNodeRegistryStore } from '../../store/nodeRegistryStore';
 import { toast } from '../../store/toastStore';
 
@@ -33,6 +34,7 @@ export default function CommandPalette() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const removeNode = useWorkflowStore((s) => s.removeNode);
   const nodeTypes = useNodeRegistryStore((s) => s.nodeTypes);
+  const connectExecution = useExecutionStore((s) => s.connect);
 
   // Toggle with Ctrl+K
   useEffect(() => {
@@ -83,9 +85,11 @@ export default function CommandPalette() {
         action: () => {
           setOpen(false);
           if (meta.id) {
-            executeWorkflow().catch((err: unknown) => {
-              toast.error(err instanceof Error ? err.message : 'Çalıştırma başarısız');
-            });
+            executeWorkflow()
+              .then((executionId) => { connectExecution(executionId); })
+              .catch((err: unknown) => {
+                toast.error(err instanceof Error ? err.message : 'Çalıştırma başarısız');
+              });
           }
         },
       },
