@@ -872,11 +872,11 @@ export default function ExecutionHistoryPage() {
       await apiPost(`/executions/${exec.id}/retry${query}`);
       const hasProgress = resume && Object.values(exec.nodeResults || {}).some(nr => nr.status === 'success');
       toast.success(hasProgress
-        ? `"${exec.workflowName ?? exec.workflowId}" kaldigi yerden devam ediyor`
-        : `"${exec.workflowName ?? exec.workflowId}" yeniden baslatildi`);
+        ? `"${exec.workflowName ?? exec.workflowId}" kaldığı yerden devam ediyor`
+        : `"${exec.workflowName ?? exec.workflowId}" yeniden başlatıldı`);
       await load();
     } catch {
-      toast.error('Yeniden baslatma basarisiz');
+      toast.error('Yeniden başlatma başarısız');
     } finally {
       setRetryingId(null);
     }
@@ -1298,7 +1298,7 @@ export default function ExecutionHistoryPage() {
                         }}
                         disabled={retryingId === exec.id}
                         className="p-1.5 rounded-lg text-obsidian-600 hover:text-aurora-cyan hover:bg-aurora-cyan/5 transition-all disabled:opacity-50"
-                        title={exec.status === 'error' && Object.values(exec.nodeResults || {}).some(nr => nr.status === 'success') ? 'Kaldigi yerden devam et' : 'Yeniden calistir'}
+                        title={exec.status === 'error' && Object.values(exec.nodeResults || {}).some(nr => nr.status === 'success') ? 'Kaldığı yerden devam et' : 'Yeniden çalıştır'}
                       >
                         {retryingId === exec.id
                           ? <Loader2 size={12} className="animate-spin" />
@@ -1338,7 +1338,7 @@ export default function ExecutionHistoryPage() {
                                 {retryingId === exec.id
                                   ? <Loader2 size={12} className="animate-spin" />
                                   : <Play size={12} />}
-                                Kaldigi Yerden Devam Et
+                                Kaldığı Yerden Devam Et
                               </button>
                               <button
                                 onClick={(e) => handleRetry(e, exec)}
@@ -1346,7 +1346,7 @@ export default function ExecutionHistoryPage() {
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-obsidian-400 text-xs hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
                               >
                                 <RotateCcw size={10} />
-                                Sifirdan Baslat
+                                Sıfırdan Başlat
                               </button>
                             </div>
                           )}
@@ -1439,7 +1439,7 @@ export default function ExecutionHistoryPage() {
                 onClick={() => setDeleteConfirmId(null)}
                 className="flex-1 px-4 py-2.5 text-xs font-semibold text-obsidian-300 border border-white/[0.08] rounded-xl hover:bg-white/[0.04] transition-all font-body"
               >
-                Vazgec
+                Vazgeç
               </button>
               <button
                 onClick={() => handleDeleteExecution(deleteConfirmId)}

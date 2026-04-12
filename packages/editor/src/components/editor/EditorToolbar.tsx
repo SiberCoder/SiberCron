@@ -427,7 +427,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
             toast.success('Workflow dışa aktarıldı');
           }}
           className="btn-ghost text-xs"
-          title="Disa Aktar (JSON)"
+          title="Dışa Aktar (JSON)"
         >
           <Download size={14} />
         </button>
@@ -455,7 +455,7 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
             input.click();
           }}
           className="btn-ghost text-xs"
-          title="Ice Aktar (JSON)"
+          title="İçe Aktar (JSON)"
         >
           <Upload size={14} />
         </button>
@@ -597,18 +597,18 @@ export default function EditorToolbar({ onVersionHistory }: EditorToolbarProps =
               </div>
               <div>
                 <h3 className="text-sm font-display font-semibold text-white">Workflow Sil</h3>
-                <p className="text-xs text-obsidian-400 font-body">Bu islem geri alinamaz</p>
+                <p className="text-xs text-obsidian-400 font-body">Bu işlem geri alınamaz</p>
               </div>
             </div>
             <p className="text-xs text-obsidian-300 font-body">
-              <strong className="text-white">{meta.name}</strong> workflow'unu silmek istediginizden emin misiniz?
+              <strong className="text-white">{meta.name}</strong> workflow'unu silmek istediğinizden emin misiniz?
             </p>
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 px-4 py-2.5 text-xs font-semibold text-obsidian-300 border border-white/[0.08] rounded-xl hover:bg-white/[0.04] transition-all font-body"
               >
-                Vazgec
+                Vazgeç
               </button>
               <button
                 onClick={handleDelete}

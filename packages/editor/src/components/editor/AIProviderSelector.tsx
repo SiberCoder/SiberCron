@@ -285,7 +285,7 @@ function CliDelegationFields({
         onTestResult({ ok: false, msg: res.error || 'Claude CLI yanitlamadi' });
       }
     } catch (e: any) {
-      onTestResult({ ok: false, msg: e.message || 'Test basarisiz' });
+      onTestResult({ ok: false, msg: e.message || 'Test başarısız' });
     } finally {
       setTestingCli(false);
     }
@@ -683,7 +683,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 />
               </div>
               <p className="text-[10px] text-obsidian-500 font-body">
-                Sunucu baslatilirken bu degisken tanimli olmalidir. Ornek: <code className="text-aurora-cyan">export ANTHROPIC_API_KEY="sk-ant-..."</code>
+                Sunucu başlatılırken bu değişken tanımlı olmalıdır. Örnek: <code className="text-aurora-cyan">export ANTHROPIC_API_KEY="sk-ant-..."</code>
               </p>
             </div>
           )}
@@ -692,7 +692,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
           {selectedAuth === 'setup_token' && (
             <div className="space-y-3">
               <p className="text-xs text-obsidian-400 font-body">
-                Claude.ai aboneligi uzerinden baglanti. <span className="text-aurora-amber">Not:</span> Anthropic Nisan 2026'da ucuncu parti token erisimini kisitladi, bu yontem calismayabilir.
+                Claude.ai aboneliği üzerinden bağlantı. <span className="text-aurora-amber">Not:</span> Anthropic Nisan 2026'da üçüncü parti token erişimini kısıtladı, bu yöntem çalışmayabilir.
               </p>
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-obsidian-400 font-body">
@@ -705,7 +705,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 />
               </div>
               <p className="text-[10px] text-obsidian-500 font-body">
-                Token almak icin: <code className="text-aurora-cyan">claude setup-token</code> komutunu calistirin.
+                Token almak için: <code className="text-aurora-cyan">claude setup-token</code> komutunu çalıştırın.
               </p>
             </div>
           )}
@@ -721,7 +721,7 @@ function ProviderCard({ providerKey, config, compact, onUpdate }: ProviderCardPr
                 onChange={(e) => updateInnerConfig({ defaultModel: e.target.value })}
                 className="glass-input"
               >
-                <option value="">Model secin...</option>
+                <option value="">Model seçin...</option>
                 {allModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} {m.contextWindow ? `(${Math.round(m.contextWindow / 1000)}K)` : ''}

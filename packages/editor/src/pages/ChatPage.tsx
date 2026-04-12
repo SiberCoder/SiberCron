@@ -207,9 +207,9 @@ function StreamingIndicator({ verbose }: { verbose?: boolean }) {
 
   const phaseLabel = () => {
     switch (streamPhase) {
-      case 'thinking': return 'Dusunuyor...';
-      case 'tool_running': return 'Arac calisiyor...';
-      case 'generating': return 'Yanit olusturuyor...';
+      case 'thinking': return 'Düşünüyor...';
+      case 'tool_running': return 'Araç çalışıyor...';
+      case 'generating': return 'Yanıt oluşturuyor...';
       case 'content': return null; // content is shown directly
       default: return 'Bekliyor...';
     }

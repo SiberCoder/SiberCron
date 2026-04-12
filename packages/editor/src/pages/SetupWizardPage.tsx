@@ -224,7 +224,7 @@ function WhatsAppQRConnect({ onConnected }: { onConnected: (phone: string, name:
       setTimeout(() => { stopped = true; clearInterval(poll); }, 300000);
     } catch (e) {
       setStatus('error');
-      setErrorMsg(e instanceof Error ? e.message : 'QR olusturulamadi');
+      setErrorMsg(e instanceof Error ? e.message : 'QR oluşturulamadı');
     }
   };
 
@@ -642,11 +642,11 @@ function CompleteStep({ onFinish }: { onFinish: () => void }) {
         <div className="absolute -inset-6 bg-aurora-emerald/10 rounded-full blur-3xl pointer-events-none" />
       </div>
       <h1 className="text-4xl font-display font-bold text-white mb-4 tracking-tight">
-        Kurulum Tamamlandi!
+        Kurulum Tamamlandı!
       </h1>
       <p className="text-obsidian-400 max-w-md mb-10 font-body leading-relaxed">
-        Platformunuz kullanima hazir. Istediginiz zaman ayarlari
-        degistirebilirsiniz.
+        Platformunuz kullanıma hazır. İstediğiniz zaman ayarları
+        değiştirebilirsiniz.
       </p>
 
       {connectedItems.length > 0 && (

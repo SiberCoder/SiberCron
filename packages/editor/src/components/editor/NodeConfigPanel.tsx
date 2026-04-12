@@ -20,7 +20,7 @@ type CronFrequency = 'minute' | 'hour' | 'day' | 'week' | 'month';
 const FREQ_OPTIONS: Array<{value: CronFrequency; label: string}> = [
   { value: 'minute', label: 'Dakika' },
   { value: 'hour', label: 'Saat' },
-  { value: 'day', label: 'Gun' },
+  { value: 'day', label: 'Gün' },
   { value: 'week', label: 'Hafta' },
   { value: 'month', label: 'Ay' },
 ];
@@ -28,7 +28,7 @@ const FREQ_OPTIONS: Array<{value: CronFrequency; label: string}> = [
 const DAYS_OF_WEEK = [
   { value: '1', label: 'Pzt' },
   { value: '2', label: 'Sal' },
-  { value: '3', label: 'Car' },
+  { value: '3', label: 'Çar' },
   { value: '4', label: 'Per' },
   { value: '5', label: 'Cum' },
   { value: '6', label: 'Cmt' },
@@ -830,7 +830,7 @@ function PropertyField({ property, value, onChange, contextVars }: FieldProps) {
           onBlur={() => handleBlur(value)}
           className={clsx('glass-input text-xs', errorBorder)}
         >
-          <option value="">Select...</option>
+          <option value="">Seç...</option>
           {options?.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.name}
@@ -1364,7 +1364,7 @@ export default function NodeConfigPanel() {
                     onChange={(e) => handleCredentialChange(cred.name, e.target.value)}
                     className="glass-input text-xs"
                   >
-                    <option value="">Secin...</option>
+                    <option value="">Seçin...</option>
                     {credOptions.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} ({c.type})
@@ -1380,7 +1380,7 @@ export default function NodeConfigPanel() {
 
         {definition.properties.length === 0 && !hasCredentials ? (
           <p className="text-xs text-obsidian-600 text-center py-10 font-body">
-            No configurable properties
+            Yapılandırılabilir özellik yok
           </p>
         ) : (
           definition.properties
@@ -1424,7 +1424,7 @@ export default function NodeConfigPanel() {
           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-semibold text-aurora-rose hover:bg-aurora-rose/10 border border-aurora-rose/15 transition-all font-body"
         >
           <Trash2 size={14} />
-          Delete Node
+          Node'u Sil
         </button>
       </div>
     </div>
