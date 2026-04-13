@@ -2,9 +2,66 @@
 
 **Open-source, self-hosted autonomous AI development & workflow automation platform.**
 
-Combines n8n's visual workflow editor with autonomous AI development capabilities in a single platform — runs on your own machine or server for fully autonomous software development and automation.
+Combines n8n's visual workflow editor with autonomous AI development capabilities — runs entirely on your own machine or server.
 
 > Visual workflow builder + Autonomous AI developer + 41 built-in nodes + 13 AI providers. All under your control, self-hosted.
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="400"/><br/>
+      <sub><b>Dashboard</b> — Live stats: workflows, executions, success rate</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/workflow-editor.png" alt="Workflow Editor" width="400"/><br/>
+      <sub><b>Workflow Editor</b> — Drag-and-drop node canvas with config panel</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/ai-chat.png" alt="AI Chat" width="400"/><br/>
+      <sub><b>AI Brain</b> — Natural language workflow management & automation</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/workflows-list.png" alt="Workflows" width="400"/><br/>
+      <sub><b>Workflows</b> — List, activate/deactivate, and manage all workflows</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/execution-history.png" alt="Execution History" width="400"/><br/>
+      <sub><b>Execution History</b> — Full run log with status, duration, and triggers</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/templates.png" alt="Templates" width="400"/><br/>
+      <sub><b>Templates</b> — Ready-made workflow templates to get started fast</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/credentials.png" alt="Credentials" width="400"/><br/>
+      <sub><b>Credentials</b> — Encrypted API key & service account management</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/messaging-accounts.png" alt="Messaging Accounts" width="400"/><br/>
+      <sub><b>Messaging Accounts</b> — Connect WhatsApp, Telegram, Discord, Slack</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/settings-ai-provider.png" alt="AI Provider Settings" width="400"/><br/>
+      <sub><b>Settings — AI Providers</b> — Configure 13+ AI providers in one place</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/server-monitor.png" alt="Server Monitor" width="400"/><br/>
+      <sub><b>Server Monitor</b> — Live request logs, uptime, memory, job queue</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -14,7 +71,7 @@ Combines n8n's visual workflow editor with autonomous AI development capabilitie
 - **AutonomousDev Node** — Fully autonomous development loop via Claude CLI: writes code, runs tests, fixes bugs, and commits
 - **AI Brain** — Manage workflows, files, shell commands, and messaging through natural language
 - **Agent Loop** — AI agent managing your system with 15 tools: workflow CRUD, execution, file read/write, shell commands
-- **Live Streaming** — Real-time monitoring of autonomous development output (session-aware resume, `--continue`)
+- **Live Streaming** — Real-time monitoring of autonomous development output
 
 ### Visual Workflow Editor
 - Drag-and-drop node-based editor (React Flow)
@@ -32,9 +89,9 @@ Combines n8n's visual workflow editor with autonomous AI development capabilitie
 |------|-------------|
 | **Manual Trigger** | Manual execution from UI |
 | **Cron Trigger** | Scheduled execution via cron expression |
-| **Webhook Trigger** | HTTP-triggered workflows (HMAC-SHA256 signature verification, payload schema validation) |
+| **Webhook Trigger** | HTTP-triggered workflows (HMAC-SHA256 signature verification) |
 | **Telegram Trigger** | Trigger on incoming Telegram messages (command/text/regex filter) |
-| **GitHub Trigger** | Trigger on GitHub events: push, pull_request, issues, release (HMAC-SHA256 verification, event/repo/branch filter) |
+| **GitHub Trigger** | Trigger on GitHub events: push, pull_request, issues, release |
 
 #### AI (5)
 | Node | Description |
@@ -43,7 +100,7 @@ Combines n8n's visual workflow editor with autonomous AI development capabilitie
 | **Autonomous Dev** | Fully autonomous software development loop via Claude CLI |
 | **AI Summarizer** | Text summarization (5 modes, multi-language, multi-provider) |
 | **AI Classifier** | Text classification (multi-label, confidence score) |
-| **AI Web Browser** | Analyze web page content with AI: summarize, Q&A, structured data extraction |
+| **AI Web Browser** | Analyze web page content with AI |
 
 #### Core (25)
 | Node | Description |
@@ -62,15 +119,15 @@ Combines n8n's visual workflow editor with autonomous AI development capabilitie
 | **Delay** | Wait for a specified duration |
 | **Log** | Logging with template interpolation |
 | **DateTime** | Date/time operations (12 operations, timezone, Intl API) |
-| **Execute Workflow** | Run another workflow via API, wait for result (polling) or fire-and-forget |
+| **Execute Workflow** | Run another workflow, wait for result or fire-and-forget |
 | **DatabaseQuery** | PostgreSQL/MySQL parameterized queries |
 | **Redis** | 16 operations (get/set/del/hget/hset/lpush/sadd/publish...) |
 | **Google Sheets** | Read/write/update rows via service account |
 | **Google Drive** | List/upload/download/delete/create folder |
 | **Notion Database** | Query/create/update/archive/search pages |
-| **GitHub** | Issue/PR/repo/release/comment operations (REST API v3) |
-| **Jira** | Issue CRUD + JQL search, comments, transitions, project list (Cloud REST API v3) |
-| **Airtable** | Record CRUD, search, upsert, filter (REST API) |
+| **GitHub** | Issue/PR/repo/release/comment operations |
+| **Jira** | Issue CRUD + JQL search, comments, transitions |
+| **Airtable** | Record CRUD, search, upsert, filter |
 | **FTP/SFTP** | File transfer (list/download/upload/delete/rename/mkdir) |
 | **RSS Feed** | Read and parse RSS/Atom feeds |
 
@@ -96,55 +153,112 @@ Combines n8n's visual workflow editor with autonomous AI development capabilitie
 ### Production Features
 - **JWT Authentication** + RBAC (admin/viewer roles)
 - **API Key Management** — Per-user token generation (`scx_` prefix, SHA-256 hash)
-- **Rate Limiting** — Per-endpoint (auth: 10/min, chat: 20/min, workflows: 60/min)
-- **Webhook Security** — HMAC-SHA256 signature verification
 - **Credential Encryption** — AES-256-GCM
-- **Execution Retention** — Automatic cleanup of old execution records
-- **Concurrent Execution Guard** — Prevent the same workflow from running simultaneously (can be disabled)
 - **BullMQ Job Queue** — Reliable job queue with Redis (falls back to direct execution without Redis)
 - **OpenAPI/Swagger** — Available at `/api/docs`
 - **Docker** — Multi-stage Dockerfile + docker-compose + nginx
 
 ---
 
-## Screenshots & Features
+## Quick Start
 
-### Workflow Editor - Visual Canvas
-Drag-and-drop node editor with real-time execution monitoring:
-- Visual node connections and data flow
-- Live execution status (running/success/error states)
-- Animated edges showing active workflow path
-- Node output viewer with collapsible JSON tree
-- Keyboard shortcuts for fast workflow design
+### Requirements
 
-![Workflow Editor](./docs/screenshots/editor-canvas.png)
+- **Node.js** >= 18 — [nodejs.org](https://nodejs.org)
+- **pnpm** >= 9 — `npm install -g pnpm`
+- **Redis** (optional — required only for BullMQ job queue)
 
-### AI Brain - Natural Language Control
-Chat interface to manage your entire system:
-- Create and execute workflows via natural language
-- Monitor execution in real-time
-- Run shell commands and file operations
-- Send messages across platforms (Telegram, Slack, Discord, etc.)
+### 1. Clone & Install
 
-![AI Brain Chat](./docs/screenshots/ai-brain-chat.png)
+```bash
+git clone https://github.com/SiberCron/SiberCron.git
+cd SiberCron
+pnpm install
+```
 
-### Node Palette - 41 Built-in Integrations
-One-click access to all available nodes:
-- Search and filter nodes by type
-- Drag nodes directly onto canvas
-- Built-in documentation for each node
-- Categorized by function (Triggers, AI, Core, Data, Messaging)
+### 2. Configure Environment
 
-![Node Palette](./docs/screenshots/node-palette.png)
+```bash
+# Linux / macOS
+cp .env.example .env
 
-### Execution History & Logs
-Monitor all workflow runs with detailed logs:
-- Filter by status, workflow, date range
-- View node-by-node execution times
-- Stream live logs during execution
-- Download execution reports
+# Windows
+copy .env.example .env
+```
 
-![Execution History](./docs/screenshots/execution-history.png)
+Open `.env` and set at minimum:
+
+```env
+# Required — generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+ENCRYPTION_KEY=your-32-byte-hex-key-here
+
+# Add any AI provider keys you want to use
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+```
+
+> ⚠️ `ENCRYPTION_KEY` is **required**. Without it the server will refuse to start.
+
+### 3. Start
+
+#### Development (hot reload)
+
+```bash
+pnpm dev
+```
+
+- **Editor** — http://localhost:5173
+- **API Server** — http://localhost:3001
+- **API Docs** — http://localhost:3001/api/docs
+
+Default login: `admin` / `admin` (change after first login)
+
+#### Production (built)
+
+```bash
+pnpm build
+pnpm start           # starts the API server
+pnpm start:editor    # serves the built editor (requires: npm install -g serve)
+```
+
+#### Windows — auto-start on boot
+
+```bat
+scripts\install-service.bat   ← Run as Administrator
+```
+
+Installs SiberCron as a Windows Service using NSSM. The server starts automatically every time the PC boots.
+
+```bat
+scripts\uninstall-service.bat   ← Remove the service
+```
+
+---
+
+## Docker
+
+The easiest way to run SiberCron in production:
+
+```bash
+git clone https://github.com/SiberCron/SiberCron.git
+cd SiberCron
+cp .env.example .env
+# Set ENCRYPTION_KEY in .env, then:
+docker compose -f docker/docker-compose.yml up -d
+```
+
+**Services:**
+- Editor: http://localhost:5173
+- API: http://localhost:3001
+- Redis: localhost:6379 (internal, used by BullMQ)
+
+**Architecture:**
+```
+Browser → nginx (editor container, :5173)
+              └─ /api/* proxy → Fastify server (:3001)
+              └─ /socket.io/* proxy → Socket.io (:3001)
+                                └─ Redis (:6379, BullMQ queue)
+```
 
 ---
 
@@ -158,88 +272,13 @@ Monitor all workflow runs with detailed logs:
 | **Local AI Models** | ✅ Ollama support | ❌ No | ❌ No | ❌ No |
 | **Open Source** | ✅ MIT | ✅ Custom | ❌ Proprietary | ❌ Proprietary |
 | **Cost** | ✅ Free | ✅ Free/Paid | ⚠️ Paid | ⚠️ Paid |
-| **Coding Workflows** | ✅ Autonomous Dev | ❌ No | ❌ No | ⚠️ Limited |
-| **41 Nodes** | ✅ Built-in | ❌ 400+ (complex) | ❌ 6000+ (SaaS) | ❌ 1000+ (SaaS) |
-
-**SiberCron is for you if:**
-- You want **full autonomy** over your infrastructure
-- You need **autonomous AI development** (bug fixes, feature implementation)
-- You prefer **open source** and **no vendor lock-in**
-- You work with **sensitive data** (healthcare, finance) and need on-premises
-- You want to run **local AI models** (Ollama) without cloud costs
-
----
-
-## Quick Start
-
-### Requirements
-
-- **Node.js** >= 18
-- **pnpm** >= 9
-- **Redis** (optional — for BullMQ job queue)
-
-### 1. Clone & Install
-
-```bash
-git clone https://github.com/SiberCoder/SiberCron.git
-cd SiberCron
-pnpm install
-```
-
-### 2. Configure Environment
-
-```bash
-# Copy the example env file
-cp .env.example .env
-
-# Generate an encryption key
-# Linux/macOS:
-openssl rand -hex 32
-# Windows (PowerShell):
--join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
-```
-
-Open `.env` and set your `ENCRYPTION_KEY` and any API keys you plan to use.
-
-### 3. Start Development Servers
-
-```bash
-pnpm dev
-```
-
-- **Editor** — [http://localhost:5173](http://localhost:5173)
-- **API Server** — [http://localhost:3001](http://localhost:3001)
-- **API Docs** — [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
-
-### With Docker (Recommended)
-
-```bash
-git clone https://github.com/SiberCoder/SiberCron.git
-cd SiberCron
-cp .env.example .env
-# Edit .env with your API keys, then:
-docker compose up -d
-```
-
-**Services start at:**
-- Editor: http://localhost:5173
-- API: http://localhost:3001
-- Redis: localhost:6379
+| **Autonomous Coding** | ✅ AutonomousDev | ❌ No | ❌ No | ⚠️ Limited |
 
 ---
 
 ## Real-World Use Cases
 
-### 📊 Data Pipeline Automation
-```
-GitHub Issue → Parse Labels → Save to Airtable → Notify Slack
-├─ GitHub Trigger (watch issues)
-├─ Transform (extract labels)
-├─ Airtable (create record)
-└─ Slack Send (notify team)
-```
-
-### 🤖 Autonomous Code Fixes
+### Autonomous Code Fixes
 ```
 Daily Health Check → Find Failed Tests → AutonomousDev → Commit Fix
 ├─ Cron Trigger (daily 2 AM)
@@ -249,26 +288,23 @@ Daily Health Check → Find Failed Tests → AutonomousDev → Commit Fix
 └─ GitHub (create commit)
 ```
 
-### 📧 Multi-Channel Notifications
+### Data Pipeline Automation
+```
+GitHub Issue → Parse Labels → Save to Airtable → Notify Slack
+├─ GitHub Trigger (watch issues)
+├─ Transform (extract labels)
+├─ Airtable (create record)
+└─ Slack Send (notify team)
+```
+
+### Multi-Channel Notifications
 ```
 API Latency Alert → Check Threshold → Route to Multiple Channels
 ├─ HTTP Request (fetch metrics)
 ├─ Conditional (if > 500ms)
 ├─ Telegram Send (on-call engineer)
 ├─ Slack Send (team channel)
-├─ Email SMTP (escalation)
-└─ Discord Send (incident channel)
-```
-
-### 🔄 Data Sync Across Platforms
-```
-Airtable Record Change → Transform → Sync to 3 Services
-├─ Webhook Trigger (Airtable change)
-├─ Transform (normalize data)
-├─ Split (3 copies)
-├─ Notion (sync page)
-├─ Google Sheets (append row)
-└─ Database (insert/update)
+└─ Email SMTP (escalation)
 ```
 
 ---
@@ -284,6 +320,7 @@ sibercron/
 │   ├── server/    # Fastify REST API + Socket.io + AI Brain + Agent Loop
 │   └── editor/    # React visual workflow editor
 ├── docker/        # Dockerfile, Compose, nginx
+├── scripts/       # Start / install-service / uninstall-service
 ├── docs/          # Architecture, plugin development, self-hosting
 └── templates/     # Pre-built workflow templates
 ```
@@ -306,7 +343,7 @@ sibercron/
 
 ## AI Brain — Autonomous Management
 
-SiberCron's built-in AI assistant manages your system through natural language. No workflows needed — just ask:
+SiberCron's built-in AI assistant manages your system through natural language:
 
 ```
 💬 "Check my API every 5 minutes, notify me on Telegram if it's down"
@@ -319,16 +356,6 @@ SiberCron's built-in AI assistant manages your system through natural language. 
    → Runs AutonomousDev with Claude CLI for autonomous coding
 ```
 
-**AI Brain Capabilities:**
-- ✅ Workflow CRUD — create, execute, pause, activate workflows
-- ✅ Autonomous coding — write code, test, commit via Claude CLI
-- ✅ Cross-platform messaging — Telegram, Slack, Discord, WhatsApp, Email
-- ✅ File operations — read, write, list, search files
-- ✅ Shell commands — run bash/PowerShell safely
-- ✅ Execution monitoring — view logs, status, trends
-- ✅ Credential management — secure API key handling
-- ✅ System health — CPU, memory, uptime monitoring
-
 ---
 
 ## API Reference
@@ -337,33 +364,25 @@ Base URL: `http://localhost:3001/api/v1`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/workflows` | List workflows (pagination, search, filter) |
+| GET | `/workflows` | List workflows |
 | POST | `/workflows` | Create workflow |
-| GET | `/workflows/:id` | Workflow details |
-| PUT | `/workflows/:id` | Update workflow |
-| DELETE | `/workflows/:id` | Delete workflow |
+| GET/PUT/DELETE | `/workflows/:id` | Get / update / delete |
 | POST | `/workflows/:id/execute` | Execute workflow |
-| POST | `/workflows/:id/validate` | Validate workflow |
 | GET | `/executions` | Execution history (filter: status, workflowId, date) |
-| GET | `/executions/:id` | Execution details |
 | GET | `/executions/:id/logs` | Live logs |
-| GET | `/executions/trend` | 7-day trend data |
-| GET | `/executions/node-errors` | Top error-producing nodes |
 | POST | `/chat` | Send AI Brain message |
-| GET | `/chat/history` | Conversation history |
 | GET | `/nodes` | Available node types |
 | CRUD | `/credentials` | Encrypted credentials |
 | GET | `/health` | System health |
-| GET | `/metrics` | Metrics (uptime, memory, error stats) |
 | POST/GET | `/webhook/*` | Webhook trigger |
 
-Full documentation: [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
+Full documentation: http://localhost:3001/api/docs
 
 ---
 
 ## Plugin Development
 
-Create community nodes as npm packages with the `sibercron-node-` prefix:
+All 41 built-in nodes follow the same interface — you can create your own:
 
 ```typescript
 import type { INodeType } from '@sibercron/shared';
@@ -398,57 +417,27 @@ export const MyCustomNode: INodeType = {
 };
 ```
 
-Details: [Plugin Development Guide](docs/plugin-development.md)
-
----
-
----
-
-## Roadmap & Future
-
-Planned features for upcoming releases:
-
-- **Database UI** — Visual database explorer and query builder
-- **Multi-user & Teams** — Collaborate on workflows with role-based access
-- **Workflow Versioning** — Full Git-like history for all workflows
-- **Performance Monitoring** — Detailed metrics dashboard (latency, throughput, errors)
-- **Custom Node Builder** — Visual interface to create nodes without coding
-- **Slack Bot Integration** — Control SiberCron directly from Slack
-- **Mobile App** — iOS/Android support for monitoring
-- **Advanced Caching** — Redis-backed state management for complex workflows
-- **Workflow Marketplace** — Share and discover community workflows
-
-[View full roadmap →](./docs/roadmap.md)
+See [Plugin Development Guide](docs/plugin-development.md) for details.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Whether it's bug fixes, new nodes, documentation, or features — we'd love your help.
+Contributions are welcome — bug fixes, new nodes, documentation, or features.
 
-**Getting Started:**
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes and test locally with `pnpm dev`
-4. Commit with a clear message: `git commit -m 'feat: add amazing feature'`
+4. Commit: `git commit -m 'feat: add amazing feature'`
 5. Push and open a Pull Request
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-**Ways to Contribute:**
-- 🐛 Report bugs in [GitHub Issues](https://github.com/SiberCoder/SiberCron/issues)
+**Ways to contribute:**
+- 🐛 Report bugs in [GitHub Issues](https://github.com/SiberCron/SiberCron/issues)
 - 📚 Improve documentation
-- 🤖 Create new nodes (see [Plugin Development](docs/plugin-development.md))
-- 🎨 Design improvements
+- 🤖 Create new nodes
 - 🧪 Write tests
 
----
-
-## Community & Support
-
-- 💬 [GitHub Discussions](https://github.com/SiberCoder/SiberCron/discussions) — Ask questions, share workflows
-- 🐛 [Issue Tracker](https://github.com/SiberCoder/SiberCron/issues) — Report bugs
-- 📖 [Documentation](./docs/) — Architecture, self-hosting, plugins
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
@@ -458,4 +447,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
-Built with ❤️ in Turkey. 🇹🇷
+Built with ❤️ in Turkey 🇹🇷
