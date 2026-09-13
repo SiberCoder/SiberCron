@@ -18,11 +18,12 @@ import { config } from '../config/env.js';
 
 // ── Credential Encryption ─────────────────────────────────────────────
 
-const DEV_KEY = 'dev-only-key-do-not-use-in-prod!!';
-const isDevKey = config.encryptionKey === DEV_KEY;
+// No ENCRYPTION_KEY supplied: credentials are stored as plain text rather than
+// encrypted under a value an attacker could also derive.
+const isDevKey = !config.encryptionKeyProvided;
 
 if (isDevKey) {
-  console.warn('[DB] WARNING: Using development encryption key. Credentials will NOT be encrypted. Set ENCRYPTION_KEY env var for production.');
+  console.warn('[DB] WARNING: ENCRYPTION_KEY is not set. Credentials will NOT be encrypted. Set ENCRYPTION_KEY before storing real API keys.');
 }
 
 // Pad or derive a 32-byte hex key from the config value

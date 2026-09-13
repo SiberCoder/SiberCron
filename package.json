@@ -34,7 +34,10 @@
       "better-sqlite3",
       "esbuild",
       "msgpackr-extract"
-    ]
+    ],
+    "overrides": {
+      "fast-jwt": ">=6.2.4"
+    }
   },
   "devDependencies": {
     "turbo": "^2.9.6",

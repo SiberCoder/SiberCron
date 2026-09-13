@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # One PR per ecosystem keeps the review load sane on a monorepo this size.
+      fastify:
+        patterns: ['fastify', '@fastify/*', 'fast-jwt', 'fast-uri', 'find-my-way']
+      frontend:
+        patterns: ['react', 'react-*', '@vitejs/*', 'vite', 'postcss', 'browserslist', 'tailwindcss']
+      dev-tooling:
+        patterns: ['vitest', 'typescript', 'turbo', 'eslint*', '@types/*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
