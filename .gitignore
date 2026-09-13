@@ -35,3 +35,20 @@ packages/server/data/
 *.sqlite3
 test_live_logs.py
 data/
+
+# ── Secrets (never commit) ──────────────────────────────
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+*credentials*.json
+*service-account*.json
+.npmrc
+.netrc
+secrets/

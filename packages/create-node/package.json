@@ -8,11 +8,14 @@
   },
   "scripts": {
     "build": "echo \"create-sibercron-node is plain JS, no build needed\"",
-    "dev": "echo \"create-sibercron-node is plain JS, no watch needed\""
+    "dev": "echo \"create-sibercron-node is plain JS, no watch needed\"",
+    "prepublishOnly": "../../scripts/scan-secrets.sh"
   },
   "files": [
     "bin",
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "keywords": [
     "sibercron",
