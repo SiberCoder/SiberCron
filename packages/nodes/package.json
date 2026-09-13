@@ -13,22 +13,22 @@
   },
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist *.tsbuildinfo",
     "dev": "tsc"
   },
   "dependencies": {
     "@sibercron/shared": "workspace:*",
-    "basic-ftp": "^5.2.2",
+    "basic-ftp": "^5.3.1",
     "googleapis": "^171.4.0",
-    "ioredis": "^5.10.1",
-    "mysql2": "^3.22.0",
-    "nodemailer": "^8.0.5",
-    "pg": "^8.13.3",
+    "ioredis": "^5.11.1",
+    "mysql2": "^3.24.4",
+    "nodemailer": "^9.1.1",
+    "pg": "^8.23.0",
     "ssh2-sftp-client": "^12.1.1"
   },
   "devDependencies": {
-    "@types/nodemailer": "^8.0.0",
-    "@types/pg": "^8.20.0",
+    "@types/nodemailer": "^8.0.1",
+    "@types/pg": "^8.23.1",
     "@types/ssh2-sftp-client": "^9.0.6"
   }
 }

@@ -3,8 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+  # Every pull request, whatever it targets — a stacked PR based on another
+  # branch needs checking just as much as one opened straight against main.
   pull_request:
-    branches: [main]
 
 jobs:
   build:
