@@ -4,7 +4,7 @@
 
 Combines n8n's visual workflow editor with autonomous AI development capabilities — runs entirely on your own machine or server.
 
-> Visual workflow builder + Autonomous AI developer + 41 built-in nodes + 13 AI providers. All under your control, self-hosted.
+> Visual workflow builder + Autonomous AI developer + 50 built-in nodes + 13 AI providers. All under your control, self-hosted.
 
 ---
 
@@ -82,7 +82,7 @@ Combines n8n's visual workflow editor with autonomous AI development capabilitie
 - Keyboard shortcuts: `Ctrl+S` save, `Ctrl+Z` undo, `Ctrl+Shift+Z` redo, `Ctrl+E` execute, `Delete` remove node
 - Workflow templates, import/export (JSON), undo/redo (up to 50 steps)
 
-### 41 Built-in Nodes
+### 50 Built-in Nodes
 
 #### Triggers (5)
 | Node | Description |
@@ -316,7 +316,7 @@ sibercron/
 ├── packages/
 │   ├── shared/    # TypeScript types & constants
 │   ├── core/      # Workflow execution engine (DAG, topological sort)
-│   ├── nodes/     # 41 built-in node implementations
+│   ├── nodes/     # 50 built-in node implementations
 │   ├── server/    # Fastify REST API + Socket.io + AI Brain + Agent Loop
 │   └── editor/    # React visual workflow editor
 ├── docker/        # Dockerfile, Compose, nginx
@@ -382,7 +382,7 @@ Full documentation: http://localhost:3001/api/docs
 
 ## Plugin Development
 
-All 41 built-in nodes follow the same interface — you can create your own:
+All 50 built-in nodes follow the same interface — you can create your own:
 
 ```typescript
 import type { INodeType } from '@sibercron/shared';
