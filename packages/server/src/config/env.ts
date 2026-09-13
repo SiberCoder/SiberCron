@@ -1,9 +1,48 @@
-const nodeEnv = process.env.NODE_ENV || 'development';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 
-if (nodeEnv === 'production' && !process.env.ENCRYPTION_KEY) {
-  throw new Error(
-    'ENCRYPTION_KEY is required in production. Generate one with: openssl rand -hex 32',
-  );
+const nodeEnv = process.env.NODE_ENV || 'development';
+const isProduction = nodeEnv === 'production';
+
+/**
+ * Secrets that must never fall back to a constant: this repository is public, so
+ * any default baked in here is a published credential. In production the process
+ * refuses to start without them; in development a random value is generated and
+ * cached under data/ (gitignored) so restarts do not invalidate local sessions.
+ */
+const DEV_SECRET_DIR = path.resolve(process.cwd(), 'data');
+
+function devSecret(name: string): string {
+  const file = path.join(DEV_SECRET_DIR, `.dev-${name.toLowerCase()}`);
+  try {
+    const existing = fs.readFileSync(file, 'utf8').trim();
+    if (existing) return existing;
+  } catch {
+    // not generated yet
+  }
+  const generated = crypto.randomBytes(32).toString('hex');
+  try {
+    fs.mkdirSync(DEV_SECRET_DIR, { recursive: true });
+    fs.writeFileSync(file, generated, { mode: 0o600 });
+  } catch {
+    // read-only filesystem: fall back to a per-process secret
+    console.warn(`[config] Could not persist ${name}; it will change on restart.`);
+  }
+  return generated;
+}
+
+function requiredSecret(name: string, hint: string): string {
+  const value = process.env[name];
+  if (value) return value;
+  if (isProduction) {
+    throw new Error(`${name} is required in production. ${hint}`);
+  }
+  return devSecret(name);
+}
+
+if (isProduction && process.env.ADMIN_PASSWORD === 'admin') {
+  throw new Error('ADMIN_PASSWORD must not be "admin" in production.');
 }
 
 /**
@@ -22,14 +61,26 @@ export const config = {
   port: Number(process.env.PORT || 3001),
   host: process.env.HOST || '0.0.0.0',
   nodeEnv,
+  isProduction,
   databaseUrl: process.env.DATABASE_URL || 'sqlite://./data/sibercron.db',
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
-  encryptionKey: process.env.ENCRYPTION_KEY || 'dev-only-key-do-not-use-in-prod!!',
-  corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://192.168.1.20:5173,http://192.168.1.20:5174'),
+  /** Credentials are stored in plain text until this is set — see encryptionKeyProvided. */
+  encryptionKey: requiredSecret(
+    'ENCRYPTION_KEY',
+    'Generate one with: openssl rand -hex 32',
+  ),
+  /** False means no ENCRYPTION_KEY was supplied, so stored credentials are not encrypted. */
+  encryptionKeyProvided: Boolean(process.env.ENCRYPTION_KEY),
+  corsOrigin: parseCorsOrigin(
+    process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174',
+  ),
   /** Optional: set API_KEY env var to require Bearer token on all /api/v1/* routes. */
   apiKey: process.env.API_KEY || '',
-  /** JWT secret for auth tokens. Set JWT_SECRET in production. */
-  jwtSecret: process.env.JWT_SECRET || 'sibercron-dev-secret-change-in-production',
+  /** Signs auth tokens. Required in production; random per install in development. */
+  jwtSecret: requiredSecret(
+    'JWT_SECRET',
+    'Generate one with: openssl rand -hex 32',
+  ),
   /** Default admin password on first startup when no users exist. */
   defaultAdminPassword: process.env.ADMIN_PASSWORD || 'admin',
   /** Set AUTH_ENABLED=false to disable auth (dev convenience). Default: true. */
@@ -46,3 +97,10 @@ export const config = {
    */
   adminResetSecret: process.env.ADMIN_RESET_SECRET || '',
 };
+
+if (!isProduction && config.authEnabled && !process.env.ADMIN_PASSWORD) {
+  console.warn(
+    '[config] WARNING: default admin password "admin" is in use. ' +
+      'Set ADMIN_PASSWORD before exposing this instance to a network.',
+  );
+}
