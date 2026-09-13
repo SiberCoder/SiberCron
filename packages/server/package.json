@@ -6,7 +6,7 @@
   "main": "./dist/main.js",
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist *.tsbuildinfo",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "migrate": "knex migrate:latest",
@@ -14,33 +14,31 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fastify/cors": "^10.0.0",
-    "@fastify/jwt": "^10.0.0",
-    "@fastify/swagger": "^9.7.0",
-    "@fastify/swagger-ui": "^5.2.5",
-    "@fastify/websocket": "^11.0.0",
+    "@fastify/cors": "^10.1.0",
+    "@fastify/jwt": "^10.2.2",
+    "@fastify/swagger": "^9.8.1",
+    "@fastify/swagger-ui": "^5.2.6",
+    "@fastify/websocket": "^11.3.0",
     "@sibercron/core": "workspace:*",
     "@sibercron/nodes": "workspace:*",
     "@sibercron/shared": "workspace:*",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^11.0.0",
-    "bullmq": "^5.0.0",
-    "dotenv": "^16.4.0",
-    "fastify": "^5.0.0",
-    "ioredis": "^5.4.0",
-    "knex": "^3.1.0",
-    "node-cron": "^4.2.1",
-    "qrcode": "^1.5.0",
-    "socket.io": "^4.8.0",
-    "uuid": "^10.0.0",
-    "zod": "^3.23.0"
+    "better-sqlite3": "^11.10.0",
+    "bullmq": "^5.81.5",
+    "dotenv": "^16.6.1",
+    "fastify": "^5.12.4",
+    "ioredis": "^5.11.1",
+    "knex": "^3.3.0",
+    "node-cron": "^4.6.0",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.3",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
-    "@types/better-sqlite3": "^7.6.0",
-    "@types/qrcode": "^1.5.0",
-    "@types/uuid": "^10.0.0",
-    "tsx": "^4.19.0",
-    "vitest": "^2.1.9"
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/qrcode": "^1.5.6",
+    "tsx": "^4.23.13",
+    "vitest": "^4.1.11"
   }
 }
