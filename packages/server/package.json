@@ -10,7 +10,8 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "migrate": "knex migrate:latest",
-    "seed": "knex seed:run"
+    "seed": "knex seed:run",
+    "prepublishOnly": "../../scripts/scan-secrets.sh"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
@@ -40,5 +41,10 @@
     "@types/qrcode": "^1.5.0",
     "@types/uuid": "^10.0.0",
     "tsx": "^4.19.0"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
 }

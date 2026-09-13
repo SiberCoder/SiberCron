@@ -8,7 +8,10 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "scan:secrets": "./scripts/scan-secrets.sh",
+    "scan:secrets:history": "./scripts/scan-secrets.sh --history",
+    "prepublishOnly": "./scripts/scan-secrets.sh"
   },
   "keywords": [
     "workflow",

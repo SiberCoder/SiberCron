@@ -15,12 +15,18 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "dev": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "../../scripts/scan-secrets.sh"
   },
   "dependencies": {
     "@sibercron/shared": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^4.1.4"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
 }
