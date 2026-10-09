@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@sibercron/shared": "workspace:*",
-    "basic-ftp": "^5.2.2",
+    "basic-ftp": "^6.2.1",
     "googleapis": "^171.4.0",
     "ioredis": "^5.10.1",
     "mysql2": "^3.22.0",
