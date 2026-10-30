@@ -22,7 +22,7 @@
     "googleapis": "^171.4.0",
     "ioredis": "^5.10.1",
     "mysql2": "^3.22.0",
-    "nodemailer": "^8.0.5",
+    "nodemailer": "^10.1.4",
     "pg": "^8.13.3",
     "ssh2-sftp-client": "^12.1.1"
   },
